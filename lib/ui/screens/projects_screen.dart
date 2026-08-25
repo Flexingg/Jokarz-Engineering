@@ -7,6 +7,7 @@ import '../../models/project.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
+import '../widgets/sync_status_badge.dart';
 
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
@@ -74,6 +75,7 @@ class ProjectsScreen extends ConsumerWidget {
             tooltip: 'Maintenance Task Calendar',
             onPressed: () => context.push('/calendar'),
           ),
+          const SyncStatusBadge(compact: true),
           IconButton(
             icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
             tooltip: 'New Project',

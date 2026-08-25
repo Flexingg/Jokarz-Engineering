@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/project_provider.dart';
+import '../../services/auth_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
+import '../widgets/sync_status_badge.dart';
+import '../widgets/auth_account_modal.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -16,6 +19,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final themeNotifier = ref.read(themeModeProvider.notifier);
     final state = ref.watch(projectProvider);
+    final user = ref.watch(authStateProvider).value;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -66,6 +70,95 @@ class SettingsScreen extends ConsumerWidget {
                 color: AppTheme.accentEmerald,
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+
+          // Google Account & Cloud Sync Section
+          const Text(
+            'Google Account & Cloud Synchronization',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          ExpressiveCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryCyan.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.cloud_sync_rounded,
+                            color: AppTheme.primaryCyan,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user != null
+                                  ? (user.displayName ?? 'Google User')
+                                  : 'Cross-Device Cloud Sync',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              user != null
+                                  ? user.email!
+                                  : 'Sync Android ⇄ Windows in real time',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SyncStatusBadge(),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: Icon(
+                      user != null
+                          ? Icons.manage_accounts_rounded
+                          : Icons.g_mobiledata_rounded,
+                      size: 20,
+                    ),
+                    label: Text(
+                      user != null
+                          ? 'Manage Cloud Sync / Account'
+                          : 'Sign In with Google to Sync',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: user != null
+                          ? AppTheme.primaryCyan
+                          : Colors.white,
+                      foregroundColor: user != null
+                          ? Colors.black87
+                          : Colors.black87,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => showAuthAccountModal(context),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
 

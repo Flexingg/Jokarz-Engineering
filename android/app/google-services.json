@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "693644308941",
+    "project_id": "jokarz-engineering",
+    "storage_bucket": "jokarz-engineering.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:693644308941:android:9bbd7e2d3a30b227355484",
+        "android_client_info": {
+          "package_name": "com.example.jokarz_engineering"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtUWu5YUFLstM0FJHLgEp1MMtS0v6wPt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -507,6 +507,31 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     }
   }
 
+  Future<void> mergeCloudProjects(List<Project> remoteProjects) async {
+    final localMap = {for (var p in state.projects) p.id: p};
+    for (final remote in remoteProjects) {
+      final local = localMap[remote.id];
+      if (local == null || remote.updatedAt.isAfter(local.updatedAt)) {
+        localMap[remote.id] = remote;
+      }
+    }
+    state = state.copyWith(
+      projects: _rebalancePriorities(localMap.values.toList()),
+    );
+    await _persist();
+  }
+
+  Future<void> mergeCloudNotes(List<VoiceNote> remoteNotes) async {
+    final localMap = {for (var n in state.voiceNotes) n.id: n};
+    for (final remote in remoteNotes) {
+      localMap[remote.id] = remote;
+    }
+    state = state.copyWith(
+      voiceNotes: localMap.values.toList(),
+    );
+    await _persist();
+  }
+
   Future<void> clearAllData() async {
     state = state.copyWith(projects: [], voiceNotes: []);
     await _storage.clearAllData();

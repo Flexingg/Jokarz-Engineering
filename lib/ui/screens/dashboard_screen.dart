@@ -8,6 +8,7 @@ import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
+import '../widgets/sync_status_badge.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -53,6 +54,7 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          const SyncStatusBadge(compact: true),
           IconButton(
             icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
             tooltip: 'Maintenance Task Calendar',
@@ -68,7 +70,7 @@ class DashboardScreen extends ConsumerWidget {
             tooltip: 'New Project',
             onPressed: () => context.push('/projects/new'),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: RefreshIndicator(
