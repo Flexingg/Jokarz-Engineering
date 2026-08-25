@@ -23,6 +23,7 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    serverClientId: '693644308941-1ach24ufnf3uv80pbqhmtecachjnf1ak.apps.googleusercontent.com',
   );
 
   Stream<User?> get authStateChanges {
