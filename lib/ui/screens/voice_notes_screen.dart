@@ -101,6 +101,87 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     );
   }
 
+  void _showEditNoteDialog(BuildContext context, VoiceNote note) {
+    final titleCtrl = TextEditingController(text: note.title);
+    final contentCtrl = TextEditingController(text: note.transcript);
+    String? selectedProjId = note.projectId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final projects = ref.read(projectProvider).projects;
+
+          return AlertDialog(
+            title: const Text('Edit Engineering Field Note'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Note Title *',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String?>(
+                    value: selectedProjId,
+                    decoration: const InputDecoration(
+                      labelText: 'Attach to Project (Optional)',
+                      prefixIcon: Icon(Icons.precision_manufacturing_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('Global Workshop Note'),
+                      ),
+                      ...projects.map(
+                        (p) => DropdownMenuItem<String?>(
+                          value: p.id,
+                          child: Text(p.title, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) => setDialogState(() => selectedProjId = val),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: contentCtrl,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Engineering Notes & Observations',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (titleCtrl.text.trim().isEmpty) return;
+                  final updated = note.copyWith(
+                    title: titleCtrl.text.trim(),
+                    transcript: contentCtrl.text.trim(),
+                    projectId: selectedProjId,
+                    clearProjectId: selectedProjId == null,
+                  );
+                  await ref.read(projectProvider.notifier).updateVoiceNote(updated);
+                  if (context.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Update Note'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(projectProvider);
@@ -249,7 +330,13 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                   ),
                                 ),
                                 IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
+                                  tooltip: 'Edit Note',
+                                  onPressed: () => _showEditNoteDialog(context, note),
+                                ),
+                                IconButton(
                                   icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
+                                  tooltip: 'Delete Note',
                                   onPressed: () => ref.read(projectProvider.notifier).deleteVoiceNote(note.id),
                                 ),
                               ],

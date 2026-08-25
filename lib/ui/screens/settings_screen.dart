@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
@@ -137,9 +138,10 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     final data = {
+                      'version': 3,
+                      'updatedAt': DateTime.now().toIso8601String(),
                       'projects': state.projects.map((e) => e.toJson()).toList(),
                       'voiceNotes': state.voiceNotes.map((e) => e.toJson()).toList(),
-                      'filaments': state.filaments.map((e) => e.toJson()).toList(),
                     };
                     final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
 
@@ -157,6 +159,85 @@ class SettingsScreen extends ConsumerWidget {
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx),
                             child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.file_upload_outlined, color: AppTheme.accentEmerald),
+                  title: const Text('Import Engineering JSON Database'),
+                  subtitle: const Text(
+                    'Populate or restore projects, tasks, orders, and notes from JSON.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    final jsonCtrl = TextEditingController();
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Import JSON Database'),
+                        content: SizedBox(
+                          width: 500,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Paste JSON data below:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.help_outline_rounded, size: 14),
+                                      label: const Text('Format Guide & Template', style: TextStyle(fontSize: 11)),
+                                      onPressed: () => _showJsonGuideDialog(context),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: jsonCtrl,
+                                  maxLines: 8,
+                                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                                  decoration: const InputDecoration(
+                                    hintText: '{\n  "projects": [...],\n  "voiceNotes": [...]\n}',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final text = jsonCtrl.text.trim();
+                              if (text.isEmpty) return;
+                              final success = await ref.read(projectProvider.notifier).importJson(text);
+                              if (context.mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      success
+                                          ? 'Database successfully imported!'
+                                          : 'Invalid JSON format. Check Guide for schema.',
+                                    ),
+                                    backgroundColor: success ? AppTheme.accentEmerald : AppTheme.accentCoral,
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text('Import & Restore'),
                           ),
                         ],
                       ),
@@ -233,6 +314,120 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showJsonGuideDialog(BuildContext context) {
+    const exampleJson = '''{
+  "version": 3,
+  "projects": [
+    {
+      "id": "proj-uuid-1",
+      "title": "Line 1 Filler Starwheel Guide Overhaul",
+      "category": "maintenance",
+      "phase": "Installation",
+      "machine": "Line 1 Filler",
+      "subAssembly": "Infeed Starwheel",
+      "priority": 1,
+      "cost": 3200.0,
+      "description": "Replace worn UHMW guides and rebuild indexer gearbox.",
+      "tags": ["Filler", "Line 1", "Overhaul"],
+      "tasks": [
+        {
+          "id": "task-uuid-101",
+          "description": "Machine new 1/2in UHMW starwheel guides",
+          "scheduledDate": "2026-08-28T00:00:00.000Z",
+          "pendingReason": "Pending mill downtime",
+          "isCompleted": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "ord-uuid-201",
+          "pr": "PR-48901",
+          "po": "PO-9921004",
+          "description": "McMaster UHMW 1/2in Sheet",
+          "price": 184.50,
+          "eta": "2026-08-27T00:00:00.000Z",
+          "delivered": false
+        }
+      ]
+    }
+  ],
+  "voiceNotes": [
+    {
+      "id": "note-uuid-1",
+      "title": "Drive Gear Backlash Measurement",
+      "transcript": "Measured 0.012in backlash on infeed drive gear with dial indicator.",
+      "timestamp": "2026-08-25T08:30:00.000Z",
+      "durationSeconds": 0,
+      "projectId": "proj-uuid-1"
+    }
+  ]
+}''';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.menu_book_rounded, color: AppTheme.primaryCyan),
+            SizedBox(width: 8),
+            Text('JSON Database Schema Guide'),
+          ],
+        ),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '📋 Schema Key Reference:',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+                ),
+                const SizedBox(height: 6),
+                const Text('• projects: Array of projects.\n  - title (Required String): Name of project.\n  - category (Optional): "maintenance", "kaizen", or "capital".\n  - phase (Optional): "Idea", "Pending", "Installation", "Validation", "Complete", "Cancelled", or custom string.\n  - machine & subAssembly (Optional Strings): Plant equipment.\n  - priority (Optional Int): 1 to X unique rank.\n  - cost (Optional Double): Budget or PO total.\n  - tasks (Optional Array): Objects with description, scheduledDate (ISO string), pendingReason, isCompleted (bool).\n  - orders (Optional Array): Objects with pr, po, description, price (double), eta (ISO string), delivered (bool).\n• voiceNotes: Array of written/voice field notes with title, transcript, timestamp, projectId.', style: TextStyle(fontSize: 11)),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Sample JSON Template:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
+                      icon: const Icon(Icons.copy_rounded, size: 14),
+                      label: const Text('Copy Template', style: TextStyle(fontSize: 11)),
+                      onPressed: () {
+                        Clipboard.setData(const ClipboardData(text: exampleJson));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sample JSON template copied to clipboard!')),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: const SelectableText(
+                    exampleJson,
+                    style: TextStyle(fontFamily: 'monospace', fontSize: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );

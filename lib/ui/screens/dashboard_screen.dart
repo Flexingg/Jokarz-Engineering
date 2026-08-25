@@ -39,19 +39,28 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
             SizedBox(width: 8),
-            Text(
-              'Jokarz Engineering',
-              style: TextStyle(fontWeight: FontWeight.w900),
+            Flexible(
+              child: Text(
+                'Jokarz Engineering',
+                style: TextStyle(fontWeight: FontWeight.w900),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Maintenance Task Calendar',
+            onPressed: () => context.push('/calendar'),
+          ),
+          IconButton(
             icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
-            tooltip: 'Record Voice Memo',
+            tooltip: 'Record Field Memo',
             onPressed: () => VoiceMemoModal.show(context),
           ),
           IconButton(

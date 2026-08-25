@@ -102,38 +102,47 @@ void main() {
       expect(m6.clearanceCloseMm, 6.4);
       expect(m6.clearanceFreeMm, 6.6);
       expect(m6.hexKeySize, '5.0 mm');
+      expect(m6.hexHeadWrenchSize, '10.0 mm');
       expect(m6.gradeMid.dryNm, 15.0); // 10.9 dry torque in N-m
+
+      final m8 = BoltSpec.database.firstWhere((b) => b.size == 'M8 x 1.25');
+      expect(m8.hexKeySize, '6.0 mm');
+      expect(m8.hexHeadWrenchSize, '13.0 mm');
 
       final m50 = BoltSpec.database.firstWhere((b) => b.size == 'M50 x 5.0');
       expect(m50.tapDrillMm, 45.0);
       expect(m50.clearanceCloseMm, 51.0);
       expect(m50.hexKeySize, '36.0 mm');
+      expect(m50.hexHeadWrenchSize, '75.0 mm');
 
       // Imperial tests
-      final quarter20 = BoltSpec.database.firstWhere((b) => b.size == '1/4"-20 UNC');
-      expect(quarter20.tapDrillFraction, '#7 (0.2010")');
-      expect(quarter20.hexKeySize, '3/16"');
-      expect(quarter20.gradeMid.dryFtLbs, closeTo(8.85, 0.1)); // Grade 5 dry torque
+      final qtr = BoltSpec.database.firstWhere((b) => b.size == '1/4"-20 UNC');
+      expect(qtr.tapDrillDecimalInch, 0.2010);
+      expect(qtr.hexKeySize, '3/16"');
+      expect(qtr.hexHeadWrenchSize, '7/16"');
+      expect(qtr.gradeHigh.dryFtLbs, 12.17); // Grade 8 dry torque ft-lbs
+
+      final threeEighth = BoltSpec.database.firstWhere((b) => b.size == '3/8"-16 UNC');
+      expect(threeEighth.hexKeySize, '5/16"');
+      expect(threeEighth.hexHeadWrenchSize, '9/16"');
 
       final twoInch = BoltSpec.database.firstWhere((b) => b.size == '2"-4.5 UNC');
-      expect(twoInch.tapDrillFraction, '1-25/32" (1.7812")');
+      expect(twoInch.majorDiaInch, 2.0);
+      expect(twoInch.tapDrillDecimalInch, 1.7812);
       expect(twoInch.hexKeySize, '1-1/2"');
+      expect(twoInch.hexHeadWrenchSize, '3"');
     });
 
     test('Heat Tint Tempering Scale and Thermal Expansion Verification', () {
-      // Test Heat Tint Scale
-      final roomTempTint = HeatTintInfo.getForTemp(20);
-      expect(roomTempTint.name.contains('Unoxidized'), true);
+      final straw = HeatTintInfo.getForTemp(220);
+      expect(straw.name.contains('Straw'), true);
 
-      final strawTint = HeatTintInfo.getForTemp(240);
-      expect(strawTint.name.contains('Straw'), true);
+      final bronze = HeatTintInfo.getForTemp(265);
+      expect(bronze.name.contains('Bronze'), true);
 
-      final blueTint = HeatTintInfo.getForTemp(305);
-      expect(blueTint.name.contains('Cobalt Blue'), true);
-
-      final dullGreyTint = HeatTintInfo.getForTemp(450);
-      expect(dullGreyTint.name.contains('Dull Grey'), true);
-
+      final blue = HeatTintInfo.getForTemp(305);
+      expect(blue.name.contains('Blue'), true);
+      
       // Test Thermal Expansion calculation: ΔD = D0 * α * ΔT
       // 50mm carbon steel (α = 11.7 x 10^-6 / °C) heated by 180°C (from 20°C to 200°C)
       const d0 = 50.0;

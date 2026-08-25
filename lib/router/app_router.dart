@@ -9,6 +9,7 @@ import '../ui/screens/open_orders_screen.dart';
 import '../ui/screens/workbench_screen.dart';
 import '../ui/screens/voice_notes_screen.dart';
 import '../ui/screens/settings_screen.dart';
+import '../ui/screens/tasks_calendar_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -118,6 +119,11 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/calendar',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const TasksCalendarScreen(),
     ),
   ],
 );

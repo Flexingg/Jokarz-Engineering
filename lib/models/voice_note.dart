@@ -23,6 +23,7 @@ class VoiceNote {
     String? transcript,
     int? durationSeconds,
     String? projectId,
+    bool clearProjectId = false,
   }) {
     return VoiceNote(
       id: id,
@@ -30,7 +31,7 @@ class VoiceNote {
       title: title ?? this.title,
       transcript: transcript ?? this.transcript,
       durationSeconds: durationSeconds ?? this.durationSeconds,
-      projectId: projectId ?? this.projectId,
+      projectId: clearProjectId ? null : (projectId ?? this.projectId),
     );
   }
 

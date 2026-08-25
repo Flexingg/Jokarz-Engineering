@@ -19,6 +19,8 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
   String? _pendingOperator;
   bool _shouldResetDisplay = false;
   double _memory = 0;
+  bool _showFractionMode = false;
+  String _fractionDisplay = '';
 
   void _onDigit(String digit) {
     setState(() {
@@ -28,6 +30,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       } else {
         _display += digit;
       }
+      _updateFraction();
     });
   }
 
@@ -39,6 +42,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       } else if (!_display.contains('.')) {
         _display += '.';
       }
+      _updateFraction();
     });
   }
 
@@ -49,6 +53,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       _firstOperand = 0;
       _pendingOperator = null;
       _shouldResetDisplay = false;
+      _fractionDisplay = '';
     });
   }
 
@@ -59,6 +64,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       } else {
         _display = '0';
       }
+      _updateFraction();
     });
   }
 
@@ -71,13 +77,16 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           _display = '-$_display';
         }
       }
+      _updateFraction();
     });
   }
 
   void _onPercent() {
     setState(() {
       final val = double.tryParse(_display) ?? 0;
-      _display = (val / 100).toString();
+      _display = _formatResult(val / 100);
+      _shouldResetDisplay = true;
+      _updateFraction();
     });
   }
 
@@ -89,6 +98,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
         _expression = '√($val)';
         _display = _formatResult(res);
         _shouldResetDisplay = true;
+        _updateFraction();
       }
     });
   }
@@ -100,6 +110,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       _expression = 'sqr($val)';
       _display = _formatResult(res);
       _shouldResetDisplay = true;
+      _updateFraction();
     });
   }
 
@@ -111,6 +122,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
         _expression = '1/($val)';
         _display = _formatResult(res);
         _shouldResetDisplay = true;
+        _updateFraction();
       }
     });
   }
@@ -119,17 +131,24 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     setState(() {
       final currentVal = double.tryParse(_display) ?? 0;
       if (_pendingOperator != null && !_shouldResetDisplay) {
-        _calculate();
+        _executeCalculation();
       } else {
         _firstOperand = currentVal;
       }
       _pendingOperator = op;
       _expression = '${_formatResult(_firstOperand)} $op';
       _shouldResetDisplay = true;
+      _updateFraction();
     });
   }
 
-  void _calculate() {
+  void _onEquals() {
+    setState(() {
+      _executeCalculation();
+    });
+  }
+
+  void _executeCalculation() {
     if (_pendingOperator == null) return;
     final secondOperand = double.tryParse(_display) ?? 0;
     double result = 0;
@@ -151,6 +170,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           _display = 'Error';
           _pendingOperator = null;
           _shouldResetDisplay = true;
+          _fractionDisplay = '';
           return;
         }
         break;
@@ -161,6 +181,61 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     _firstOperand = result;
     _pendingOperator = null;
     _shouldResetDisplay = true;
+    _updateFraction();
+  }
+
+  void _toggleFractionMode() {
+    setState(() {
+      _showFractionMode = !_showFractionMode;
+      _updateFraction();
+    });
+  }
+
+  void _updateFraction() {
+    final val = double.tryParse(_display);
+    if (val != null) {
+      _fractionDisplay = _decimalToFraction(val);
+    } else {
+      _fractionDisplay = '';
+    }
+  }
+
+  String _decimalToFraction(double val) {
+    if (val.isNaN || val.isInfinite) return '';
+    final isNegative = val < 0;
+    final absVal = val.abs();
+    final integerPart = absVal.floor();
+    final decimalPart = absVal - integerPart;
+
+    if (decimalPart < 0.0001) {
+      return '${isNegative ? '-' : ''}$integerPart"';
+    }
+
+    // Standard fractional inches up to 64ths
+    const maxDenominator = 64;
+    int bestNumerator = (decimalPart * maxDenominator).round();
+    int bestDenominator = maxDenominator;
+
+    if (bestNumerator == 0) {
+      return '${isNegative ? '-' : ''}$integerPart"';
+    }
+    if (bestNumerator == maxDenominator) {
+      return '${isNegative ? '-' : ''}${integerPart + 1}"';
+    }
+
+    int gcd(int a, int b) => b == 0 ? a : gcd(b, a % b);
+    final divisor = gcd(bestNumerator, bestDenominator);
+    bestNumerator ~/= divisor;
+    bestDenominator ~/= divisor;
+
+    final approxError = (absVal - (integerPart + (bestNumerator / bestDenominator))).abs();
+    final approxPrefix = approxError > 0.001 ? '≈ ' : '';
+
+    if (integerPart == 0) {
+      return '$approxPrefix${isNegative ? '-' : ''}$bestNumerator/$bestDenominator"';
+    } else {
+      return '$approxPrefix${isNegative ? '-' : ''}$integerPart $bestNumerator/$bestDenominator"';
+    }
   }
 
   String _formatResult(double val) {
@@ -168,7 +243,6 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     if (val == val.toInt().toDouble()) {
       return val.toInt().toString();
     }
-    // Limit decimals cleanly
     final formatter = NumberFormat('0.########');
     return formatter.format(val);
   }
@@ -193,17 +267,29 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (_memory != 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentEmerald.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text('M', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
-                      )
-                    else
-                      const SizedBox(),
+                    Row(
+                      children: [
+                        if (_memory != 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentEmerald.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('M', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+                          ),
+                        if (_showFractionMode)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentAmber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('FRAC MODE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentAmber)),
+                          ),
+                      ],
+                    ),
                     Text(
                       _expression,
                       style: TextStyle(
@@ -214,12 +300,14 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   ],
                 ),
                 const SizedBox(height: 8),
+
+                // Main Number Display
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryCyan),
-                      tooltip: 'Copy Value',
+                      tooltip: 'Copy Result',
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _display));
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,15 +316,31 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                       },
                     ),
                     Expanded(
-                      child: SelectableText(
-                        _display,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1,
-                          color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          SelectableText(
+                            _display,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.1,
+                              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                            ),
+                          ),
+                          if (_fractionDisplay.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Fraction (Inch): $_fractionDisplay',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.accentAmber,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
@@ -246,35 +350,41 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // Memory & Scientific Quick Functions Row
+          // Memory & Fraction Mode Row
           Row(
             children: [
-              _buildBtn('MC', () => setState(() => _memory = 0), isAccent: false, isSmall: true),
+              _buildBtn('MC', () => setState(() => _memory = 0), isSmall: true),
               const SizedBox(width: 8),
-              _buildBtn('MR', () => setState(() => _display = _formatResult(_memory)), isAccent: false, isSmall: true),
+              _buildBtn('MR', () => setState(() {
+                _display = _formatResult(_memory);
+                _updateFraction();
+              }), isSmall: true),
               const SizedBox(width: 8),
-              _buildBtn('M+', () => setState(() => _memory += double.tryParse(_display) ?? 0), isAccent: false, isSmall: true),
+              _buildBtn('M+', () => setState(() => _memory += double.tryParse(_display) ?? 0), isSmall: true),
               const SizedBox(width: 8),
-              _buildBtn('M-', () => setState(() => _memory -= double.tryParse(_display) ?? 0), isAccent: false, isSmall: true),
+              _buildBtn('M-', () => setState(() => _memory -= double.tryParse(_display) ?? 0), isSmall: true),
             ],
           ),
           const SizedBox(height: 8),
 
-          // Keypad Grid
+          // Keypad Rows
           Column(
             children: [
+              // Row 1: Frac toggle, Clear, Backspace, Divide
               Row(
                 children: [
-                  _buildBtn('%', _onPercent, isOperator: true),
+                  _buildBtn('Frac (a b/c)', _toggleFractionMode, isAmber: _showFractionMode, isOperator: !_showFractionMode),
                   const SizedBox(width: 8),
                   _buildBtn('CE / C', _onClear, isCoral: true),
                   const SizedBox(width: 8),
                   _buildBtn('⌫', _onBackspace, isOperator: true),
                   const SizedBox(width: 8),
-                  _buildBtn('÷', () => _onOperator('÷'), isOperator: true, isCyan: true),
+                  _buildBtn('÷', () => _onOperator('÷'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Row 2: Powers, Roots, Multiply
               Row(
                 children: [
                   _buildBtn('1/x', _onReciprocal, isOperator: true),
@@ -283,10 +393,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('√x', _onSqrt, isOperator: true),
                   const SizedBox(width: 8),
-                  _buildBtn('×', () => _onOperator('×'), isOperator: true, isCyan: true),
+                  _buildBtn('×', () => _onOperator('×'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Row 3: 7, 8, 9, Minus
               Row(
                 children: [
                   _buildBtn('7', () => _onDigit('7')),
@@ -295,10 +407,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('9', () => _onDigit('9')),
                   const SizedBox(width: 8),
-                  _buildBtn('-', () => _onOperator('-'), isOperator: true, isCyan: true),
+                  _buildBtn('-', () => _onOperator('-'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Row 4: 4, 5, 6, Plus
               Row(
                 children: [
                   _buildBtn('4', () => _onDigit('4')),
@@ -307,10 +421,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('6', () => _onDigit('6')),
                   const SizedBox(width: 8),
-                  _buildBtn('+', () => _onOperator('+'), isOperator: true, isCyan: true),
+                  _buildBtn('+', () => _onOperator('+'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Row 5: 1, 2, 3, %
               Row(
                 children: [
                   _buildBtn('1', () => _onDigit('1')),
@@ -319,10 +435,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('3', () => _onDigit('3')),
                   const SizedBox(width: 8),
-                  _buildBtn('=', _calculate, isEmerald: true),
+                  _buildBtn('%', _onPercent, isOperator: true),
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Row 6: ±, 0, ., Equals (=)
               Row(
                 children: [
                   _buildBtn('±', _onToggleSign),
@@ -331,7 +449,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('.', _onDecimal),
                   const SizedBox(width: 8),
-                  _buildBtn('=', _calculate, isEmerald: true),
+                  _buildBtn('=', _onEquals, isEmerald: true),
                 ],
               ),
             ],
@@ -348,7 +466,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     bool isCyan = false,
     bool isEmerald = false,
     bool isCoral = false,
-    bool isAccent = false,
+    bool isAmber = false,
     bool isSmall = false,
   }) {
     final theme = Theme.of(context);
@@ -359,6 +477,9 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
 
     if (isEmerald) {
       bg = AppTheme.accentEmerald;
+      fg = Colors.black87;
+    } else if (isAmber) {
+      bg = AppTheme.accentAmber;
       fg = Colors.black87;
     } else if (isCoral) {
       bg = AppTheme.accentCoral.withValues(alpha: 0.2);
@@ -395,8 +516,8 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: isSmall ? 11 : 17,
-              fontWeight: (isOperator || isEmerald || isCyan) ? FontWeight.bold : FontWeight.w600,
+              fontSize: isSmall ? 11 : 16,
+              fontWeight: (isOperator || isEmerald || isCyan || isAmber) ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ),

@@ -70,6 +70,11 @@ class ProjectsScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Maintenance Task Calendar',
+            onPressed: () => context.push('/calendar'),
+          ),
+          IconButton(
             icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
             tooltip: 'New Project',
             onPressed: () => context.push('/projects/new'),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../models/task_item.dart';
@@ -361,6 +363,10 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     await updateProject(updatedProject);
   }
 
+  Future<void> toggleTask(String projectId, String taskId) async {
+    await toggleTaskCompleted(projectId, taskId);
+  }
+
   Future<void> deleteTask(String projectId, String taskId) async {
     final project = getProjectById(projectId);
     if (project == null) return;
@@ -463,10 +469,42 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     await _persist();
   }
 
+  Future<void> updateVoiceNote(VoiceNote updatedNote) async {
+    final updatedList = state.voiceNotes.map((n) {
+      return n.id == updatedNote.id ? updatedNote : n;
+    }).toList();
+    state = state.copyWith(voiceNotes: updatedList);
+    await _persist();
+  }
+
   Future<void> deleteVoiceNote(String id) async {
     final updated = state.voiceNotes.where((n) => n.id != id).toList();
     state = state.copyWith(voiceNotes: updated);
     await _persist();
+  }
+
+  Future<bool> importJson(String jsonString) async {
+    try {
+      final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
+      final projects = (jsonMap['projects'] as List<dynamic>?)
+              ?.map((e) => Project.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final voiceNotes = (jsonMap['voiceNotes'] as List<dynamic>?)
+              ?.map((e) => VoiceNote.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      state = state.copyWith(
+        projects: _rebalancePriorities(projects),
+        voiceNotes: voiceNotes,
+      );
+      await _persist();
+      return true;
+    } catch (e) {
+      debugPrint('JSON Import Error: $e');
+      return false;
+    }
   }
 
   Future<void> clearAllData() async {

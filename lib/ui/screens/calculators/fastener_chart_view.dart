@@ -107,10 +107,21 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                             ),
                           ],
                         ),
-                        ExpressiveBadge(
-                          label: 'Socket Hex: ${bolt.hexKeySize}',
-                          color: AppTheme.accentAmber,
-                          fontSize: 10,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            ExpressiveBadge(
+                              label: '🔧 Hex Bolt: ${bolt.hexHeadWrenchSize}',
+                              color: AppTheme.accentEmerald,
+                              fontSize: 10,
+                            ),
+                            ExpressiveBadge(
+                              label: '🔩 Socket: ${bolt.hexKeySize}',
+                              color: AppTheme.accentAmber,
+                              fontSize: 10,
+                            ),
+                          ],
                         ),
                       ],
                     ),

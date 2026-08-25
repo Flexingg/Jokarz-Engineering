@@ -141,10 +141,21 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                           bolt.size,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                         ),
-                        ExpressiveBadge(
-                          label: 'Socket Hex: ${bolt.hexKeySize}',
-                          color: AppTheme.primaryCyan,
-                          fontSize: 10,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            ExpressiveBadge(
+                              label: '🔧 Hex Bolt: ${bolt.hexHeadWrenchSize}',
+                              color: AppTheme.accentEmerald,
+                              fontSize: 10,
+                            ),
+                            ExpressiveBadge(
+                              label: '🔩 Socket: ${bolt.hexKeySize}',
+                              color: AppTheme.primaryCyan,
+                              fontSize: 10,
+                            ),
+                          ],
                         ),
                       ],
                     ),

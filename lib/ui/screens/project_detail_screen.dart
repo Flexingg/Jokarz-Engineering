@@ -406,8 +406,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final project =
-        ref.read(projectProvider.notifier).getProjectById(widget.projectId);
+    final state = ref.watch(projectProvider);
+    final project = state.projects.cast<Project?>().firstWhere(
+          (p) => p?.id == widget.projectId,
+          orElse: () => null,
+        );
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
