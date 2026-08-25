@@ -1,198 +1,233 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/bolt_spec.dart';
-import '../../../providers/tools_provider.dart';
 import '../../widgets/expressive_card.dart';
 import '../../widgets/expressive_badge.dart';
 
-class FastenerChartView extends ConsumerWidget {
+class FastenerChartView extends StatefulWidget {
   const FastenerChartView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final fasteners = ref.watch(filteredFastenersProvider);
-    final search = ref.watch(fastenerSearchProvider);
-    final standard = ref.watch(fastenerStandardProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  State<FastenerChartView> createState() => _FastenerChartViewState();
+}
+
+class _FastenerChartViewState extends State<FastenerChartView> {
+  FastenerStandard _standard = FastenerStandard.metric;
+  String _search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final bolts = BoltSpec.database.where((b) {
+      final matchesStd = b.standard == _standard;
+      final matchesSearch = _search.isEmpty ||
+          b.size.toLowerCase().contains(_search.toLowerCase()) ||
+          b.pitchOrTpi.toLowerCase().contains(_search.toLowerCase()) ||
+          b.tapDrillFraction.toLowerCase().contains(_search.toLowerCase()) ||
+          b.tapDrillMmLabel.toLowerCase().contains(_search.toLowerCase());
+      return matchesStd && matchesSearch;
+    }).toList();
 
     return Column(
       children: [
-        // Filter bar
-        Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
-            border: Border(
-              bottom: BorderSide(
-                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-              ),
-            ),
-          ),
+        // Controls Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Column(
             children: [
-              TextField(
-                onChanged: (v) => ref.read(fastenerSearchProvider.notifier).state = v,
-                decoration: InputDecoration(
-                  hintText: 'Search bolt size, tap drill, thread (e.g. M3, 1/4-20, #4)...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: search.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () =>
-                              ref.read(fastenerSearchProvider.notifier).state = '',
-                        )
-                      : null,
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 10),
               Row(
                 children: [
-                  ChoiceChip(
-                    label: const Text('All Standards'),
-                    selected: standard == null,
-                    onSelected: (_) =>
-                        ref.read(fastenerStandardProvider.notifier).state = null,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Metric (ISO)'),
-                    selected: standard == FastenerStandard.metric,
-                    onSelected: (sel) => ref
-                        .read(fastenerStandardProvider.notifier)
-                        .state = sel ? FastenerStandard.metric : null,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Imperial (UNC)'),
-                    selected: standard == FastenerStandard.imperial,
-                    onSelected: (sel) => ref
-                        .read(fastenerStandardProvider.notifier)
-                        .state = sel ? FastenerStandard.imperial : null,
+                  SegmentedButton<FastenerStandard>(
+                    segments: const [
+                      ButtonSegment(
+                        value: FastenerStandard.metric,
+                        label: Text('Metric (M2 to M50)'),
+                      ),
+                      ButtonSegment(
+                        value: FastenerStandard.imperial,
+                        label: Text('Imperial (#2 to 2")'),
+                      ),
+                    ],
+                    selected: {_standard},
+                    onSelectionChanged: (val) => setState(() => _standard = val.first),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: _standard == FastenerStandard.metric
+                      ? 'Search metric thread (e.g. M6, M12, M24, M48)...'
+                      : 'Search imperial thread (e.g. 1/4, 1/2, 3/4, #10)...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+                onChanged: (val) => setState(() => _search = val),
               ),
             ],
           ),
         ),
 
-        // Fastener list
+        // Fastener Specs List
         Expanded(
-          child: fasteners.isEmpty
-              ? const Center(
-                  child: Text('No fasteners match your search'),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: fasteners.length,
-                  itemBuilder: (context, index) {
-                    final spec = fasteners[index];
-                    return ExpressiveCard(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                spec.size,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppTheme.primaryCyan,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: bolts.length,
+            itemBuilder: (context, idx) {
+              final bolt = bolts[idx];
+              final isMetric = bolt.standard == FastenerStandard.metric;
+
+              return ExpressiveCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Row: Bolt Size, Pitch, and Drive Key
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              bolt.size,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ExpressiveBadge(
+                              label: bolt.pitchOrTpi,
+                              color: AppTheme.primaryCyan,
+                              fontSize: 10,
+                            ),
+                          ],
+                        ),
+                        ExpressiveBadge(
+                          label: 'Socket Hex: ${bolt.hexKeySize}',
+                          color: AppTheme.accentAmber,
+                          fontSize: 10,
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+
+                    // Dimensions & Tap Drill Spec Grid
+                    Row(
+                      children: [
+                        // Tap Drill Size
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentEmerald.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                              border: Border.all(color: AppTheme.accentEmerald.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'TAP DRILL (75% THREAD)',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.accentEmerald,
+                                  ),
                                 ),
-                              ),
-                              ExpressiveBadge(
-                                label: spec.standard == FastenerStandard.metric
-                                    ? 'METRIC'
-                                    : 'IMPERIAL',
-                                color: spec.standard == FastenerStandard.metric
-                                    ? AppTheme.accentEmerald
-                                    : AppTheme.accentAmber,
-                                fontSize: 10,
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  isMetric
+                                      ? bolt.tapDrillMmLabel
+                                      : bolt.tapDrillFraction,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (isMetric)
+                                  Text(
+                                    '(${bolt.tapDrillDecimalInch.toStringAsFixed(4)}")',
+                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                  )
+                                else
+                                  Text(
+                                    '(${bolt.tapDrillMm.toStringAsFixed(2)} mm)',
+                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
+                              ],
+                            ),
                           ),
-                          const Divider(height: 16),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final isWide = constraints.maxWidth > 500;
-                              return GridView.count(
-                                crossAxisCount: isWide ? 4 : 2,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                childAspectRatio: isWide ? 2.5 : 2.0,
-                                mainAxisSpacing: 8,
-                                crossAxisSpacing: 8,
-                                children: [
-                                  _buildParamTile(
-                                    'Tap Drill Size',
-                                    '${spec.tapDrillMm} mm',
-                                    spec.tapDrillFraction,
-                                    AppTheme.accentEmerald,
-                                  ),
-                                  _buildParamTile(
-                                    'Close Clearance',
-                                    '${spec.clearanceCloseMm} mm',
-                                    'Tight Fit',
-                                    AppTheme.primaryCyan,
-                                  ),
-                                  _buildParamTile(
-                                    'Free Clearance',
-                                    '${spec.clearanceFreeMm} mm',
-                                    'Standard Fit',
-                                    AppTheme.accentAmber,
-                                  ),
-                                  _buildParamTile(
-                                    'Hex / Allen Key',
-                                    spec.hexKeySize,
-                                    'Drive Tool',
-                                    AppTheme.accentPurple,
-                                  ),
-                                ],
-                              );
-                            },
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Close Clearance Hole (Tight fit)
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'CLOSE CLEARANCE (TIGHT)',
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isMetric
+                                      ? '${bolt.clearanceCloseMm.toStringAsFixed(2)} mm'
+                                      : bolt.clearanceCloseInch,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Free Clearance Hole (Standard fit)
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'FREE CLEARANCE (STD)',
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isMetric
+                                      ? '${bolt.clearanceFreeMm.toStringAsFixed(2)} mm'
+                                      : bolt.clearanceFreeInch,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+              );
+            },
+          ),
         ),
       ],
-    );
-  }
-
-  Widget _buildParamTile(String label, String value, String sub, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            sub,
-            style: const TextStyle(fontSize: 9, color: Colors.grey),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
     );
   }
 }

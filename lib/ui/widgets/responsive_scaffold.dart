@@ -133,8 +133,8 @@ class ResponsiveScaffold extends ConsumerWidget {
                       ),
                       _buildDesktopNavItem(
                         context,
-                        icon: Icons.mic_external_on_rounded,
-                        label: 'Voice Field Notes',
+                        icon: Icons.edit_note_rounded,
+                        label: 'Field Notes',
                         isSelected: navigationShell.currentIndex == 4,
                         onTap: () => _onTapNav(4),
                       ),
@@ -236,9 +236,9 @@ class ResponsiveScaffold extends ConsumerWidget {
                 label: 'Tools',
               ),
               NavigationDestination(
-                icon: Icon(Icons.mic_none_rounded),
-                selectedIcon: Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
-                label: 'Voice',
+                icon: Icon(Icons.note_alt_outlined),
+                selectedIcon: Icon(Icons.edit_note_rounded, color: AppTheme.primaryCyan),
+                label: 'Notes',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings_outlined),

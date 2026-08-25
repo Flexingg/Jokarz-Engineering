@@ -468,6 +468,12 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     state = state.copyWith(voiceNotes: updated);
     await _persist();
   }
+
+  Future<void> clearAllData() async {
+    state = state.copyWith(projects: [], voiceNotes: []);
+    await _storage.clearAllData();
+    await _persist();
+  }
 }
 
 final projectProvider =

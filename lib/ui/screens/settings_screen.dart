@@ -163,6 +163,45 @@ class SettingsScreen extends ConsumerWidget {
                     );
                   },
                 ),
+                const Divider(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.delete_sweep_rounded, color: AppTheme.accentCoral),
+                  title: const Text('Reset All Data to Blank Slate', style: TextStyle(color: AppTheme.accentCoral, fontWeight: FontWeight.bold)),
+                  subtitle: const Text(
+                    'Permanently clears all projects, tasks, orders, and field notes.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Clear All Engineering Data?'),
+                        content: const Text('This will wipe all active and completed projects, tasks, orders, and notes back to a clean blank slate.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCoral),
+                            onPressed: () async {
+                              await ref.read(projectProvider.notifier).clearAllData();
+                              if (context.mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('All data reset to blank slate')),
+                                );
+                              }
+                            },
+                            child: const Text('Reset to Blank Slate'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -184,7 +223,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Built with Flutter, Riverpod, GoRouter, and Material Expressive design system. Features offline-first local persistence, multi-discipline BOM costing, 3D printing slicer estimation, hardware bolt specs, electronics circuit solvers, and workshop voice speech-to-text dictation for Windows and Android.',
+                  'Tailored for plant floor mechanical engineers managing line maintenance, Kaizen improvements, CapEx machinery projects, downtime tasks, and open purchase orders with offline persistence and workshop mechanical diagnostics.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,

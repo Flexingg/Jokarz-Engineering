@@ -3,8 +3,7 @@ import 'package:jokarz_engineering/models/project.dart';
 import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/order_item.dart';
 import 'package:jokarz_engineering/models/bolt_spec.dart';
-import 'package:jokarz_engineering/models/filament_profile.dart';
-import 'package:jokarz_engineering/providers/tools_provider.dart';
+import 'package:jokarz_engineering/ui/screens/calculators/heat_shrink_calculator_view.dart';
 
 void main() {
   group('Manufacturing Domain Models Test', () {
@@ -93,63 +92,60 @@ void main() {
       expect(project.nextPendingTask?.id, 't-2');
       expect(project.nextPendingTask?.pendingReason, 'Pending parts from McMaster');
     });
+  });
 
-    test('Fastener tap drill and clearance reference database', () {
+  group('Mechanical Calculators & Fastener Reference Test', () {
+    test('Fastener tap drill and clearance reference database consistency', () {
+      // Metric tests
       final m6 = BoltSpec.database.firstWhere((b) => b.size == 'M6 x 1.0');
       expect(m6.tapDrillMm, 5.0);
       expect(m6.clearanceCloseMm, 6.4);
       expect(m6.clearanceFreeMm, 6.6);
       expect(m6.hexKeySize, '5.0 mm');
+      expect(m6.gradeMid.dryNm, 15.0); // 10.9 dry torque in N-m
 
+      final m50 = BoltSpec.database.firstWhere((b) => b.size == 'M50 x 5.0');
+      expect(m50.tapDrillMm, 45.0);
+      expect(m50.clearanceCloseMm, 51.0);
+      expect(m50.hexKeySize, '36.0 mm');
+
+      // Imperial tests
       final quarter20 = BoltSpec.database.firstWhere((b) => b.size == '1/4"-20 UNC');
       expect(quarter20.tapDrillFraction, '#7 (0.2010")');
       expect(quarter20.hexKeySize, '3/16"');
-    });
-  });
+      expect(quarter20.gradeMid.dryFtLbs, closeTo(8.85, 0.1)); // Grade 5 dry torque
 
-  group('Workbench Calculators Test', () {
-    test('Calculates 3D print costs accurately', () {
-      final state = PrintEstimatorState(
-        selectedFilament: FilamentProfile.defaultProfiles.first, // PLA ($18/kg)
-        partWeightGrams: 100.0, // 0.1 kg -> $1.80
-        printTimeHours: 5.0,
-        printerPowerWatts: 150.0, // 0.15 kW * 5h = 0.75 kWh @ $0.14 = $0.105
-        electricityCostPerKwh: 0.14,
-        failureBufferPercent: 10.0, // 10%
-        operatorHourlyRate: 25.0,
-        operatorLaborMinutes: 12.0, // 0.2h * $25 = $5.00
-        machineWearPerHour: 0.40, // 5h * $0.40 = $2.00
-      );
-
-      // Raw filament: 1.80
-      expect(state.rawFilamentCost, closeTo(1.80, 0.01));
-      // Power: 0.105
-      expect(state.powerCost, closeTo(0.105, 0.01));
-      // Machine wear: 2.00
-      expect(state.machineWearCost, closeTo(2.00, 0.01));
-      // Labor: 5.00
-      expect(state.laborCost, closeTo(5.00, 0.01));
-
-      // Subtotal: 1.80 + 0.105 + 2.00 + 5.00 = 8.905
-      expect(state.subtotalCost, closeTo(8.905, 0.01));
-      // Buffer: 0.8905
-      expect(state.failureBufferCost, closeTo(0.8905, 0.01));
-      // Net: ~9.80
-      expect(state.totalNetCost, closeTo(9.795, 0.02));
+      final twoInch = BoltSpec.database.firstWhere((b) => b.size == '2"-4.5 UNC');
+      expect(twoInch.tapDrillFraction, '1-25/32" (1.7812")');
+      expect(twoInch.hexKeySize, '1-1/2"');
     });
 
-    test('Decodes 4-band 10k resistor correctly (Brown, Black, Orange)', () {
-      const state = ResistorCodeState(
-        mode: ResistorBandMode.fourBand,
-        band1: 1, // Brown (1)
-        band2: 0, // Black (0)
-        multiplier: 3, // Orange (10^3 = 1000) -> 10,000 Ohm
-        tolerancePercent: 5.0,
-      );
+    test('Heat Tint Tempering Scale and Thermal Expansion Verification', () {
+      // Test Heat Tint Scale
+      final roomTempTint = HeatTintInfo.getForTemp(20);
+      expect(roomTempTint.name.contains('Unoxidized'), true);
 
-      expect(state.resistanceOhms, 10000.0);
-      expect(state.formattedResistance, '10.00 kΩ');
-      expect(state.tolerancePercent, 5.0);
+      final strawTint = HeatTintInfo.getForTemp(240);
+      expect(strawTint.name.contains('Straw'), true);
+
+      final blueTint = HeatTintInfo.getForTemp(305);
+      expect(blueTint.name.contains('Cobalt Blue'), true);
+
+      final dullGreyTint = HeatTintInfo.getForTemp(450);
+      expect(dullGreyTint.name.contains('Dull Grey'), true);
+
+      // Test Thermal Expansion calculation: ΔD = D0 * α * ΔT
+      // 50mm carbon steel (α = 11.7 x 10^-6 / °C) heated by 180°C (from 20°C to 200°C)
+      const d0 = 50.0;
+      const alpha = 11.7e-6;
+      const deltaT = 180.0;
+      final deltaD = d0 * alpha * deltaT; // 50 * 11.7e-6 * 180 = 0.1053 mm
+      expect(deltaD, closeTo(0.1053, 0.001));
+
+      // With 50.050mm shaft (0.050mm interference), hot clearance is 50.1053 - 50.050 = +0.0553 mm slip fit
+      final hotClearance = (d0 + deltaD) - 50.050;
+      expect(hotClearance, closeTo(0.0553, 0.001));
+      expect(hotClearance > 0, true);
     });
   });
 }

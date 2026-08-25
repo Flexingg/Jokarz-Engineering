@@ -1,7 +1,7 @@
 <div align="center">
 
 # ⚙️ JOKARZ ENGINEERING ⚙️
-### *Corporate Manufacturing Plant Mechanical Engineering Suite & Operations Companion*
+### *Corporate Manufacturing Plant Mechanical Engineering Suite & Workshop Companion*
 
 [![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.0%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-v1.0.0.apk)
 [![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.0%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-Windows-v1.0.0.zip)
@@ -15,7 +15,7 @@
 
 ### 📥 **[Download Android APK (v1.0.0)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-v1.0.0.apk)** | **[Download Windows App (v1.0.0 .zip)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-Windows-v1.0.0.zip)**
 
-*A personal manufacturing mechanical engineering suite for corporate plant operations, tracking line maintenance, Kaizen improvements, capital projects, machine downtime tasks, purchase orders, and workshop diagnostics.*
+*A personal mechanical engineering suite for corporate plant operations, tracking line maintenance, Kaizen improvements, capital projects, machine downtime tasks, purchase orders, and workshop mechanical diagnostics.*
 
 </div>
 
@@ -34,154 +34,85 @@ Engineered specifically for plant floor mechanical engineers managing production
         ┌──────────────────────────────┼──────────────────────────────┐
         ▼                              ▼                              ▼
 ┌───────────────────────┐  ┌───────────────────────┐  ┌───────────────────────┐
-│ 📁 PROJECTS & TASKS   │  │ 📦 OPEN ORDERS TRACK  │  │ 🛠️ WORKBENCH TOOLS    │
-│ • Maintenance/Kaizen  │  │ • Requisitions (PR)   │  │ • Tap & Clearance Drll│
-│ • Dynamic 1..X Priority│ │ • Purchase Orders (PO)│  │ • Ohm's Law & DC Power│
-│ • Custom Phase Steps  │  │ • ETA Countdown       │  │ • Resistor Color Code │
-│ • Auto "Completed At" │  │ • One-Click Delivery  │  │ • ISO Fit Tolerances  │
-│ • Machine/Sub-Assembly│  │ • Total Open PO Spend │  │ • Wire Gauges & AWG   │
+│ 📁 PROJECTS & TASKS   │  │ 📦 OPEN ORDERS TRACK  │  │ 🛠️ MECHANICAL TOOLS   │
+│ • Maintenance/Kaizen  │  │ • Requisitions (PR)   │  │ • Simple Calc + Tape  │
+│ • Dynamic 1..X Priority│ │ • Purchase Orders (PO)│  │ • Triangle Trig Solver│
+│ • Custom Phase Steps  │  │ • ETA Countdown       │  │ • Tap Drills to M50/2"│
+│ • Auto "Completed At" │  │ • One-Click Delivery  │  │ • Torque Spec Chart   │
+│ • Machine/Sub-Assembly│  │ • Total Open PO Spend │  │ • Torque Solver (K·D·F│
+│ • Clean Blank Slate   │  │ • Crib Arrival Alerts │  │ • Heat Shrink & Tints │
+│ • In-App Help Guides  │  │ • PO Summary Metrics  │  │ • 🇯🇵 Translate Camera│
 └───────────────────────┘  └───────────────────────┘  └───────────────────────┘
 ```
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Mechanical Engineering Features
 
 ### 1. 📁 Project Management & Dynamic Priority Ranking
 - **Minimal Required Input**: Only the **Title** is required; every other field is optional.
+- **Clean Blank Slate**: Starts fresh with zero demo clutter. Help buttons (`?` / Info) guide new users through categories, priority shifting, and workflows.
 - **Corporate Categories**:
   - **1. Maintenance** (Default)
   - **2. Kaizen** (Continuous Improvement)
   - **3. Capital** (CapEx machinery & major upgrades)
 - **Unique Dynamic Priority Ranking (1..X)**:
-  - Active projects are ranked from 1 to X with strict uniqueness.
-  - Moving a project from #3 to #1 automatically bumps the existing #1 to #2, and #2 to #3.
-  - Completed or Cancelled projects freeze their priority as a **greyed-out lifetime record** (e.g. `Prev #1`) and exit the active 1..X queue.
-- **Customizable Phase Pipeline**:
+  - Active projects are ranked 1 to X with strict uniqueness.
+  - Moving a project to #1 automatically bumps the existing #1 to #2, #2 to #3, etc.
+  - Completed or Cancelled projects freeze their priority as a **greyed-out lifetime record** (e.g. `Prev #1`) and exit the active queue.
+- **Customizable Phase Pipeline & Timestamping**:
   - Standard Phases: `Idea`, `Pending`, `Installation`, `Validation`, `Complete`, `Cancelled`.
-  - Add custom phases (e.g. `Fabrication`, `FAT Review`, `Vendor Quote`) that dynamically populate future project dropdowns alphabetically.
-  - **Auto-Timestamped "Completed at"**: Auto-records completion timestamp when transitioning to `Complete` or `Cancelled`, and clears it if reopened.
-- **Machine & Sub-Assembly Dropdowns**:
-  - Auto-suggests unique machine lines (e.g., `Line 1 Filler`, `Cell 621 ABB Robot`, `Packaging Gantry 4`, `Stamping Press 2`) and sub-assemblies (`Infeed Starwheel`, `Gripper Tooling`, `Linear Actuator`).
-- **Next Pending Task Banner**:
-  - Highlights the immediate next bottleneck (e.g. `Pending mill downtime`, `Pending electrician review`, `Pending parts`).
+  - Add custom phases dynamically that populate future project dropdowns alphabetically.
+  - Automatically stamps `completedAt` timestamp on transition to `Complete` or `Cancelled`.
 
 ### 2. 📋 Multiple Project Tasks & Downtime Scheduling
-- Create multiple granular tasks within each project.
-- Assign **Scheduled Dates** for shutdown or shift maintenance.
-- Set **Pending Values** (`Pending parts`, `Pending email`, `Pending downtime`, `Pending vendor quote`).
-- One-click task checkbox completion.
+- Track multiple tasks within each project with descriptions, scheduled dates, and pending reasons (`Pending parts`, `Pending email`, `Pending downtime`, `Pending vendor quote`).
 
 ### 3. 📦 Open Purchase Orders (PO) & Requisitions (PR) Tracker
-- Dedicated **Open Orders** dashboard tab tracking all undelivered plant orders.
-- Order Fields:
-  - **PR** (Purchase Requisition text)
-  - **PO** (Purchase Order number text)
-  - **Description** (Part description, vendor, specs)
-  - **Price** (Numeric $\$$ spend)
-  - **ETA** (Scheduled arrival date with countdown badges)
-  - **Delivered** (Boolean toggle)
-- Summary banner calculating total open PO spend across all plant equipment.
+- Dedicated **Open Orders** navigation screen showing all undelivered parts across plant equipment.
+- Tracks **PR** (Requisition), **PO** (Purchase Order), **Description**, **Price** ($\$$), **ETA**, and one-click delivery toggles.
 
-### 4. 🔩 Fastener, Tap Drill & Clearance Hole Selector
-- Searchable thread database across **Metric (M2 to M12)** and **Imperial (#2 to 1/2" UNC)**.
-- Tap drill sizes, close clearance holes, free clearance holes, and hex/Allen key drive sizes.
+### 4. 🧮 Simple Workshop Calculator
+- Big tactile mechanical keypad with calculation tape history, memory functions ($M+, M-, MR, MC$), square root, powers, percentages, and copy-to-clipboard.
 
-### 5. ⚡ Electronics & Power Calculators
-- **Resistor Color Code Decoder**: Interactive 4-band and 5-band color decoder.
-- **Ohm's Law & DC Power**: Solves Voltage, Current, Resistance, and Power ($P = V \times I$).
-- **LED Series Resistor**: Calculates current-limiting resistor and wattage dissipation.
-- **AWG Wire Gauge & Voltage Drop**: Calculates loop resistance and voltage drop for 10–30 AWG wiring.
+### 5. 📐 Triangle Trigonometry Solver
+- Solves any triangle with 3 known values (SSS, SAS, ASA, AAS, Right Triangle).
+- Calculates all sides, angles in degrees, area, perimeter, and renders an interactive **scaled geometric drawing canvas** with labeled vertex angles and sides!
 
-### 6. 📏 Dimensional Unit Converter & ISO Tolerances
-- Length, Pressure, Torque, Temperature, Mass, and Power converter.
-- ISO hole/shaft limits and fits (H7/g6, H7/k6, H7/p6, H11/c11) with micron tolerance data.
+### 6. 🔩 Standard Tap Drill & Clearance Hole Chart (Up to M50 & 2")
+- **Strict Unit Consistency**: Metric gives mm tap drills and clearance holes; Imperial gives fractions, wire gauges, and decimal inches.
+- Standard steps up to **M50 x 5.0** (Metric) and **2"-4.5 UNC** (Imperial).
+- Includes tap drill sizes (75% thread), close clearance holes, free clearance holes, and hex/Allen key drive sizes.
 
-### 7. 🎙️ Workshop Speech-to-Text & Field Dictation
-- Live voice dictation modal with pulsing audio visualizer for hands-free workshop logging on the plant floor.
-- Automatically saves to lab memos or attaches directly to active machines.
+### 7. 🔧 Fastener Torque Spec Chart
+- Reference tightening torque table for **Metric Class 8.8, 10.9, 12.9** and **SAE Grade 2, Grade 5, Grade 8**.
+- Displays both **Dry** and **Lubricated** torque specs in both **ft-lbs** and **N·m**.
+
+### 8. ⚡ Bolt Torque & Clamp Load Solver
+- Custom torque solver using $T = K \cdot D \cdot F$.
+- Calculates Tensile Stress Area ($A_t$), Clamp Pre-load Force ($lbf$ / $kN$), and required torque in $ft\cdot lb$, $in\cdot lb$, and $N\cdot m$ based on bolt grade, friction factor $K$, and clamp load percentage.
+
+### 9. 🔥 Thermal Shrink Fit & Steel Heat-Tint Oxide Indicator
+- Calculates shaft/hub interference fits, thermal bore expansion ($\Delta D = D_0 \cdot \alpha \cdot \Delta T$), and hot slip assembly clearance.
+- **Live Steel Tempering Oxide Color Swatch**: Visualizes the exact temper oxide color (Faint Straw $220^\circ\text{C}$, Medium Straw $245^\circ\text{C}$, Brown Bronze $265^\circ\text{C}$, Purple $285^\circ\text{C}$, Bright Cobalt Blue $305^\circ\text{C}$, Dark Navy Blue $330^\circ\text{C}$, Dull Grey $400^\circ\text{C}+$, Red Glow $550^\circ\text{C}+$).
+
+### 10. 🇯🇵 Japanese Manufacturing Translation Camera Launcher
+- One-click launcher in the workbench top bar deeplinking directly to Google Translate camera mode for instant Japanese $\rightarrow$ English machine label translation.
+
+### 11. 📝 Field Notes & Notepad
+- Replaceable notepad on navigation bar for quick workshop memos, field observations, machine measurements, and hands-free voice speech-to-text dictation.
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## 🛠️ Tech Stack & Architecture
 
 - **Framework**: Flutter 3.32+ (Dart 3.8+)
 - **Architecture**: Domain-Driven Layered Architecture (UI, Providers/Notifiers, Models, Services)
 - **State Management**: `flutter_riverpod: ^2.6.1`
 - **Navigation & Routing**: `go_router: ^13.2.5` (`StatefulShellRoute.indexedStack`)
 - **Speech Recognition**: `speech_to_text: ^7.4.0`
-- **Persistence**: Local offline JSON document store with seed data
-
-```
-lib/
-├── main.dart                          # Entry point & ProviderScope
-├── theme/
-│   └── app_theme.dart                 # Material Expressive tokens & Obsidian theme
-├── models/
-│   ├── project.dart                   # Project domain model (Categories, Phases, Priority)
-│   ├── task_item.dart                 # Multi-task domain entity (Pending reasons, Dates)
-│   ├── order_item.dart                # PR / PO / Price / ETA order entity
-│   ├── project_log.dart               # Engineering history & log entries
-│   ├── voice_note.dart                # Voice dictation & transcript model
-│   └── bolt_spec.dart                 # Fastener & tap drill database
-├── services/
-│   ├── storage_service.dart           # Offline JSON persistence & manufacturing seeds
-│   └── speech_service.dart            # Speech-to-text workshop engine
-├── providers/
-│   ├── project_provider.dart          # Riverpod state notifier with 1..X priority ranking
-│   ├── tools_provider.dart            # Fastener, electronics & tolerance calculators
-│   └── theme_provider.dart            # Dark/Light theme mode notifier
-├── router/
-│   └── app_router.dart                # Stateful shell route with 6 branches
-└── ui/
-    ├── widgets/
-    │   ├── expressive_card.dart       # Squircle/glowing container cards
-    │   ├── expressive_badge.dart      # Category, priority & status pill badges
-    │   ├── voice_memo_modal.dart      # Pulsing speech dictation modal
-    │   └── responsive_scaffold.dart   # Desktop NavigationRail & Mobile NavigationBar
-    └── screens/
-        ├── dashboard_screen.dart      # Plant operations HUD & top priority feed
-        ├── projects_screen.dart       # Searchable project list with category/phase filters
-        ├── project_detail_screen.dart # Multi-tab tasks, orders, photos, and logs
-        ├── project_edit_screen.dart   # Minimal title-only project creator & editor
-        ├── open_orders_screen.dart    # Dedicated undelivered PR/PO parts tracker
-        ├── workbench_screen.dart      # Engineering calculators & charts
-        ├── voice_notes_screen.dart    # Workshop voice note repository
-        └── settings_screen.dart       # Theme toggle, database JSON export
-```
-
----
-
-## 🚀 Building & Running
-
-### Prerequisites
-- Flutter SDK 3.32.0+
-- Dart SDK 3.8.0+
-- Android Studio / Android SDK (for Android build)
-- Visual Studio with C++ Desktop Workload (for Windows build)
-
-### Run in Debug Mode
-```bash
-flutter pub get
-flutter run -d windows
-# or for Android
-flutter run -d android
-```
-
-### Run Tests & Analyzer
-```bash
-flutter test
-dart analyze lib
-```
-
-### Build Production Releases
-```bash
-# Build Windows Desktop executable
-flutter build windows --release
-
-# Build Android release APK
-flutter build apk --release
-```
+- **Deep Linking**: `url_launcher: ^6.3.2`
+- **Persistence**: Local offline JSON document store
 
 ---
 
