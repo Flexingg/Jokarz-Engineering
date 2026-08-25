@@ -37,7 +37,7 @@ class ResponsiveScaffold extends ConsumerWidget {
               children: [
                 // Custom Expressive Navigation Rail
                 Container(
-                  width: 220,
+                  width: 230,
                   decoration: BoxDecoration(
                     color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
                     border: Border(
@@ -112,31 +112,38 @@ class ResponsiveScaffold extends ConsumerWidget {
                       ),
                       _buildDesktopNavItem(
                         context,
-                        icon: Icons.folder_special_rounded,
-                        label: 'Projects & BOM',
+                        icon: Icons.assignment_outlined,
+                        label: 'Projects',
                         isSelected: navigationShell.currentIndex == 1,
                         onTap: () => _onTapNav(1),
                       ),
                       _buildDesktopNavItem(
                         context,
-                        icon: Icons.handyman_rounded,
-                        label: 'Workbench Tools',
+                        icon: Icons.local_shipping_outlined,
+                        label: 'Open Orders',
                         isSelected: navigationShell.currentIndex == 2,
                         onTap: () => _onTapNav(2),
                       ),
                       _buildDesktopNavItem(
                         context,
-                        icon: Icons.mic_external_on_rounded,
-                        label: 'Voice Lab Notes',
+                        icon: Icons.handyman_rounded,
+                        label: 'Workbench Tools',
                         isSelected: navigationShell.currentIndex == 3,
                         onTap: () => _onTapNav(3),
                       ),
                       _buildDesktopNavItem(
                         context,
-                        icon: Icons.settings_suggest_rounded,
-                        label: 'Workshop Settings',
+                        icon: Icons.mic_external_on_rounded,
+                        label: 'Voice Field Notes',
                         isSelected: navigationShell.currentIndex == 4,
                         onTap: () => _onTapNav(4),
+                      ),
+                      _buildDesktopNavItem(
+                        context,
+                        icon: Icons.settings_suggest_rounded,
+                        label: 'Settings',
+                        isSelected: navigationShell.currentIndex == 5,
+                        onTap: () => _onTapNav(5),
                       ),
 
                       const Spacer(),
@@ -148,33 +155,41 @@ class ResponsiveScaffold extends ConsumerWidget {
                           onPressed: () => VoiceMemoModal.show(context),
                           icon: const Icon(Icons.mic, color: AppTheme.accentAmber, size: 18),
                           label: const Text(
-                            'Quick Voice Memo',
-                            style: TextStyle(color: AppTheme.accentAmber, fontSize: 11),
+                            'Dictate Note',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppTheme.accentAmber),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            minimumSize: const Size.fromHeight(40),
                           ),
                         ),
                       ),
 
-                      // Theme Mode Switcher
+                      // Theme Mode Switch Tile
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              isDark ? 'Dark Mode' : 'Light Mode',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            Expanded(
+                              child: Text(
+                                isDark ? 'Obsidian Theme' : 'Clean Steel',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             IconButton(
                               icon: Icon(
                                 themeMode == ThemeMode.dark
                                     ? Icons.dark_mode_rounded
                                     : Icons.light_mode_rounded,
+                                size: 18,
                                 color: AppTheme.primaryCyan,
-                                size: 20,
                               ),
                               onPressed: () =>
                                   ref.read(themeModeProvider.notifier).toggleTheme(),
@@ -186,7 +201,7 @@ class ResponsiveScaffold extends ConsumerWidget {
                   ),
                 ),
 
-                // Main Content Body
+                // Main Content Area
                 Expanded(child: navigationShell),
               ],
             ),
@@ -196,39 +211,38 @@ class ResponsiveScaffold extends ConsumerWidget {
         // Mobile Layout with Expressive NavigationBar
         return Scaffold(
           body: navigationShell,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => VoiceMemoModal.show(context),
-            backgroundColor: AppTheme.primaryCyan,
-            foregroundColor: Colors.black87,
-            child: const Icon(Icons.mic_rounded),
-          ),
           bottomNavigationBar: NavigationBar(
             selectedIndex: navigationShell.currentIndex,
             onDestinationSelected: _onTapNav,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded),
+                selectedIcon: Icon(Icons.dashboard_rounded, color: AppTheme.primaryCyan),
                 label: 'Dashboard',
               ),
               NavigationDestination(
-                icon: Icon(Icons.folder_outlined),
-                selectedIcon: Icon(Icons.folder_special_rounded),
+                icon: Icon(Icons.assignment_outlined),
+                selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.primaryCyan),
                 label: 'Projects',
               ),
               NavigationDestination(
+                icon: Icon(Icons.local_shipping_outlined),
+                selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.primaryCyan),
+                label: 'Orders',
+              ),
+              NavigationDestination(
                 icon: Icon(Icons.handyman_outlined),
-                selectedIcon: Icon(Icons.handyman_rounded),
-                label: 'Workbench',
+                selectedIcon: Icon(Icons.handyman_rounded, color: AppTheme.primaryCyan),
+                label: 'Tools',
               ),
               NavigationDestination(
                 icon: Icon(Icons.mic_none_rounded),
-                selectedIcon: Icon(Icons.mic_external_on_rounded),
-                label: 'Voice Logs',
+                selectedIcon: Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
+                label: 'Voice',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_suggest_rounded),
+                selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.primaryCyan),
                 label: 'Settings',
               ),
             ],

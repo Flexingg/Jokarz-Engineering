@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/project.dart';
-import '../models/bom_item.dart';
+import '../models/task_item.dart';
+import '../models/order_item.dart';
 import '../models/project_log.dart';
 import '../models/voice_note.dart';
 import '../models/filament_profile.dart';
@@ -84,7 +85,7 @@ class StorageService {
     try {
       final file = await _getFile();
       final data = {
-        'version': 1,
+        'version': 2,
         'updatedAt': DateTime.now().toIso8601String(),
         'projects': projects.map((e) => e.toJson()).toList(),
         'voiceNotes': voiceNotes.map((e) => e.toJson()).toList(),
@@ -96,103 +97,187 @@ class StorageService {
     }
   }
 
-  String exportBOMToCSV(Project project) {
-    final buffer = StringBuffer();
-    buffer.writeln('Part Name,Category,Part Number,Supplier,Quantity,Unit Cost (USD),Total Cost (USD),Purchased');
-    for (final item in project.bom) {
-      buffer.writeln(
-        '"${item.name}","${item.category.label}","${item.partNumber}","${item.supplier}",${item.quantity},${item.unitCost.toStringAsFixed(2)},${item.totalCost.toStringAsFixed(2)},${item.isPurchased ? "YES" : "NO"}',
-      );
-    }
-    buffer.writeln('');
-    buffer.writeln('TOTAL ESTIMATED BOM COST,,,,,,${project.totalBOMCost.toStringAsFixed(2)},');
-    return buffer.toString();
-  }
-
   ({List<Project> projects, List<VoiceNote> voiceNotes, List<FilamentProfile> filaments}) _generateSeedData() {
-    final p1Id = 'proj-seed-1';
-    final p2Id = 'proj-seed-2';
-    final p3Id = 'proj-seed-3';
+    final p1Id = 'proj-mfg-1';
+    final p2Id = 'proj-mfg-2';
+    final p3Id = 'proj-mfg-3';
+    final p4Id = 'proj-mfg-4';
+
+    final t1Id = 'task-101';
+    final t2Id = 'task-102';
+    final t3Id = 'task-103';
 
     final projects = [
       Project(
         id: p1Id,
-        title: 'Jokarz Fastener Grid & Sorting System',
-        description: 'Modular interlocking grid storage for M2-M6 socket head cap screws, hex nuts, and heat-set inserts with chamfered bin lip designs.',
-        category: ProjectCategory.threeDPrinting,
-        status: ProjectStatus.production,
-        priority: ProjectPriority.high,
-        budget: 45.0,
-        tags: ['Gridfinity', '3D Print', 'PETG', 'Workshop Organization'],
-        estimatedPrintHours: 18.5,
-        estimatedFilamentGrams: 420.0,
-        bom: [
-          BOMItem(name: 'Black PETG Filament (1kg)', category: BOMCategory.filament, supplier: 'Polymaker', unitCost: 22.0, quantity: 1, isPurchased: true),
-          BOMItem(name: '6x2mm Neodymium Magnets (100pk)', category: BOMCategory.fastener, supplier: 'Amazon', unitCost: 12.50, quantity: 1, isPurchased: true),
-          BOMItem(name: 'M3 Brass Heat-Set Inserts (50pk)', category: BOMCategory.fastener, supplier: 'CNC Kitchen', unitCost: 8.99, quantity: 1, isPurchased: true),
+        title: 'Line 1 Filler Infeed Starwheel Jamming',
+        description: 'Address frequent bottle jamming and bottle tip-overs on the high-speed infeed transition starwheel. Machine custom UHMW wear plates and upgrade main bearings.',
+        category: ProjectCategory.maintenance,
+        phase: ProjectPhases.installation,
+        priority: 1,
+        cost: 1250.0,
+        machine: 'Line 1 High-Speed Filler',
+        subAssembly: 'Infeed Timing Starwheel',
+        nextPendingTaskId: t1Id,
+        tags: ['Line 1', '621', 'Filler', 'Starwheel', 'Shutdown'],
+        tasks: [
+          TaskItem(
+            id: t1Id,
+            description: 'Machine replacement UHMW starwheel guide plates in machine shop',
+            scheduledDate: DateTime.now().add(const Duration(days: 1)),
+            pendingReason: 'Pending mill downtime',
+            isCompleted: false,
+          ),
+          TaskItem(
+            id: t2Id,
+            description: 'Replace 6205 sealed ball bearings on starwheel drive shaft',
+            isCompleted: true,
+          ),
+          TaskItem(
+            id: t3Id,
+            description: 'Re-align bottle timing screw with proximity sensor trigger',
+            pendingReason: 'Pending line clearance',
+            isCompleted: false,
+          ),
+        ],
+        orders: [
+          OrderItem(
+            pr: 'PR-48901',
+            po: 'PO-9921004',
+            description: 'UHMW 1/2" Sheet 24x48 White Virgin',
+            price: 184.50,
+            delivered: true,
+          ),
+          OrderItem(
+            pr: 'PR-48922',
+            po: 'PO-9921088',
+            description: 'SKF 6205-2RSH Deep Groove Bearings (x4)',
+            price: 78.20,
+            eta: DateTime.now().add(const Duration(days: 2)),
+            delivered: false,
+          ),
         ],
         logs: [
           ProjectLog(
-            title: 'Initial CAD bin prototypes completed',
-            content: 'Modeled 1x1, 1x2, and 2x2 modular bins with 0.4mm tolerance fit. Stackable lip verified.',
-            type: LogType.milestone,
-            timestamp: DateTime.now().subtract(const Duration(days: 3)),
-          ),
-          ProjectLog(
-            title: 'Filament shrinkage & magnet press fit test',
-            content: 'Dialed in magnet pocket bore to 6.10mm. Magnets press fit snugly without glue.',
+            title: 'Worn starwheel pocket inspection',
+            content: 'Found 0.080" excessive play on pocket #3 causing bottle tilt at 450 bpm.',
             type: LogType.inspection,
-            timestamp: DateTime.now().subtract(const Duration(days: 1)),
+            timestamp: DateTime.now().subtract(const Duration(days: 2)),
           ),
         ],
       ),
       Project(
         id: p2Id,
-        title: 'ESP32 Workshop Environmental & Power Node',
-        description: 'Multi-sensor wireless telemetry node monitoring workshop temperature, humidity, particulate dust (PM2.5), and 12V tool battery rail voltage with MQTT / WebSocket reporting.',
-        category: ProjectCategory.electronics,
-        status: ProjectStatus.prototyping,
-        priority: ProjectPriority.critical,
-        budget: 65.0,
-        tags: ['ESP32', 'Sensors', 'BME280', 'PCB', 'Home Assistant'],
-        estimatedPrintHours: 4.2,
-        estimatedFilamentGrams: 85.0,
-        bom: [
-          BOMItem(name: 'ESP32-S3 Dev Board', category: BOMCategory.electronic, supplier: 'DigiKey', unitCost: 6.50, quantity: 2, isPurchased: true),
-          BOMItem(name: 'BME280 Temperature/Humidity/Pressure Sensor', category: BOMCategory.electronic, supplier: 'Adafruit', unitCost: 14.95, quantity: 1, isPurchased: true),
-          BOMItem(name: 'PMS5003 Laser Dust Sensor', category: BOMCategory.electronic, supplier: 'Amazon', unitCost: 24.0, quantity: 1, isPurchased: false),
-          BOMItem(name: 'Buck Converter Module 24V->5V', category: BOMCategory.electronic, supplier: 'Pololu', unitCost: 7.20, quantity: 1, isPurchased: true),
-          BOMItem(name: 'M2.5 x 6mm Standoffs (Pack)', category: BOMCategory.fastener, supplier: 'McMaster-Carr', unitCost: 6.50, quantity: 1, isPurchased: true),
+        title: 'Cell 621 Robot End-Effector Quick-Change Kaizen',
+        description: 'Implement toolless quick-change pneumatic gripper assembly on ABB robot to reduce line changeover downtime from 45 minutes to 4 minutes.',
+        category: ProjectCategory.kaizen,
+        phase: ProjectPhases.validation,
+        priority: 2,
+        cost: 3400.0,
+        machine: 'Cell 621 ABB Robot',
+        subAssembly: 'Pneumatic Gripper Tooling',
+        tags: ['621', 'Kaizen', 'Robotics', 'Pneumatics', 'QuickChange'],
+        tasks: [
+          TaskItem(
+            description: 'Design 6061 aluminum mounting adapter plate in Inventor CAD',
+            isCompleted: true,
+          ),
+          TaskItem(
+            description: 'Wire safety interlock 24V PNP inductive sensor to robot controller',
+            scheduledDate: DateTime.now().add(const Duration(days: 1)),
+            pendingReason: 'Pending electrician review',
+            isCompleted: false,
+          ),
+          TaskItem(
+            description: 'Run 100-cycle dry run repeatability test with payload',
+            scheduledDate: DateTime.now().add(const Duration(days: 3)),
+            pendingReason: 'Pending shift downtime',
+            isCompleted: false,
+          ),
+        ],
+        orders: [
+          OrderItem(
+            pr: 'PR-50112',
+            po: 'PO-9922415',
+            description: 'Schunk Quick-Change Robotic Tool Changer Module QC-040',
+            price: 2850.00,
+            eta: DateTime.now().add(const Duration(days: 4)),
+            delivered: false,
+          ),
+          OrderItem(
+            pr: 'PR-50118',
+            po: 'PO-9922430',
+            description: 'SMC 8mm Quick Exhaust Valves & Push-in Fittings',
+            price: 145.00,
+            delivered: true,
+          ),
         ],
         logs: [
           ProjectLog(
-            title: 'Breadboard wiring verified',
-            content: 'I2C communication established at 400kHz. BME280 sending clean telemetry to local broker.',
+            title: 'Adapter plate machined and anodized',
+            content: 'Fits robot wrist bolt circle precisely with 0.001" locating dowel pin fit.',
             type: LogType.update,
-            timestamp: DateTime.now().subtract(const Duration(days: 4)),
+            timestamp: DateTime.now().subtract(const Duration(days: 1)),
           ),
         ],
       ),
       Project(
         id: p3Id,
-        title: 'Precision Quick-Change Lathe Toolpost Height Gauge',
-        description: 'Machined aluminum reference fixture with digital dial indicator for rapid on-center lathe tooling setup.',
-        category: ProjectCategory.mechanical,
-        status: ProjectStatus.planning,
-        priority: ProjectPriority.medium,
-        budget: 35.0,
-        tags: ['Machining', 'Lathe', 'Metrology', '6061-T6'],
-        bom: [
-          BOMItem(name: '6061-T6 Aluminum Bar 1" x 2" x 6"', category: BOMCategory.rawMaterial, supplier: 'Midwest Steel', unitCost: 14.50, quantity: 1, isPurchased: false),
-          BOMItem(name: 'Digital Dial Indicator 0.0005" Res', category: BOMCategory.tool, supplier: 'Shars Tool', unitCost: 28.0, quantity: 1, isPurchased: false),
-          BOMItem(name: '1/4"-20 Brass Tipped Thumbscrew', category: BOMCategory.fastener, supplier: 'McMaster-Carr', unitCost: 4.80, quantity: 2, isPurchased: false),
+        title: 'Packaging Gantry Overhead Servo Overhaul',
+        description: 'Upgrade obsolete pneumatic pusher cylinder on Case Packer 4 with high-speed linear belt-drive servo actuator for smooth deceleration.',
+        category: ProjectCategory.capital,
+        phase: ProjectPhases.idea,
+        priority: 3,
+        cost: 18500.0,
+        machine: 'Packaging Gantry 4',
+        subAssembly: 'Z-Axis Linear Actuator',
+        tags: ['100', 'Packaging', 'Servo', 'Capital', 'Actuator'],
+        tasks: [
+          TaskItem(
+            description: 'Obtain vendor quotes and torque calculations from Festo and Rockwell',
+            pendingReason: 'Pending vendor email quote',
+            isCompleted: false,
+          ),
+          TaskItem(
+            description: 'Submit Capital Expenditure (CapEx) approval form to plant management',
+            isCompleted: false,
+          ),
         ],
-        logs: [
-          ProjectLog(
-            title: 'Tolerance and clearance specs drafted',
-            content: 'Establishing base parallelism to within 0.0005 inches. V-groove angle chosen at 90 degrees.',
-            type: LogType.update,
-            timestamp: DateTime.now().subtract(const Duration(days: 2)),
+        orders: [],
+      ),
+      Project(
+        id: p4Id,
+        title: 'Stamping Press 2 Hydraulic Seal Kit Rebuild',
+        description: 'Replaced leaking rod seals and piston wipers on main 50-ton hydraulic clamp manifold block.',
+        category: ProjectCategory.maintenance,
+        phase: ProjectPhases.complete,
+        completedAt: DateTime.now().subtract(const Duration(days: 2)),
+        priority: 1,
+        cost: 620.0,
+        machine: 'Stamping Press 2',
+        subAssembly: 'Hydraulic Manifold Block',
+        tags: ['Hydraulics', 'Stamping', 'Seals', 'Maintenance', 'Shutdown'],
+        tasks: [
+          TaskItem(
+            description: 'Lockout/tagout press and bleed accumulator pressure to 0 psi',
+            isCompleted: true,
+          ),
+          TaskItem(
+            description: 'Replace polyurethane rod seals and O-rings with viton backup rings',
+            isCompleted: true,
+          ),
+          TaskItem(
+            description: 'Pressure test clamp cylinder at 2500 psi for 30 minutes',
+            isCompleted: true,
+          ),
+        ],
+        orders: [
+          OrderItem(
+            pr: 'PR-47800',
+            po: 'PO-9918820',
+            description: 'Parker Cylinder 3.25" Bore Seal Overhaul Kit',
+            price: 310.00,
+            delivered: true,
           ),
         ],
       ),
@@ -200,16 +285,16 @@ class StorageService {
 
     final voiceNotes = [
       VoiceNote(
-        title: 'Filament Drying & Speed Note',
-        transcript: 'Remember to dry the CF-PETG at 65C for 6 hours prior to printing the structural brackets to prevent layer delamination.',
-        durationSeconds: 14,
+        title: 'Line 1 Starwheel Measurement',
+        transcript: 'Measured bottle pocket clearance on the infeed starwheel. Bore is 6.10mm on guide pins, but the wear plate has 2mm grooving from glass bottle friction.',
+        durationSeconds: 16,
         projectId: p1Id,
         timestamp: DateTime.now().subtract(const Duration(days: 2)),
       ),
       VoiceNote(
-        title: 'Sensor I2C Pullup Check',
-        transcript: 'Added 4.7k ohm pullup resistors on SDA and SCL lines for the ESP32 breadboard rig to stabilize noise from the dust sensor fan motor.',
-        durationSeconds: 22,
+        title: 'Cell 621 Robot Sensor Wiring',
+        transcript: 'Need to make sure electrician uses shielded 4-conductor M8 sensor cable to prevent electrical noise from the robot servo drives.',
+        durationSeconds: 19,
         projectId: p2Id,
         timestamp: DateTime.now().subtract(const Duration(days: 1)),
       ),

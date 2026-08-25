@@ -1,41 +1,38 @@
 import 'package:uuid/uuid.dart';
-import 'bom_item.dart';
+import 'task_item.dart';
+import 'order_item.dart';
 import 'project_log.dart';
 
 enum ProjectCategory {
-  threeDPrinting('3D Printing & CAD'),
-  electronics('Electronics & Circuits'),
-  mechanical('Mechanical & Machining'),
-  embedded('Software & Embedded'),
-  robotics('Robotics & Automation'),
-  workshop('Tooling & Workshop'),
-  general('General Engineering');
+  maintenance('Maintenance'),
+  kaizen('Kaizen'),
+  capital('Capital');
 
   final String label;
   const ProjectCategory(this.label);
 }
 
-enum ProjectStatus {
-  idea('💡 Concept / Idea'),
-  planning('📐 Planning & CAD'),
-  prototyping('⚡ Prototyping'),
-  testing('🔬 Testing & Validation'),
-  production('🏭 Production Ready'),
-  complete('✅ Completed'),
-  archived('📦 Archived');
+class ProjectPhases {
+  static const String idea = 'Idea';
+  static const String pending = 'Pending';
+  static const String installation = 'Installation';
+  static const String validation = 'Validation';
+  static const String complete = 'Complete';
+  static const String cancelled = 'Cancelled';
 
-  final String label;
-  const ProjectStatus(this.label);
-}
+  static const List<String> standardPhases = [
+    idea,
+    pending,
+    installation,
+    validation,
+    complete,
+    cancelled,
+  ];
 
-enum ProjectPriority {
-  low('Low'),
-  medium('Medium'),
-  high('High'),
-  critical('Critical 🔥');
-
-  final String label;
-  const ProjectPriority(this.label);
+  static bool isTerminal(String phase) {
+    final lower = phase.trim().toLowerCase();
+    return lower == 'complete' || lower == 'completed' || lower == 'cancelled' || lower == 'canceled';
+  }
 }
 
 class Project {
@@ -43,82 +40,119 @@ class Project {
   final String title;
   final String description;
   final ProjectCategory category;
-  final ProjectStatus status;
-  final ProjectPriority priority;
-  final double budget;
+  final String phase;
+  final DateTime? completedAt;
+  final int priority; // 1..X for active, or frozen lifetime highest priority
+  final double cost;
+  final String machine;
+  final String subAssembly;
+  final String? nextPendingTaskId;
   final List<String> tags;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final List<BOMItem> bom;
+  final List<TaskItem> tasks;
+  final List<OrderItem> orders;
   final List<ProjectLog> logs;
   final List<String> photoPaths;
-  final double estimatedPrintHours;
-  final double estimatedFilamentGrams;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   Project({
     String? id,
     required this.title,
     this.description = '',
-    this.category = ProjectCategory.threeDPrinting,
-    this.status = ProjectStatus.planning,
-    this.priority = ProjectPriority.medium,
-    this.budget = 0.0,
+    this.category = ProjectCategory.maintenance,
+    this.phase = ProjectPhases.idea,
+    this.completedAt,
+    this.priority = 1,
+    this.cost = 0.0,
+    this.machine = '',
+    this.subAssembly = '',
+    this.nextPendingTaskId,
     List<String>? tags,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    List<BOMItem>? bom,
+    List<TaskItem>? tasks,
+    List<OrderItem>? orders,
     List<ProjectLog>? logs,
     List<String>? photoPaths,
-    this.estimatedPrintHours = 0.0,
-    this.estimatedFilamentGrams = 0.0,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   })  : id = id ?? const Uuid().v4(),
         tags = tags ?? [],
-        createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now(),
-        bom = bom ?? [],
+        tasks = tasks ?? [],
+        orders = orders ?? [],
         logs = logs ?? [],
-        photoPaths = photoPaths ?? [];
+        photoPaths = photoPaths ?? [],
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
 
-  double get totalBOMCost =>
-      bom.fold(0.0, (previousValue, item) => previousValue + item.totalCost);
+  bool get isCompletedOrCancelled => ProjectPhases.isTerminal(phase);
 
-  int get purchasedItemCount => bom.where((i) => i.isPurchased).length;
+  double get totalOrdersCost =>
+      orders.fold(0.0, (prev, o) => prev + o.price);
 
-  double get bomCompletionRatio =>
-      bom.isEmpty ? 0.0 : purchasedItemCount / bom.length;
+  int get undeliveredOrdersCount =>
+      orders.where((o) => !o.delivered).length;
+
+  int get completedTasksCount =>
+      tasks.where((t) => t.isCompleted).length;
+
+  TaskItem? get nextPendingTask {
+    if (nextPendingTaskId != null) {
+      try {
+        return tasks.firstWhere((t) => t.id == nextPendingTaskId);
+      } catch (_) {}
+    }
+    // Fallback to first incomplete task with a pending reason or first incomplete task
+    try {
+      return tasks.firstWhere((t) => !t.isCompleted && t.pendingReason.isNotEmpty);
+    } catch (_) {
+      try {
+        return tasks.firstWhere((t) => !t.isCompleted);
+      } catch (_) {
+        return null;
+      }
+    }
+  }
 
   Project copyWith({
     String? title,
     String? description,
     ProjectCategory? category,
-    ProjectStatus? status,
-    ProjectPriority? priority,
-    double? budget,
+    String? phase,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
+    int? priority,
+    double? cost,
+    String? machine,
+    String? subAssembly,
+    String? nextPendingTaskId,
+    bool clearNextPendingTask = false,
     List<String>? tags,
-    DateTime? updatedAt,
-    List<BOMItem>? bom,
+    List<TaskItem>? tasks,
+    List<OrderItem>? orders,
     List<ProjectLog>? logs,
     List<String>? photoPaths,
-    double? estimatedPrintHours,
-    double? estimatedFilamentGrams,
+    DateTime? updatedAt,
   }) {
     return Project(
       id: id,
       title: title ?? this.title,
       description: description ?? this.description,
       category: category ?? this.category,
-      status: status ?? this.status,
+      phase: phase ?? this.phase,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       priority: priority ?? this.priority,
-      budget: budget ?? this.budget,
+      cost: cost ?? this.cost,
+      machine: machine ?? this.machine,
+      subAssembly: subAssembly ?? this.subAssembly,
+      nextPendingTaskId: clearNextPendingTask
+          ? null
+          : (nextPendingTaskId ?? this.nextPendingTaskId),
       tags: tags ?? this.tags,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
-      bom: bom ?? this.bom,
+      tasks: tasks ?? this.tasks,
+      orders: orders ?? this.orders,
       logs: logs ?? this.logs,
       photoPaths: photoPaths ?? this.photoPaths,
-      estimatedPrintHours: estimatedPrintHours ?? this.estimatedPrintHours,
-      estimatedFilamentGrams:
-          estimatedFilamentGrams ?? this.estimatedFilamentGrams,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 
@@ -128,17 +162,20 @@ class Project {
       'title': title,
       'description': description,
       'category': category.name,
-      'status': status.name,
-      'priority': priority.name,
-      'budget': budget,
+      'phase': phase,
+      'completedAt': completedAt?.toIso8601String(),
+      'priority': priority,
+      'cost': cost,
+      'machine': machine,
+      'subAssembly': subAssembly,
+      'nextPendingTaskId': nextPendingTaskId,
       'tags': tags,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'bom': bom.map((e) => e.toJson()).toList(),
+      'tasks': tasks.map((e) => e.toJson()).toList(),
+      'orders': orders.map((e) => e.toJson()).toList(),
       'logs': logs.map((e) => e.toJson()).toList(),
       'photoPaths': photoPaths,
-      'estimatedPrintHours': estimatedPrintHours,
-      'estimatedFilamentGrams': estimatedFilamentGrams,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
@@ -149,29 +186,28 @@ class Project {
       description: json['description'] as String? ?? '',
       category: ProjectCategory.values.firstWhere(
         (e) => e.name == json['category'],
-        orElse: () => ProjectCategory.general,
+        orElse: () => ProjectCategory.maintenance,
       ),
-      status: ProjectStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => ProjectStatus.idea,
-      ),
-      priority: ProjectPriority.values.firstWhere(
-        (e) => e.name == json['priority'],
-        orElse: () => ProjectPriority.medium,
-      ),
-      budget: (json['budget'] as num?)?.toDouble() ?? 0.0,
+      phase: json['phase'] as String? ?? (json['status'] as String? ?? ProjectPhases.idea),
+      completedAt: json['completedAt'] != null
+          ? DateTime.tryParse(json['completedAt'] as String)
+          : null,
+      priority: (json['priority'] as num?)?.toInt() ?? 1,
+      cost: (json['cost'] as num?)?.toDouble() ??
+          ((json['budget'] as num?)?.toDouble() ?? 0.0),
+      machine: json['machine'] as String? ?? '',
+      subAssembly: json['subAssembly'] as String? ?? '',
+      nextPendingTaskId: json['nextPendingTaskId'] as String?,
       tags: (json['tags'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      bom: (json['bom'] as List<dynamic>?)
-              ?.map((e) => BOMItem.fromJson(e as Map<String, dynamic>))
+      tasks: (json['tasks'] as List<dynamic>?)
+              ?.map((e) => TaskItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      orders: (json['orders'] as List<dynamic>?)
+              ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       logs: (json['logs'] as List<dynamic>?)
@@ -182,10 +218,12 @@ class Project {
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      estimatedPrintHours:
-          (json['estimatedPrintHours'] as num?)?.toDouble() ?? 0.0,
-      estimatedFilamentGrams:
-          (json['estimatedFilamentGrams'] as num?)?.toDouble() ?? 0.0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 }

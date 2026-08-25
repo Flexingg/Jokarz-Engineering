@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
-import '../../models/bom_item.dart';
+import '../../models/task_item.dart';
+import '../../models/order_item.dart';
 import '../../models/project_log.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
@@ -66,6 +67,266 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     }
   }
 
+  void _showAddTaskDialog(BuildContext context, {TaskItem? existingTask}) {
+    final descCtrl = TextEditingController(text: existingTask?.description ?? '');
+    final pendingCtrl = TextEditingController(text: existingTask?.pendingReason ?? '');
+    DateTime? scheduled = existingTask?.scheduledDate;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final dateText = scheduled != null
+              ? DateFormat('MMM d, y').format(scheduled!)
+              : 'No Date Scheduled';
+
+          return AlertDialog(
+            title: Text(existingTask == null ? 'Add Project Task' : 'Edit Task'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Task Description *',
+                      hintText: 'e.g. Machine UHMW starwheel guide plates',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: pendingCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Pending Value / Reason',
+                      hintText: 'e.g. Pending parts, Pending downtime, Pending email',
+                      prefixIcon: Icon(Icons.hourglass_empty_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.primaryCyan),
+                    title: Text(
+                      dateText,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text('Scheduled Target Date', style: TextStyle(fontSize: 11)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (scheduled != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              setDialogState(() => scheduled = null);
+                            },
+                          ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: scheduled ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setDialogState(() => scheduled = picked);
+                            }
+                          },
+                          child: const Text('Pick Date'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (descCtrl.text.trim().isEmpty) return;
+                  if (existingTask != null) {
+                    final updated = existingTask.copyWith(
+                      description: descCtrl.text.trim(),
+                      pendingReason: pendingCtrl.text.trim(),
+                      scheduledDate: scheduled,
+                      clearScheduledDate: scheduled == null,
+                    );
+                    await ref
+                        .read(projectProvider.notifier)
+                        .updateTask(widget.projectId, updated);
+                  } else {
+                    final newTask = TaskItem(
+                      description: descCtrl.text.trim(),
+                      pendingReason: pendingCtrl.text.trim(),
+                      scheduledDate: scheduled,
+                    );
+                    await ref
+                        .read(projectProvider.notifier)
+                        .addTask(widget.projectId, newTask);
+                  }
+                  if (context.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Save Task'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddOrderDialog(BuildContext context, {OrderItem? existingOrder}) {
+    final prCtrl = TextEditingController(text: existingOrder?.pr ?? '');
+    final poCtrl = TextEditingController(text: existingOrder?.po ?? '');
+    final descCtrl = TextEditingController(text: existingOrder?.description ?? '');
+    final priceCtrl = TextEditingController(
+      text: existingOrder != null && existingOrder.price > 0
+          ? existingOrder.price.toStringAsFixed(2)
+          : '',
+    );
+    DateTime? eta = existingOrder?.eta;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final etaText = eta != null
+              ? DateFormat('MMM d, y').format(eta!)
+              : 'Unscheduled ETA';
+
+          return AlertDialog(
+            title: Text(existingOrder == null ? 'Add Order / Requisition' : 'Edit Order'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: prCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'PR (Requisition)',
+                            hintText: 'PR-48901',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: poCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'PO (Purchase Order)',
+                            hintText: 'PO-9921004',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Order Description',
+                      hintText: 'e.g. SKF 6205 Bearings, UHMW Sheet',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: priceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Price (\$ USD)',
+                      prefixIcon: Icon(Icons.attach_money_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.local_shipping_outlined, color: AppTheme.primaryCyan),
+                    title: Text(
+                      etaText,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text('Estimated Delivery Date (ETA)', style: TextStyle(fontSize: 11)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (eta != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              setDialogState(() => eta = null);
+                            },
+                          ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: eta ?? DateTime.now().add(const Duration(days: 3)),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setDialogState(() => eta = picked);
+                            }
+                          },
+                          child: const Text('Set ETA'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+                  if (existingOrder != null) {
+                    final updated = existingOrder.copyWith(
+                      pr: prCtrl.text.trim(),
+                      po: poCtrl.text.trim(),
+                      description: descCtrl.text.trim(),
+                      price: price,
+                      eta: eta,
+                      clearEta: eta == null,
+                    );
+                    await ref
+                        .read(projectProvider.notifier)
+                        .updateOrder(widget.projectId, updated);
+                  } else {
+                    final newOrder = OrderItem(
+                      pr: prCtrl.text.trim(),
+                      po: poCtrl.text.trim(),
+                      description: descCtrl.text.trim(),
+                      price: price,
+                      eta: eta,
+                    );
+                    await ref
+                        .read(projectProvider.notifier)
+                        .addOrder(widget.projectId, newOrder);
+                  }
+                  if (context.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Save Order'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showAddLogDialog(BuildContext context) {
     final titleCtrl = TextEditingController();
     final contentCtrl = TextEditingController();
@@ -85,7 +346,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     controller: titleCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Log Title',
-                      hintText: 'e.g. Tolerances measured on test print',
+                      hintText: 'e.g. Tolerances measured on guide rails',
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -109,8 +370,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     controller: contentCtrl,
                     maxLines: 4,
                     decoration: const InputDecoration(
-                      labelText: 'Notes & Findings',
-                      hintText: 'Enter observation, fit adjustments, sensor readings...',
+                      labelText: 'Notes & Observations',
+                      hintText: 'Record root cause, measurement findings, alignment data...',
                     ),
                   ),
                 ],
@@ -143,124 +404,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     );
   }
 
-  void _showAddBOMDialog(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final partNumCtrl = TextEditingController();
-    final supplierCtrl = TextEditingController();
-    final costCtrl = TextEditingController(text: '0.00');
-    final qtyCtrl = TextEditingController(text: '1');
-    final urlCtrl = TextEditingController();
-    BOMCategory category = BOMCategory.other;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          return AlertDialog(
-            title: const Text('Add BOM Component'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Part / Component Name',
-                      hintText: 'e.g. M3x12 Socket Head Screw',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<BOMCategory>(
-                    value: category,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: BOMCategory.values
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => category = val);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: costCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Unit Cost (\$)'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: qtyCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'Quantity'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: supplierCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Supplier',
-                      hintText: 'e.g. McMaster, DigiKey, Amazon',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: partNumCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Part Number / SKU',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (nameCtrl.text.trim().isEmpty) return;
-                  final item = BOMItem(
-                    name: nameCtrl.text.trim(),
-                    category: category,
-                    unitCost: double.tryParse(costCtrl.text.trim()) ?? 0.0,
-                    quantity: int.tryParse(qtyCtrl.text.trim()) ?? 1,
-                    supplier: supplierCtrl.text.trim(),
-                    partNumber: partNumCtrl.text.trim(),
-                    linkUrl: urlCtrl.text.trim(),
-                  );
-                  await ref
-                      .read(projectProvider.notifier)
-                      .addBOMItem(widget.projectId, item);
-                  if (context.mounted) Navigator.pop(ctx);
-                },
-                child: const Text('Add Part'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final project = ref.read(projectProvider.notifier).getProjectById(widget.projectId);
+    final project =
+        ref.read(projectProvider.notifier).getProjectById(widget.projectId);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final dateFormat = DateFormat('MMM d, y • h:mm a');
 
     if (project == null) {
       return Scaffold(
@@ -271,6 +422,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       );
     }
 
+    final isTerminal = project.isCompletedOrCancelled;
+    final nextTask = project.nextPendingTask;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -280,7 +434,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.mic, color: AppTheme.accentAmber),
-            tooltip: 'Dictate Note for Project',
+            tooltip: 'Dictate Field Log for Project',
             onPressed: () => VoiceMemoModal.show(
               context,
               preselectedProjectId: project.id,
@@ -324,157 +478,525 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           controller: _tabController,
           indicatorColor: AppTheme.primaryCyan,
           tabs: [
-            const Tab(icon: Icon(Icons.info_outline), text: 'Overview & CAD'),
             Tab(
-              icon: const Icon(Icons.receipt_long_outlined),
-              text: 'BOM (${project.bom.length})',
+              icon: const Icon(Icons.checklist_rounded),
+              text: 'Tasks (${project.completedTasksCount}/${project.tasks.length})',
+            ),
+            Tab(
+              icon: const Icon(Icons.local_shipping_outlined),
+              text: 'Orders (${project.orders.length})',
             ),
             Tab(
               icon: const Icon(Icons.history_edu_outlined),
-              text: 'Logs (${project.logs.length})',
+              text: 'Logs & Photos (${project.logs.length})',
             ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildOverviewTab(context, project, currency, isDark),
-          _buildBOMTab(context, project, currency, isDark),
-          _buildLogsTab(context, project, isDark),
+          // Project Meta Info Header Card
+          _buildProjectHeader(context, project, currency, dateFormat, isDark, isTerminal),
+
+          // Next Pending Task Banner
+          if (nextTask != null && !isTerminal)
+            _buildNextPendingBanner(context, nextTask, isDark),
+
+          // Tabs
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTasksTab(context, project, isDark),
+                _buildOrdersTab(context, project, currency, isDark),
+                _buildLogsAndPhotosTab(context, project, isDark),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildOverviewTab(
+  Widget _buildProjectHeader(
+    BuildContext context,
+    Project project,
+    NumberFormat currency,
+    DateFormat dateFormat,
+    bool isDark,
+    bool isTerminal,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Badges Row
+          Row(
+            children: [
+              // Category
+              ExpressiveBadge(
+                label: project.category.label,
+                color: AppTheme.primaryCyan,
+                fontSize: 11,
+              ),
+              const SizedBox(width: 8),
+
+              // Priority
+              if (isTerminal)
+                ExpressiveBadge(
+                  label: 'Lifetime #${project.priority} (Closed)',
+                  color: Colors.grey,
+                  fontSize: 11,
+                )
+              else
+                ExpressiveBadge(
+                  label: 'Priority #${project.priority}',
+                  color: project.priority == 1
+                      ? AppTheme.accentCoral
+                      : (project.priority <= 3
+                          ? AppTheme.accentAmber
+                          : AppTheme.primaryCyan),
+                  fontSize: 11,
+                ),
+              const SizedBox(width: 8),
+
+              // Phase
+              ExpressiveBadge(
+                label: project.phase,
+                color: project.phase.toLowerCase() == 'complete'
+                    ? AppTheme.accentEmerald
+                    : (project.phase.toLowerCase() == 'cancelled'
+                        ? AppTheme.accentCoral
+                        : AppTheme.accentAmber),
+                fontSize: 11,
+              ),
+
+              const Spacer(),
+
+              // Cost
+              if (project.cost > 0)
+                Text(
+                  'Cost: ${currency.format(project.cost)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+            ],
+          ),
+
+          // Machine & Sub-Assembly Row
+          if (project.machine.isNotEmpty || project.subAssembly.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (project.machine.isNotEmpty) ...[
+                  const Icon(Icons.precision_manufacturing_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    project.machine,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+                if (project.machine.isNotEmpty && project.subAssembly.isNotEmpty)
+                  const Text('  ▸  ', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                if (project.subAssembly.isNotEmpty) ...[
+                  const Icon(Icons.account_tree_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    project.subAssembly,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ],
+            ),
+          ],
+
+          // Completed at indicator
+          if (project.completedAt != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.check_circle_outline, size: 14, color: AppTheme.accentEmerald),
+                const SizedBox(width: 4),
+                Text(
+                  'Completed at: ${dateFormat.format(project.completedAt!)}',
+                  style: const TextStyle(fontSize: 11, color: AppTheme.accentEmerald, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+
+          // Description & Tags
+          if (project.description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              project.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNextPendingBanner(
+    BuildContext context,
+    TaskItem task,
+    bool isDark,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppTheme.accentAmber.withValues(alpha: 0.15),
+      child: Row(
+        children: [
+          const Icon(Icons.pending_actions_rounded, size: 18, color: AppTheme.accentAmber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                children: [
+                  const TextSpan(
+                    text: 'NEXT PENDING: ',
+                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.accentAmber),
+                  ),
+                  TextSpan(
+                    text: task.description,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (task.pendingReason.isNotEmpty)
+                    TextSpan(
+                      text: ' (${task.pendingReason})',
+                      style: const TextStyle(fontStyle: FontStyle.italic, color: AppTheme.accentAmber),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTasksTab(BuildContext context, Project project, bool isDark) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tasks (${project.completedTasksCount} of ${project.tasks.length} Complete)',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddTaskDialog(context),
+                icon: const Icon(Icons.add_task_rounded, size: 16),
+                label: const Text('Add Task'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: project.tasks.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.checklist_rounded, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No tasks created for this project yet',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddTaskDialog(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add First Task'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  itemCount: project.tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = project.tasks[index];
+                    final dateText = task.scheduledDate != null
+                        ? DateFormat('MMM d, y').format(task.scheduledDate!)
+                        : null;
+
+                    return ExpressiveCard(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Checkbox(
+                            value: task.isCompleted,
+                            activeColor: AppTheme.accentEmerald,
+                            onChanged: (_) {
+                              ref
+                                  .read(projectProvider.notifier)
+                                  .toggleTaskCompleted(project.id, task.id);
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  task.description,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    if (task.pendingReason.isNotEmpty)
+                                      ExpressiveBadge(
+                                        label: task.pendingReason,
+                                        icon: Icons.hourglass_empty_rounded,
+                                        color: AppTheme.accentAmber,
+                                        fontSize: 10,
+                                      ),
+                                    if (dateText != null)
+                                      ExpressiveBadge(
+                                        label: 'Scheduled: $dateText',
+                                        icon: Icons.calendar_today_rounded,
+                                        color: AppTheme.primaryCyan,
+                                        fontSize: 10,
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                            onPressed: () => _showAddTaskDialog(context, existingTask: task),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                            onPressed: () => ref
+                                .read(projectProvider.notifier)
+                                .deleteTask(project.id, task.id),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrdersTab(
     BuildContext context,
     Project project,
     NumberFormat currency,
     bool isDark,
   ) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Orders: ${currency.format(project.totalOrdersCost)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  Text(
+                    '${project.undeliveredOrdersCount} Undelivered',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddOrderDialog(context),
+                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                label: const Text('Add Order'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: project.orders.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.local_shipping_outlined, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No purchase orders created for this build',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddOrderDialog(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add First Order'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  itemCount: project.orders.length,
+                  itemBuilder: (context, index) {
+                    final order = project.orders[index];
+                    final etaText = order.eta != null
+                        ? DateFormat('MMM d, y').format(order.eta!)
+                        : 'Unscheduled ETA';
+
+                    return ExpressiveCard(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: order.delivered,
+                            activeColor: AppTheme.accentEmerald,
+                            onChanged: (_) {
+                              ref
+                                  .read(projectProvider.notifier)
+                                  .toggleOrderDelivered(project.id, order.id);
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (order.po.isNotEmpty)
+                                      ExpressiveBadge(
+                                        label: 'PO: ${order.po}',
+                                        color: AppTheme.primaryCyan,
+                                        fontSize: 10,
+                                      ),
+                                    if (order.pr.isNotEmpty) ...[
+                                      const SizedBox(width: 4),
+                                      ExpressiveBadge(
+                                        label: 'PR: ${order.pr}',
+                                        color: AppTheme.primaryBlue,
+                                        isOutlined: true,
+                                        fontSize: 10,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  order.description,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    decoration: order.delivered
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'ETA: $etaText',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                currency.format(order.price),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                order.delivered ? 'Delivered' : 'Pending',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: order.delivered
+                                      ? AppTheme.accentEmerald
+                                      : AppTheme.accentAmber,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                            onPressed: () => _showAddOrderDialog(context, existingOrder: order),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                            onPressed: () => ref
+                                .read(projectProvider.notifier)
+                                .deleteOrder(project.id, order.id),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogsAndPhotosTab(BuildContext context, Project project, bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badges & Status Row
-          Row(
-            children: [
-              ExpressiveBadge(
-                label: project.category.label,
-                color: AppTheme.primaryCyan,
-                fontSize: 12,
-              ),
-              const SizedBox(width: 8),
-              ExpressiveBadge(
-                label: project.status.label,
-                color: project.status == ProjectStatus.complete
-                    ? AppTheme.accentEmerald
-                    : AppTheme.accentAmber,
-                fontSize: 12,
-              ),
-              const SizedBox(width: 8),
-              ExpressiveBadge(
-                label: 'Priority: ${project.priority.label}',
-                color: project.priority == ProjectPriority.critical
-                    ? AppTheme.accentCoral
-                    : AppTheme.primaryBlue,
-                fontSize: 12,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Description Card
-          ExpressiveCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Project Scope & Specifications',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  project.description.isEmpty
-                      ? 'No description provided.'
-                      : project.description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                  ),
-                ),
-                if (project.tags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: project.tags
-                        .map(
-                          (t) => Chip(
-                            label: Text('#$t', style: const TextStyle(fontSize: 11)),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 3D Printing & Budget Estimations Card
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 600;
-              return GridView.count(
-                crossAxisCount: isWide ? 3 : 1,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isWide ? 2.0 : 3.0,
-                children: [
-                  _buildMetricTile(
-                    title: 'Total BOM Cost',
-                    value: currency.format(project.totalBOMCost),
-                    subtitle: 'Budget: ${currency.format(project.budget)}',
-                    icon: Icons.attach_money_rounded,
-                    color: AppTheme.accentEmerald,
-                    isDark: isDark,
-                  ),
-                  _buildMetricTile(
-                    title: 'Est. Print Time',
-                    value: '${project.estimatedPrintHours.toStringAsFixed(1)} hrs',
-                    subtitle: 'Machine Run Time',
-                    icon: Icons.timer_outlined,
-                    color: AppTheme.primaryCyan,
-                    isDark: isDark,
-                  ),
-                  _buildMetricTile(
-                    title: 'Filament Usage',
-                    value: '${project.estimatedFilamentGrams.toStringAsFixed(0)} g',
-                    subtitle: 'Material Weight',
-                    icon: Icons.scale_outlined,
-                    color: AppTheme.accentPurple,
-                    isDark: isDark,
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-
-          // Attached Photos & Inspections Section
+          // Photo Inspections Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Photo Inspections & Blueprints',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Inspection Photos & Schematics',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               TextButton.icon(
                 onPressed: _pickImage,
@@ -489,21 +1011,13 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ExpressiveCard(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.camera_alt_outlined, size: 36, color: Colors.grey),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'No inspection photos attached yet',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.upload_file, size: 16),
-                        label: const Text('Upload Photo / Schematic'),
-                      ),
+                      const Icon(Icons.camera_alt_outlined, size: 24, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      const Text('No photos attached yet. Tap Attach Photo to upload.'),
                     ],
                   ),
                 ),
@@ -511,7 +1025,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             )
           else
             SizedBox(
-              height: 160,
+              height: 140,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: project.photoPaths.length,
@@ -519,7 +1033,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   final path = project.photoPaths[idx];
                   return Container(
                     margin: const EdgeInsets.only(right: 12),
-                    width: 160,
+                    width: 140,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
@@ -538,376 +1052,97 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 },
               ),
             ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 24),
 
-  Widget _buildBOMTab(
-    BuildContext context,
-    Project project,
-    NumberFormat currency,
-    bool isDark,
-  ) {
-    return Column(
-      children: [
-        // BOM Sourcing Bar & Export Action
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
-            border: Border(
-              bottom: BorderSide(
-                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Procurement: ${project.purchasedItemCount} of ${project.bom.length} items (${(project.bomCompletionRatio * 100).toStringAsFixed(0)}%)',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Total: ${currency.format(project.totalBOMCost)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.download_rounded, color: AppTheme.primaryCyan),
-                tooltip: 'Export BOM CSV',
-                onPressed: () {
-                  final csv = ref.read(storageServiceProvider).exportBOMToCSV(project);
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Exported Bill of Materials CSV'),
-                      content: SingleChildScrollView(
-                        child: SelectableText(
-                          csv,
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                        ),
-                      ),
-                      actions: [
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddBOMDialog(context),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Part'),
-              ),
-            ],
-          ),
-        ),
-
-        // BOM Items List
-        Expanded(
-          child: project.bom.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No components added to BOM yet',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () => _showAddBOMDialog(context),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add First Part'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: project.bom.length,
-                  itemBuilder: (context, index) {
-                    final item = project.bom[index];
-                    return ExpressiveCard(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: item.isPurchased,
-                            activeColor: AppTheme.accentEmerald,
-                            onChanged: (_) {
-                              ref
-                                  .read(projectProvider.notifier)
-                                  .toggleBOMItemPurchased(project.id, item.id);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    decoration: item.isPurchased
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    ExpressiveBadge(
-                                      label: item.category.label,
-                                      color: AppTheme.primaryCyan,
-                                      fontSize: 9,
-                                    ),
-                                    if (item.supplier.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '• ${item.supplier}',
-                                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                      ),
-                                    ],
-                                    if (item.partNumber.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '#${item.partNumber}',
-                                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                currency.format(item.totalCost),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '${item.quantity} × ${currency.format(item.unitCost)}',
-                                style: const TextStyle(fontSize: 10, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                            onPressed: () {
-                              ref
-                                  .read(projectProvider.notifier)
-                                  .deleteBOMItem(project.id, item.id);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLogsTab(BuildContext context, Project project, bool isDark) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
-            border: Border(
-              bottom: BorderSide(
-                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-              ),
-            ),
-          ),
-          child: Row(
+          // Engineering Field Logs
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${project.logs.length} Log Entries Recorded',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                'Engineering Logs (${project.logs.length})',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => VoiceMemoModal.show(
-                      context,
-                      preselectedProjectId: project.id,
-                    ),
-                    icon: const Icon(Icons.mic, color: AppTheme.accentAmber, size: 16),
-                    label: const Text(
-                      'Voice Dictation',
-                      style: TextStyle(color: AppTheme.accentAmber, fontSize: 11),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddLogDialog(context),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Entry'),
-                  ),
-                ],
+              ElevatedButton.icon(
+                onPressed: () => _showAddLogDialog(context),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Log Entry'),
               ),
             ],
           ),
-        ),
-        Expanded(
-          child: project.logs.isEmpty
-              ? Center(
-                  child: Column(
+          const SizedBox(height: 8),
+
+          if (project.logs.isEmpty)
+            ExpressiveCard(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.history_edu_outlined, size: 48, color: Colors.grey),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No field logs or voice memos recorded yet',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () => _showAddLogDialog(context),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add First Log Entry'),
-                      ),
+                      const Icon(Icons.history_edu_outlined, size: 24, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      const Text('No field logs recorded yet.'),
                     ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: project.logs.length,
-                  itemBuilder: (context, index) {
-                    final log = project.logs[index];
-                    return ExpressiveCard(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              ExpressiveBadge(
-                                label: log.type.label,
-                                color: log.type == LogType.voice
-                                    ? AppTheme.accentAmber
-                                    : (log.type == LogType.milestone
-                                        ? AppTheme.accentEmerald
-                                        : AppTheme.primaryCyan),
-                                fontSize: 10,
-                              ),
-                              const Spacer(),
-                              Text(
-                                DateFormat('MMM d, y • h:mm a').format(log.timestamp),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
-                                onPressed: () {
-                                  ref
-                                      .read(projectProvider.notifier)
-                                      .deleteProjectLog(project.id, log.id);
-                                },
-                              ),
-                            ],
+                ),
+              ),
+            )
+          else
+            ...project.logs.map((log) {
+              return ExpressiveCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ExpressiveBadge(
+                          label: log.type.label,
+                          color: log.type == LogType.voice
+                              ? AppTheme.accentAmber
+                              : (log.type == LogType.milestone
+                                  ? AppTheme.accentEmerald
+                                  : AppTheme.primaryCyan),
+                          fontSize: 10,
+                        ),
+                        const Spacer(),
+                        Text(
+                          DateFormat('MMM d, y • h:mm a').format(log.timestamp),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            log.title,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          if (log.content.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              log.content,
-                              style: TextStyle(
-                                fontSize: 12,
-                                height: 1.4,
-                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                              ),
-                            ),
-                          ],
-                        ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
+                          onPressed: () {
+                            ref
+                                .read(projectProvider.notifier)
+                                .deleteProjectLog(project.id, log.id);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      log.title,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    if (log.content.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        log.content,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ],
                 ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricTile({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-  }) {
-    return ExpressiveCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
+              );
+            }),
         ],
       ),
     );

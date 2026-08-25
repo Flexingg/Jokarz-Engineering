@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/filament_profile.dart';
+import '../../../models/order_item.dart';
 import '../../../providers/tools_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../widgets/expressive_card.dart';
@@ -241,13 +242,15 @@ class _PrintEstimatorViewState extends ConsumerState<PrintEstimatorView> {
                           .read(projectProvider.notifier)
                           .getProjectById(projId);
                       if (p != null) {
-                        final updated = p.copyWith(
-                          estimatedPrintHours: state.printTimeHours,
-                          estimatedFilamentGrams: state.partWeightGrams,
-                        );
-                        await ref
-                            .read(projectProvider.notifier)
-                            .updateProject(updated);
+                        await ref.read(projectProvider.notifier).addOrder(
+                              projId,
+                              OrderItem(
+                                description:
+                                    '${state.selectedFilament.name} 3D Print (${state.partWeightGrams.toStringAsFixed(0)}g, ${state.printTimeHours.toStringAsFixed(1)}h)',
+                                price: state.totalNetCost,
+                                delivered: true,
+                              ),
+                            );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

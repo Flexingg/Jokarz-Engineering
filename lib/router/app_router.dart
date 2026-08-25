@@ -5,6 +5,7 @@ import '../ui/screens/dashboard_screen.dart';
 import '../ui/screens/projects_screen.dart';
 import '../ui/screens/project_detail_screen.dart';
 import '../ui/screens/project_edit_screen.dart';
+import '../ui/screens/open_orders_screen.dart';
 import '../ui/screens/workbench_screen.dart';
 import '../ui/screens/voice_notes_screen.dart';
 import '../ui/screens/settings_screen.dart';
@@ -13,7 +14,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/dashboard',
+  initialLocation: '/',
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
@@ -24,7 +25,7 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/dashboard',
+              path: '/',
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: DashboardScreen(),
               ),
@@ -32,7 +33,7 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Branch 1: Projects & BOM
+        // Branch 1: Projects
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -69,23 +70,31 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Branch 2: Workbench Tools
+        // Branch 2: Open Orders
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/workbench',
-              pageBuilder: (context, state) {
-                final tabParam = state.uri.queryParameters['tab'];
-                final tabIndex = int.tryParse(tabParam ?? '0') ?? 0;
-                return NoTransitionPage(
-                  child: WorkbenchScreen(initialTabIndex: tabIndex),
-                );
-              },
+              path: '/orders',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: OpenOrdersScreen(),
+              ),
             ),
           ],
         ),
 
-        // Branch 3: Voice Notes & Field Logs
+        // Branch 3: Workbench Tools
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/workbench',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: WorkbenchScreen(),
+              ),
+            ),
+          ],
+        ),
+
+        // Branch 4: Voice Notes
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -97,7 +106,7 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Branch 4: Settings
+        // Branch 5: Settings
         StatefulShellBranch(
           routes: [
             GoRoute(

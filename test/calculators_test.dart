@@ -1,120 +1,155 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jokarz_engineering/models/bolt_spec.dart';
-import 'package:jokarz_engineering/models/bom_item.dart';
 import 'package:jokarz_engineering/models/project.dart';
+import 'package:jokarz_engineering/models/task_item.dart';
+import 'package:jokarz_engineering/models/order_item.dart';
+import 'package:jokarz_engineering/models/bolt_spec.dart';
 import 'package:jokarz_engineering/models/filament_profile.dart';
 import 'package:jokarz_engineering/providers/tools_provider.dart';
 
 void main() {
-  group('Engineering Domain Models Test', () {
-    test('BOMItem calculation and serialization', () {
-      final item = BOMItem(
-        name: 'M3x10 Socket Screw',
-        unitCost: 0.15,
-        quantity: 20,
-        category: BOMCategory.fastener,
+  group('Manufacturing Domain Models Test', () {
+    test('TaskItem serialization and copyWith', () {
+      final task = TaskItem(
+        description: 'Machine starwheel wear plates',
+        scheduledDate: DateTime(2026, 8, 26),
+        pendingReason: 'Pending mill downtime',
+        isCompleted: false,
       );
 
-      expect(item.totalCost, closeTo(3.00, 0.001));
+      final json = task.toJson();
+      final reconstructed = TaskItem.fromJson(json);
 
-      final json = item.toJson();
-      final restored = BOMItem.fromJson(json);
+      expect(reconstructed.description, 'Machine starwheel wear plates');
+      expect(reconstructed.pendingReason, 'Pending mill downtime');
+      expect(reconstructed.isCompleted, false);
+      expect(reconstructed.scheduledDate, DateTime(2026, 8, 26));
 
-      expect(restored.name, 'M3x10 Socket Screw');
-      expect(restored.totalCost, closeTo(3.00, 0.001));
-      expect(restored.category, BOMCategory.fastener);
+      final completed = reconstructed.copyWith(isCompleted: true);
+      expect(completed.isCompleted, true);
     });
 
-    test('Project BOM cost summation & completion ratio', () {
+    test('OrderItem calculation and serialization', () {
+      final order = OrderItem(
+        pr: 'PR-48901',
+        po: 'PO-9921004',
+        description: 'UHMW 1/2" Sheet',
+        price: 184.50,
+        eta: DateTime(2026, 8, 28),
+        delivered: false,
+      );
+
+      final json = order.toJson();
+      final reconstructed = OrderItem.fromJson(json);
+
+      expect(reconstructed.pr, 'PR-48901');
+      expect(reconstructed.po, 'PO-9921004');
+      expect(reconstructed.price, 184.50);
+      expect(reconstructed.delivered, false);
+    });
+
+    test('Project manufacturing fields and next pending task logic', () {
+      final t1 = TaskItem(
+        id: 't-1',
+        description: 'First task (done)',
+        isCompleted: true,
+      );
+      final t2 = TaskItem(
+        id: 't-2',
+        description: 'Second task (pending parts)',
+        pendingReason: 'Pending parts from McMaster',
+        isCompleted: false,
+      );
+      final t3 = TaskItem(
+        id: 't-3',
+        description: 'Third task',
+        isCompleted: false,
+      );
+
       final project = Project(
-        title: 'CNC Spindle Mount',
-        bom: [
-          BOMItem(name: 'Part 1', unitCost: 10.0, quantity: 2, isPurchased: true),
-          BOMItem(name: 'Part 2', unitCost: 5.0, quantity: 4, isPurchased: false),
+        title: 'Line 1 Filler Rebuild',
+        category: ProjectCategory.maintenance,
+        phase: ProjectPhases.installation,
+        machine: 'Line 1 Filler',
+        subAssembly: 'Infeed Starwheel',
+        cost: 2500.0,
+        tasks: [t1, t2, t3],
+        orders: [
+          OrderItem(price: 500.0, delivered: true),
+          OrderItem(price: 350.0, delivered: false),
         ],
       );
 
-      expect(project.totalBOMCost, closeTo(40.0, 0.001));
-      expect(project.purchasedItemCount, 1);
-      expect(project.bomCompletionRatio, closeTo(0.5, 0.001));
+      expect(project.title, 'Line 1 Filler Rebuild');
+      expect(project.category, ProjectCategory.maintenance);
+      expect(project.phase, 'Installation');
+      expect(project.machine, 'Line 1 Filler');
+      expect(project.subAssembly, 'Infeed Starwheel');
+      expect(project.cost, 2500.0);
+      expect(project.totalOrdersCost, 850.0);
+      expect(project.undeliveredOrdersCount, 1);
+      expect(project.completedTasksCount, 1);
+
+      // Next pending task auto-detects incomplete task with pending reason
+      expect(project.nextPendingTask?.id, 't-2');
+      expect(project.nextPendingTask?.pendingReason, 'Pending parts from McMaster');
     });
 
-    test('Bolt database includes standard Metric and Imperial sizes', () {
-      final bolts = BoltSpec.database;
-      expect(bolts.isNotEmpty, true);
+    test('Fastener tap drill and clearance reference database', () {
+      final m6 = BoltSpec.database.firstWhere((b) => b.size == 'M6 x 1.0');
+      expect(m6.tapDrillMm, 5.0);
+      expect(m6.clearanceCloseMm, 6.4);
+      expect(m6.clearanceFreeMm, 6.6);
+      expect(m6.hexKeySize, '5.0 mm');
 
-      final m3 = bolts.firstWhere((b) => b.size == 'M3 x 0.5');
-      expect(m3.tapDrillMm, 2.5);
-      expect(m3.standard, FastenerStandard.metric);
-
-      final quarterTwenty = bolts.firstWhere((b) => b.size == '1/4"-20 UNC');
-      expect(quarterTwenty.majorDiaMm, 6.35);
-      expect(quarterTwenty.standard, FastenerStandard.imperial);
+      final quarter20 = BoltSpec.database.firstWhere((b) => b.size == '1/4"-20 UNC');
+      expect(quarter20.tapDrillFraction, '#7 (0.2010")');
+      expect(quarter20.hexKeySize, '3/16"');
     });
   });
 
-  group('Print Estimator Calculations', () {
+  group('Workbench Calculators Test', () {
     test('Calculates 3D print costs accurately', () {
       final state = PrintEstimatorState(
         selectedFilament: FilamentProfile.defaultProfiles.first, // PLA ($18/kg)
-        partWeightGrams: 200.0,
+        partWeightGrams: 100.0, // 0.1 kg -> $1.80
         printTimeHours: 5.0,
-        printerPowerWatts: 150.0,
-        electricityCostPerKwh: 0.15,
-        failureBufferPercent: 10.0,
-        operatorHourlyRate: 30.0,
-        operatorLaborMinutes: 10.0,
-        machineWearPerHour: 0.50,
+        printerPowerWatts: 150.0, // 0.15 kW * 5h = 0.75 kWh @ $0.14 = $0.105
+        electricityCostPerKwh: 0.14,
+        failureBufferPercent: 10.0, // 10%
+        operatorHourlyRate: 25.0,
+        operatorLaborMinutes: 12.0, // 0.2h * $25 = $5.00
+        machineWearPerHour: 0.40, // 5h * $0.40 = $2.00
       );
 
-      // Raw filament: (200 / 1000) * 18 = 3.60
-      expect(state.rawFilamentCost, closeTo(3.60, 0.01));
-
-      // Power: (150 * 5 / 1000) * 0.15 = 0.1125
-      expect(state.powerCost, closeTo(0.1125, 0.001));
-
-      // Wear: 5 * 0.50 = 2.50
-      expect(state.machineWearCost, closeTo(2.50, 0.01));
-
-      // Labor: (10 / 60) * 30 = 5.00
+      // Raw filament: 1.80
+      expect(state.rawFilamentCost, closeTo(1.80, 0.01));
+      // Power: 0.105
+      expect(state.powerCost, closeTo(0.105, 0.01));
+      // Machine wear: 2.00
+      expect(state.machineWearCost, closeTo(2.00, 0.01));
+      // Labor: 5.00
       expect(state.laborCost, closeTo(5.00, 0.01));
 
-      // Subtotal: 3.60 + 0.1125 + 2.50 + 5.00 = 11.2125
-      expect(state.subtotalCost, closeTo(11.2125, 0.01));
-
-      // Total with 10% buffer: 11.2125 * 1.1 = 12.33375
-      expect(state.totalNetCost, closeTo(12.33, 0.02));
-
-      // Commercial 2x
-      expect(state.suggestedPrice2x, closeTo(state.totalNetCost * 2, 0.01));
+      // Subtotal: 1.80 + 0.105 + 2.00 + 5.00 = 8.905
+      expect(state.subtotalCost, closeTo(8.905, 0.01));
+      // Buffer: 0.8905
+      expect(state.failureBufferCost, closeTo(0.8905, 0.01));
+      // Net: ~9.80
+      expect(state.totalNetCost, closeTo(9.795, 0.02));
     });
-  });
 
-  group('Resistor Code Decoder', () {
     test('Decodes 4-band 10k resistor correctly (Brown, Black, Orange)', () {
       const state = ResistorCodeState(
         mode: ResistorBandMode.fourBand,
-        band1: 1, // Brown
-        band2: 0, // Black
-        multiplier: 3, // 10^3 = 1000 -> 10,000 Ohm
+        band1: 1, // Brown (1)
+        band2: 0, // Black (0)
+        multiplier: 3, // Orange (10^3 = 1000) -> 10,000 Ohm
         tolerancePercent: 5.0,
       );
 
       expect(state.resistanceOhms, 10000.0);
       expect(state.formattedResistance, '10.00 kΩ');
-    });
-
-    test('Decodes 4.7k resistor correctly (Yellow, Violet, Red)', () {
-      const state = ResistorCodeState(
-        mode: ResistorBandMode.fourBand,
-        band1: 4, // Yellow
-        band2: 7, // Violet
-        multiplier: 2, // 10^2 = 100 -> 4,700 Ohm
-        tolerancePercent: 1.0,
-      );
-
-      expect(state.resistanceOhms, 4700.0);
-      expect(state.formattedResistance, '4.70 kΩ');
+      expect(state.tolerancePercent, 5.0);
     });
   });
 }

@@ -44,9 +44,8 @@ class SpeechService {
         onResult: (val) {
           onResult(val.recognizedWords);
         },
-        listenFor: const Duration(minutes: 2),
-        pauseFor: const Duration(seconds: 5),
         listenOptions: stt.SpeechListenOptions(
+          listenMode: stt.ListenMode.dictation,
           partialResults: true,
           cancelOnError: false,
         ),

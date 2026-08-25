@@ -1,7 +1,7 @@
 <div align="center">
 
 # ⚙️ JOKARZ ENGINEERING ⚙️
-### *Material Expressive Engineering Suite, Multi-Discipline BOM & Workshop Companion*
+### *Corporate Manufacturing Plant Mechanical Engineering Suite & Operations Companion*
 
 [![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.0%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-v1.0.0.apk)
 [![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.0%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-Windows-v1.0.0.zip)
@@ -15,35 +15,31 @@
 
 ### 📥 **[Download Android APK (v1.0.0)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-v1.0.0.apk)** | **[Download Windows App (v1.0.0 .zip)](https://github.com/Flexingg/Jokarz-Engineering/raw/main/releases/JokarzEngineering-Windows-v1.0.0.zip)**
 
-*The ultimate multi-discipline workshop companion for makers, CAD modelers, electrical designers, machinists, and 3D printing enthusiasts.*
+*A personal manufacturing mechanical engineering suite for corporate plant operations, tracking line maintenance, Kaizen improvements, capital projects, machine downtime tasks, purchase orders, and workshop diagnostics.*
 
 </div>
 
 ---
 
-## 🎨 Material Expressive / Jetpack Compose Aesthetic
+## 🏭 Tailored for Corporate Plant Mechanical Engineering
 
-Engineered with a high-contrast industrial Cyber & Workshop dark theme:
-- **Obsidian Core** (`#0B0F17` / `#131A26`): Zero eye fatigue in low-light labs and workshops.
-- **Cyber Cyan Accent** (`#00E5FF`): Precision indicator for primary metrics, active navigation, and dimensional data.
-- **Safety Amber Accent** (`#FFB300`): Voice recording, warnings, and power measurements.
-- **Precision Emerald Accent** (`#00E676`): BOM sourcing checkmarks, tolerance fits, and passed verifications.
-- **Responsive Layout**: Adaptive Navigation Rail on Windows desktop & tablets, fluid bottom NavigationBar with quick dictation FAB on mobile.
+Engineered specifically for plant floor mechanical engineers managing production lines, packaging cells, robotics, machining, and shutdown overhauls:
 
 ```
        ┌─────────────────────────────────────────────────────────────┐
        │                ⚙️  JOKARZ ENGINEERING HUB  ⚙️                │
-       │       MATERIAL EXPRESSIVE WORKSHOP & LAB COMPANION          │
+       │       CORPORATE MANUFACTURING & PLANT WORKSHOP SUITE        │
        └─────────────────────────────────────────────────────────────┘
                                        │
         ┌──────────────────────────────┼──────────────────────────────┐
         ▼                              ▼                              ▼
 ┌───────────────────────┐  ┌───────────────────────┐  ┌───────────────────────┐
-│ 📁 PROJECTS & BOM     │  │ 🛠️ WORKBENCH TOOLS    │  │ 🎙️ FIELD VOICE NOTES  │
-│ • Multi-Stage Status  │  │ • 3D Print Cost Estim.│  │ • Hands-Free Speech   │
-│ • Sourcing Checklists │  │ • Tap & Clearance Drll│  │ • Live Dictation      │
-│ • CSV BOM Export      │  │ • Ohm's Law & DC Power│  │ • Blueprint Photos    │
-│ • CAD & Budget Stats  │  │ • Resistor Color Code │  │ • Auto-Attach to Build│
+│ 📁 PROJECTS & TASKS   │  │ 📦 OPEN ORDERS TRACK  │  │ 🛠️ WORKBENCH TOOLS    │
+│ • Maintenance/Kaizen  │  │ • Requisitions (PR)   │  │ • Tap & Clearance Drll│
+│ • Dynamic 1..X Priority│ │ • Purchase Orders (PO)│  │ • Ohm's Law & DC Power│
+│ • Custom Phase Steps  │  │ • ETA Countdown       │  │ • Resistor Color Code │
+│ • Auto "Completed At" │  │ • One-Click Delivery  │  │ • ISO Fit Tolerances  │
+│ • Machine/Sub-Assembly│  │ • Total Open PO Spend │  │ • Wire Gauges & AWG   │
 └───────────────────────┘  └───────────────────────┘  └───────────────────────┘
 ```
 
@@ -51,47 +47,59 @@ Engineered with a high-contrast industrial Cyber & Workshop dark theme:
 
 ## 🌟 Key Features
 
-### 1. 📁 Project Lifecycle & Bill of Materials (BOM) Manager
-- Track projects across 7 engineering stages: **💡 Idea → 📐 Planning & CAD → ⚡ Prototyping → 🔬 Testing → 🏭 Production → ✅ Complete → 📦 Archived**.
-- Organize by discipline: **3D Printing & CAD, Electronics & Circuits, Mechanical & Machining, Software & Embedded, Robotics, Workshop Tooling**.
-- Comprehensive Bill of Materials (BOM):
-  - Track part names, categories (Fasteners, Filament, Electronics, Raw Stock, Tools), supplier, SKU/part number, unit cost, and quantity.
-  - Interactive procurement checklist with real-time budget vs. actual cost summation and sourcing progress bar.
-  - **One-click BOM CSV Export** for procurement and purchasing spreadsheets.
-- Attach workshop photos, inspection snapshots, and measurement schematics.
+### 1. 📁 Project Management & Dynamic Priority Ranking
+- **Minimal Required Input**: Only the **Title** is required; every other field is optional.
+- **Corporate Categories**:
+  - **1. Maintenance** (Default)
+  - **2. Kaizen** (Continuous Improvement)
+  - **3. Capital** (CapEx machinery & major upgrades)
+- **Unique Dynamic Priority Ranking (1..X)**:
+  - Active projects are ranked from 1 to X with strict uniqueness.
+  - Moving a project from #3 to #1 automatically bumps the existing #1 to #2, and #2 to #3.
+  - Completed or Cancelled projects freeze their priority as a **greyed-out lifetime record** (e.g. `Prev #1`) and exit the active 1..X queue.
+- **Customizable Phase Pipeline**:
+  - Standard Phases: `Idea`, `Pending`, `Installation`, `Validation`, `Complete`, `Cancelled`.
+  - Add custom phases (e.g. `Fabrication`, `FAT Review`, `Vendor Quote`) that dynamically populate future project dropdowns alphabetically.
+  - **Auto-Timestamped "Completed at"**: Auto-records completion timestamp when transitioning to `Complete` or `Cancelled`, and clears it if reopened.
+- **Machine & Sub-Assembly Dropdowns**:
+  - Auto-suggests unique machine lines (e.g., `Line 1 Filler`, `Cell 621 ABB Robot`, `Packaging Gantry 4`, `Stamping Press 2`) and sub-assemblies (`Infeed Starwheel`, `Gripper Tooling`, `Linear Actuator`).
+- **Next Pending Task Banner**:
+  - Highlights the immediate next bottleneck (e.g. `Pending mill downtime`, `Pending electrician review`, `Pending parts`).
 
-### 2. 🖨️ 3D Printing & Slicer Cost Estimator
-- Calculate exact part production costs combining:
-  - **Filament Consumption**: Spool cost and material density (PLA, PETG, ABS, TPU, Carbon Fiber PETG, ASA).
-  - **Electrical Power Draw**: Printer wattage ($W$) $\times$ print duration ($h$) $\times$ local electricity rate ($\$/\text{kWh}$).
-  - **Machine Depreciation**: Wear and nozzle depreciation per hour.
-  - **Operator Labor**: Post-processing, prep, and design setup time.
-  - **Failure & Purge Risk Buffer**: 0–30% customizable risk contingency.
-- Commercial multiplier suggestions ($2\times$ and $3\times$ retail quotes).
-- Direct **"Apply to Project"** integration to save estimates straight to CAD build cards.
+### 2. 📋 Multiple Project Tasks & Downtime Scheduling
+- Create multiple granular tasks within each project.
+- Assign **Scheduled Dates** for shutdown or shift maintenance.
+- Set **Pending Values** (`Pending parts`, `Pending email`, `Pending downtime`, `Pending vendor quote`).
+- One-click task checkbox completion.
 
-### 3. 🔩 Fastener, Tap Drill & Clearance Hole Selector
+### 3. 📦 Open Purchase Orders (PO) & Requisitions (PR) Tracker
+- Dedicated **Open Orders** dashboard tab tracking all undelivered plant orders.
+- Order Fields:
+  - **PR** (Purchase Requisition text)
+  - **PO** (Purchase Order number text)
+  - **Description** (Part description, vendor, specs)
+  - **Price** (Numeric $\$$ spend)
+  - **ETA** (Scheduled arrival date with countdown badges)
+  - **Delivered** (Boolean toggle)
+- Summary banner calculating total open PO spend across all plant equipment.
+
+### 4. 🔩 Fastener, Tap Drill & Clearance Hole Selector
 - Searchable thread database across **Metric (M2 to M12)** and **Imperial (#2 to 1/2" UNC)**.
-- Provides exact:
-  - Tap drill size (mm and wire gauge / fractional inch).
-  - Close clearance hole (tight fit).
-  - Free clearance hole (standard fit).
-  - Allen / Hex drive wrench size.
+- Tap drill sizes, close clearance holes, free clearance holes, and hex/Allen key drive sizes.
 
-### 4. ⚡ Electronics & Circuit Solvers
-- **Resistor Color Code Decoder**: Interactive 4-band and 5-band color band picker with dynamic visual resistor body rendering and automatic metric scaling ($\Omega$, $\text{k}\Omega$, $\text{M}\Omega$).
-- **Ohm's Law & DC Power Solver**: Real-time cross-calculation of Voltage ($V$), Current ($I$), Resistance ($R$), and Power ($P = V \times I$).
-- **LED Series Resistor Calculator**: Compute exact current-limiting resistor and minimum wattage dissipation given supply voltage ($V_s$), forward voltage ($V_f$), and LED current ($I_f$).
-- **AWG Wire Gauge & Voltage Drop Calculator**: Calculate loop resistance, voltage drop, and cable power loss across standard wire sizes (10 AWG to 30 AWG) for varying amp loads and run lengths.
+### 5. ⚡ Electronics & Power Calculators
+- **Resistor Color Code Decoder**: Interactive 4-band and 5-band color decoder.
+- **Ohm's Law & DC Power**: Solves Voltage, Current, Resistance, and Power ($P = V \times I$).
+- **LED Series Resistor**: Calculates current-limiting resistor and wattage dissipation.
+- **AWG Wire Gauge & Voltage Drop**: Calculates loop resistance and voltage drop for 10–30 AWG wiring.
 
-### 5. 📏 Dimensional Unit Converter & ISO Tolerances
-- Convert between metric and imperial across **Length, Pressure, Torque, Temperature, Mass, and Power**.
-- **ISO Limits & Fits Guide**: Reference standards for Hole/Shaft fits (**H7/g6 close sliding, H7/k6 locating transition, H7/p6 press fit, H11/c11 running fit**) with micron tolerances and engineering application guidelines.
+### 6. 📏 Dimensional Unit Converter & ISO Tolerances
+- Length, Pressure, Torque, Temperature, Mass, and Power converter.
+- ISO hole/shaft limits and fits (H7/g6, H7/k6, H7/p6, H11/c11) with micron tolerance data.
 
-### 6. 🎙️ Workshop Speech-to-Text & Field Dictation
-- Hands-free voice speech-to-text logging for when working at the lathe, soldering station, or 3D printer.
-- Live audio waveform pulse with automatic transcription.
-- Automatically save to global lab memos or attach as timestamped engineering logs on active builds.
+### 7. 🎙️ Workshop Speech-to-Text & Field Dictation
+- Live voice dictation modal with pulsing audio visualizer for hands-free workshop logging on the plant floor.
+- Automatically saves to lab memos or attaches directly to active machines.
 
 ---
 
@@ -100,54 +108,46 @@ Engineered with a high-contrast industrial Cyber & Workshop dark theme:
 - **Framework**: Flutter 3.32+ (Dart 3.8+)
 - **Architecture**: Domain-Driven Layered Architecture (UI, Providers/Notifiers, Models, Services)
 - **State Management**: `flutter_riverpod: ^2.6.1`
-- **Navigation & Routing**: `go_router: ^13.2.5` (Stateful Shell Route with IndexedStack)
+- **Navigation & Routing**: `go_router: ^13.2.5` (`StatefulShellRoute.indexedStack`)
 - **Speech Recognition**: `speech_to_text: ^7.4.0`
-- **Camera & Photos**: `image_picker: ^1.2.1`
-- **Responsive Layout**: `responsive_builder: ^0.7.1` + adaptive LayoutBuilder
-- **Persistence**: Local offline JSON document store via `path_provider`
-- **Formatting & IDs**: `intl: ^0.19.0`, `uuid: ^4.6.0`
+- **Persistence**: Local offline JSON document store with seed data
 
 ```
 lib/
 ├── main.dart                          # Entry point & ProviderScope
 ├── theme/
-│   └── app_theme.dart                 # Material Expressive tokens & Compose palette
+│   └── app_theme.dart                 # Material Expressive tokens & Obsidian theme
 ├── models/
-│   ├── project.dart                   # Project domain model & status phases
-│   ├── bom_item.dart                  # Bill of materials item & categories
+│   ├── project.dart                   # Project domain model (Categories, Phases, Priority)
+│   ├── task_item.dart                 # Multi-task domain entity (Pending reasons, Dates)
+│   ├── order_item.dart                # PR / PO / Price / ETA order entity
 │   ├── project_log.dart               # Engineering history & log entries
 │   ├── voice_note.dart                # Voice dictation & transcript model
-│   ├── filament_profile.dart          # 3D printer material density profiles
 │   └── bolt_spec.dart                 # Fastener & tap drill database
 ├── services/
-│   ├── storage_service.dart           # Offline JSON persistence & CSV exporter
+│   ├── storage_service.dart           # Offline JSON persistence & manufacturing seeds
 │   └── speech_service.dart            # Speech-to-text workshop engine
 ├── providers/
-│   ├── project_provider.dart          # Riverpod state notifier for projects & logs
-│   ├── tools_provider.dart            # Calculators, estimators & fastener state
+│   ├── project_provider.dart          # Riverpod state notifier with 1..X priority ranking
+│   ├── tools_provider.dart            # Fastener, electronics & tolerance calculators
 │   └── theme_provider.dart            # Dark/Light theme mode notifier
 ├── router/
-│   └── app_router.dart                # GoRouter shell & routes
+│   └── app_router.dart                # Stateful shell route with 6 branches
 └── ui/
     ├── widgets/
     │   ├── expressive_card.dart       # Squircle/glowing container cards
-    │   ├── expressive_badge.dart      # Category & status pill badges
+    │   ├── expressive_badge.dart      # Category, priority & status pill badges
     │   ├── voice_memo_modal.dart      # Pulsing speech dictation modal
-    │   └── responsive_scaffold.dart   # Desktop NavigationRail & Mobile Nav
+    │   └── responsive_scaffold.dart   # Desktop NavigationRail & Mobile NavigationBar
     └── screens/
-        ├── dashboard_screen.dart      # Engineering HUD & quick tools
-        ├── projects_screen.dart       # Searchable CAD & project cards
-        ├── project_detail_screen.dart # Multi-tab BOM, CAD specs, and logs
-        ├── project_edit_screen.dart   # Project creation & editor
-        ├── workbench_screen.dart      # 5-in-1 Engineering calculator workbench
+        ├── dashboard_screen.dart      # Plant operations HUD & top priority feed
+        ├── projects_screen.dart       # Searchable project list with category/phase filters
+        ├── project_detail_screen.dart # Multi-tab tasks, orders, photos, and logs
+        ├── project_edit_screen.dart   # Minimal title-only project creator & editor
+        ├── open_orders_screen.dart    # Dedicated undelivered PR/PO parts tracker
+        ├── workbench_screen.dart      # Engineering calculators & charts
         ├── voice_notes_screen.dart    # Workshop voice note repository
-        ├── settings_screen.dart       # Theme toggle, database JSON export
-        └── calculators/
-            ├── print_estimator_view.dart
-            ├── fastener_chart_view.dart
-            ├── electronics_view.dart
-            ├── unit_converter_view.dart
-            └── tolerances_view.dart
+        └── settings_screen.dart       # Theme toggle, database JSON export
 ```
 
 ---
@@ -187,4 +187,4 @@ flutter build apk --release
 
 ## 📄 License
 
-MIT License • Developed with pride for Randall Engineering by Jonathan Randall.
+MIT License • Developed for Randall Engineering by Jonathan Randall.

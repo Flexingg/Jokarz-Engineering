@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
-import '../models/bom_item.dart';
+import '../models/task_item.dart';
+import '../models/order_item.dart';
 import '../models/project_log.dart';
 import '../models/voice_note.dart';
 import '../models/filament_profile.dart';
@@ -10,6 +11,13 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
 });
 
+class OpenOrderEntry {
+  final Project project;
+  final OrderItem order;
+
+  const OpenOrderEntry({required this.project, required this.order});
+}
+
 class EngineeringState {
   final List<Project> projects;
   final List<VoiceNote> voiceNotes;
@@ -17,7 +25,8 @@ class EngineeringState {
   final bool isLoading;
   final String searchQuery;
   final ProjectCategory? selectedCategory;
-  final ProjectStatus? selectedStatus;
+  final String? selectedPhase;
+  final String? selectedMachine;
 
   const EngineeringState({
     this.projects = const [],
@@ -26,23 +35,99 @@ class EngineeringState {
     this.isLoading = true,
     this.searchQuery = '',
     this.selectedCategory,
-    this.selectedStatus,
+    this.selectedPhase,
+    this.selectedMachine,
   });
 
+  List<Project> get activeProjects =>
+      projects.where((p) => !p.isCompletedOrCancelled).toList()
+        ..sort((a, b) => a.priority.compareTo(b.priority));
+
+  List<Project> get terminalProjects =>
+      projects.where((p) => p.isCompletedOrCancelled).toList()
+        ..sort((a, b) => (b.completedAt ?? b.updatedAt).compareTo(a.completedAt ?? a.updatedAt));
+
+  List<Project> get sortedProjects => [...activeProjects, ...terminalProjects];
+
   List<Project> get filteredProjects {
-    return projects.where((p) {
+    return sortedProjects.where((p) {
       final matchesSearch = searchQuery.isEmpty ||
           p.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
           p.description.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          p.machine.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          p.subAssembly.toLowerCase().contains(searchQuery.toLowerCase()) ||
           p.tags.any((t) => t.toLowerCase().contains(searchQuery.toLowerCase()));
 
       final matchesCategory =
           selectedCategory == null || p.category == selectedCategory;
-      final matchesStatus =
-          selectedStatus == null || p.status == selectedStatus;
+      final matchesPhase =
+          selectedPhase == null || p.phase.toLowerCase() == selectedPhase!.toLowerCase();
+      final matchesMachine =
+          selectedMachine == null || p.machine.toLowerCase() == selectedMachine!.toLowerCase();
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesPhase && matchesMachine;
     }).toList();
+  }
+
+  List<OpenOrderEntry> get openOrders {
+    final list = <OpenOrderEntry>[];
+    for (final p in sortedProjects) {
+      for (final o in p.orders) {
+        if (!o.delivered) {
+          list.add(OpenOrderEntry(project: p, order: o));
+        }
+      }
+    }
+    // Sort by ETA ascending (nulls last)
+    list.sort((a, b) {
+      if (a.order.eta == null && b.order.eta == null) return 0;
+      if (a.order.eta == null) return 1;
+      if (b.order.eta == null) return -1;
+      return a.order.eta!.compareTo(b.order.eta!);
+    });
+    return list;
+  }
+
+  List<String> get availablePhases {
+    final set = <String>{...ProjectPhases.standardPhases};
+    for (final p in projects) {
+      if (p.phase.trim().isNotEmpty) {
+        set.add(p.phase.trim());
+      }
+    }
+    final list = set.toList();
+    list.sort((a, b) {
+      // Keep standard phases in standard order, custom at end alphabetically
+      final idxA = ProjectPhases.standardPhases.indexOf(a);
+      final idxB = ProjectPhases.standardPhases.indexOf(b);
+      if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
+      if (idxA != -1) return -1;
+      if (idxB != -1) return 1;
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+    return list;
+  }
+
+  List<String> get availableMachines {
+    final set = <String>{};
+    for (final p in projects) {
+      if (p.machine.trim().isNotEmpty) {
+        set.add(p.machine.trim());
+      }
+    }
+    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+
+  List<String> get availableSubAssemblies {
+    final set = <String>{};
+    for (final p in projects) {
+      if (p.subAssembly.trim().isNotEmpty) {
+        set.add(p.subAssembly.trim());
+      }
+    }
+    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
   }
 
   EngineeringState copyWith({
@@ -53,8 +138,10 @@ class EngineeringState {
     String? searchQuery,
     ProjectCategory? selectedCategory,
     bool clearCategory = false,
-    ProjectStatus? selectedStatus,
-    bool clearStatus = false,
+    String? selectedPhase,
+    bool clearPhase = false,
+    String? selectedMachine,
+    bool clearMachine = false,
   }) {
     return EngineeringState(
       projects: projects ?? this.projects,
@@ -64,8 +151,10 @@ class EngineeringState {
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory:
           clearCategory ? null : (selectedCategory ?? this.selectedCategory),
-      selectedStatus:
-          clearStatus ? null : (selectedStatus ?? this.selectedStatus),
+      selectedPhase:
+          clearPhase ? null : (selectedPhase ?? this.selectedPhase),
+      selectedMachine:
+          clearMachine ? null : (selectedMachine ?? this.selectedMachine),
     );
   }
 }
@@ -80,8 +169,11 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   Future<void> _loadInitialData() async {
     state = state.copyWith(isLoading: true);
     final data = await _storage.loadData();
+    var loadedProjects = data['projects'] as List<Project>;
+    loadedProjects = _rebalancePriorities(loadedProjects);
+
     state = state.copyWith(
-      projects: data['projects'] as List<Project>,
+      projects: loadedProjects,
       voiceNotes: data['voiceNotes'] as List<VoiceNote>,
       filaments: data['filaments'] as List<FilamentProfile>,
       isLoading: false,
@@ -101,42 +193,130 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   }
 
   void filterCategory(ProjectCategory? category) {
-    if (category == null) {
-      state = state.copyWith(clearCategory: true);
-    } else {
-      state = state.copyWith(selectedCategory: category);
-    }
+    state = state.copyWith(
+      selectedCategory: category,
+      clearCategory: category == null,
+    );
   }
 
-  void filterStatus(ProjectStatus? status) {
-    if (status == null) {
-      state = state.copyWith(clearStatus: true);
-    } else {
-      state = state.copyWith(selectedStatus: status);
-    }
+  void filterPhase(String? phase) {
+    state = state.copyWith(
+      selectedPhase: phase,
+      clearPhase: phase == null,
+    );
   }
 
-  // --- Project CRUD ---
+  void filterMachine(String? machine) {
+    state = state.copyWith(
+      selectedMachine: machine,
+      clearMachine: machine == null,
+    );
+  }
+
+  List<Project> _rebalancePriorities(List<Project> list) {
+    final active = list.where((p) => !p.isCompletedOrCancelled).toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    final terminal = list.where((p) => p.isCompletedOrCancelled).toList();
+
+    final rebalancedActive = <Project>[];
+    for (int i = 0; i < active.length; i++) {
+      rebalancedActive.add(active[i].copyWith(priority: i + 1));
+    }
+
+    return [...rebalancedActive, ...terminal];
+  }
+
+  // --- Project CRUD & Priority Ranking ---
   Future<void> addProject(Project project) async {
-    final updated = [project, ...state.projects];
-    state = state.copyWith(projects: updated);
+    // If active, insert at desired priority (default 1 or end)
+    final isTerminal = ProjectPhases.isTerminal(project.phase);
+    final currentProjects = [...state.projects];
+
+    Project prepared = project;
+    if (isTerminal) {
+      prepared = prepared.copyWith(
+        completedAt: prepared.completedAt ?? DateTime.now(),
+      );
+      currentProjects.add(prepared);
+    } else {
+      final active = currentProjects.where((p) => !p.isCompletedOrCancelled).toList()
+        ..sort((a, b) => a.priority.compareTo(b.priority));
+      
+      int targetPriority = prepared.priority.clamp(1, active.length + 1);
+      // Shift active items
+      active.insert(targetPriority - 1, prepared);
+
+      final rebalancedActive = <Project>[];
+      for (int i = 0; i < active.length; i++) {
+        rebalancedActive.add(active[i].copyWith(priority: i + 1));
+      }
+      final terminal = currentProjects.where((p) => p.isCompletedOrCancelled).toList();
+      currentProjects.clear();
+      currentProjects.addAll([...rebalancedActive, ...terminal]);
+    }
+
+    state = state.copyWith(projects: currentProjects);
     await _persist();
   }
 
-  Future<void> updateProject(Project project) async {
-    final updated = state.projects.map((p) {
-      if (p.id == project.id) {
-        return project.copyWith(updatedAt: DateTime.now());
+  Future<void> updateProject(Project updated) async {
+    final oldProject = getProjectById(updated.id);
+    if (oldProject == null) return;
+
+    var modified = updated.copyWith(updatedAt: DateTime.now());
+
+    // Phase transition completedAt logic
+    final wasTerminal = oldProject.isCompletedOrCancelled;
+    final isNowTerminal = modified.isCompletedOrCancelled;
+
+    if (!wasTerminal && isNowTerminal) {
+      modified = modified.copyWith(
+        completedAt: DateTime.now(),
+        // Keep highest lifetime priority stored on object
+      );
+    } else if (wasTerminal && !isNowTerminal) {
+      // Restoring to active phase -> clear completedAt
+      modified = modified.copyWith(
+        clearCompletedAt: true,
+      );
+    }
+
+    var list = state.projects.map((p) => p.id == modified.id ? modified : p).toList();
+
+    // If active priority changed, reorder active projects
+    if (!isNowTerminal) {
+      final active = list.where((p) => !p.isCompletedOrCancelled && p.id != modified.id).toList()
+        ..sort((a, b) => a.priority.compareTo(b.priority));
+
+      int targetPos = (modified.priority - 1).clamp(0, active.length);
+      active.insert(targetPos, modified);
+
+      final rebalancedActive = <Project>[];
+      for (int i = 0; i < active.length; i++) {
+        rebalancedActive.add(active[i].copyWith(priority: i + 1));
       }
-      return p;
-    }).toList();
-    state = state.copyWith(projects: updated);
+      final terminal = list.where((p) => p.isCompletedOrCancelled).toList();
+      list = [...rebalancedActive, ...terminal];
+    } else {
+      list = _rebalancePriorities(list);
+    }
+
+    state = state.copyWith(projects: list);
     await _persist();
+  }
+
+  Future<void> setProjectPriority(String projectId, int newPriority) async {
+    final project = getProjectById(projectId);
+    if (project == null || project.isCompletedOrCancelled) return;
+
+    final updated = project.copyWith(priority: newPriority);
+    await updateProject(updated);
   }
 
   Future<void> deleteProject(String id) async {
-    final updated = state.projects.where((p) => p.id != id).toList();
-    state = state.copyWith(projects: updated);
+    final list = state.projects.where((p) => p.id != id).toList();
+    final rebalanced = _rebalancePriorities(list);
+    state = state.copyWith(projects: rebalanced);
     await _persist();
   }
 
@@ -148,45 +328,91 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     }
   }
 
-  // --- BOM Item Management ---
-  Future<void> addBOMItem(String projectId, BOMItem item) async {
+  // --- Task Management ---
+  Future<void> addTask(String projectId, TaskItem task) async {
     final project = getProjectById(projectId);
     if (project == null) return;
 
-    final updatedBOM = [...project.bom, item];
-    final updatedProject = project.copyWith(bom: updatedBOM);
+    final updatedTasks = [...project.tasks, task];
+    final updatedProject = project.copyWith(tasks: updatedTasks);
     await updateProject(updatedProject);
   }
 
-  Future<void> updateBOMItem(String projectId, BOMItem item) async {
+  Future<void> updateTask(String projectId, TaskItem task) async {
     final project = getProjectById(projectId);
     if (project == null) return;
 
-    final updatedBOM = project.bom.map((i) => i.id == item.id ? item : i).toList();
-    final updatedProject = project.copyWith(bom: updatedBOM);
+    final updatedTasks = project.tasks.map((t) => t.id == task.id ? task : t).toList();
+    final updatedProject = project.copyWith(tasks: updatedTasks);
     await updateProject(updatedProject);
   }
 
-  Future<void> toggleBOMItemPurchased(String projectId, String itemId) async {
+  Future<void> toggleTaskCompleted(String projectId, String taskId) async {
     final project = getProjectById(projectId);
     if (project == null) return;
 
-    final updatedBOM = project.bom.map((i) {
-      if (i.id == itemId) {
-        return i.copyWith(isPurchased: !i.isPurchased);
+    final updatedTasks = project.tasks.map((t) {
+      if (t.id == taskId) {
+        return t.copyWith(isCompleted: !t.isCompleted);
       }
-      return i;
+      return t;
     }).toList();
-    final updatedProject = project.copyWith(bom: updatedBOM);
+    final updatedProject = project.copyWith(tasks: updatedTasks);
     await updateProject(updatedProject);
   }
 
-  Future<void> deleteBOMItem(String projectId, String itemId) async {
+  Future<void> deleteTask(String projectId, String taskId) async {
     final project = getProjectById(projectId);
     if (project == null) return;
 
-    final updatedBOM = project.bom.where((i) => i.id != itemId).toList();
-    final updatedProject = project.copyWith(bom: updatedBOM);
+    final updatedTasks = project.tasks.where((t) => t.id != taskId).toList();
+    final clearPending = project.nextPendingTaskId == taskId;
+    final updatedProject = project.copyWith(
+      tasks: updatedTasks,
+      clearNextPendingTask: clearPending,
+    );
+    await updateProject(updatedProject);
+  }
+
+  // --- Order Management ---
+  Future<void> addOrder(String projectId, OrderItem order) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+
+    final updatedOrders = [...project.orders, order];
+    final updatedProject = project.copyWith(orders: updatedOrders);
+    await updateProject(updatedProject);
+  }
+
+  Future<void> updateOrder(String projectId, OrderItem order) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+
+    final updatedOrders = project.orders.map((o) => o.id == order.id ? order : o).toList();
+    final updatedProject = project.copyWith(orders: updatedOrders);
+    await updateProject(updatedProject);
+  }
+
+  Future<void> toggleOrderDelivered(String projectId, String orderId) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+
+    final updatedOrders = project.orders.map((o) {
+      if (o.id == orderId) {
+        return o.copyWith(delivered: !o.delivered);
+      }
+      return o;
+    }).toList();
+    final updatedProject = project.copyWith(orders: updatedOrders);
+    await updateProject(updatedProject);
+  }
+
+  Future<void> deleteOrder(String projectId, String orderId) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+
+    final updatedOrders = project.orders.where((o) => o.id != orderId).toList();
+    final updatedProject = project.copyWith(orders: updatedOrders);
     await updateProject(updatedProject);
   }
 
@@ -224,7 +450,6 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final updated = [note, ...state.voiceNotes];
     state = state.copyWith(voiceNotes: updated);
 
-    // If attached to a project, also add as a project log entry
     if (note.projectId != null) {
       final log = ProjectLog(
         title: '🎤 ${note.title}',

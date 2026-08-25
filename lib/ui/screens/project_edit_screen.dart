@@ -6,7 +6,7 @@ import '../../models/project.dart';
 import '../../providers/project_provider.dart';
 
 class ProjectEditScreen extends ConsumerStatefulWidget {
-  final String? projectId; // null for creating new project
+  final String? projectId; // null for new project
 
   const ProjectEditScreen({super.key, this.projectId});
 
@@ -18,14 +18,17 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descController;
-  late TextEditingController _budgetController;
-  late TextEditingController _printHoursController;
-  late TextEditingController _filamentGramsController;
+  late TextEditingController _costController;
+  late TextEditingController _machineController;
+  late TextEditingController _subAssemblyController;
+  late TextEditingController _customPhaseController;
   late TextEditingController _tagsController;
 
-  ProjectCategory _category = ProjectCategory.threeDPrinting;
-  ProjectStatus _status = ProjectStatus.planning;
-  ProjectPriority _priority = ProjectPriority.medium;
+  ProjectCategory _category = ProjectCategory.maintenance;
+  String _selectedPhase = ProjectPhases.idea;
+  bool _isCustomPhase = false;
+  int _priority = 1;
+  String? _nextPendingTaskId;
 
   Project? _existingProject;
 
@@ -34,9 +37,10 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
     super.initState();
     _titleController = TextEditingController();
     _descController = TextEditingController();
-    _budgetController = TextEditingController(text: '0.00');
-    _printHoursController = TextEditingController(text: '0.0');
-    _filamentGramsController = TextEditingController(text: '0.0');
+    _costController = TextEditingController(text: '');
+    _machineController = TextEditingController();
+    _subAssemblyController = TextEditingController();
+    _customPhaseController = TextEditingController();
     _tagsController = TextEditingController();
 
     if (widget.projectId != null) {
@@ -46,16 +50,23 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
       if (_existingProject != null) {
         _titleController.text = _existingProject!.title;
         _descController.text = _existingProject!.description;
-        _budgetController.text = _existingProject!.budget.toStringAsFixed(2);
-        _printHoursController.text =
-            _existingProject!.estimatedPrintHours.toString();
-        _filamentGramsController.text =
-            _existingProject!.estimatedFilamentGrams.toString();
+        _costController.text = _existingProject!.cost > 0
+            ? _existingProject!.cost.toStringAsFixed(2)
+            : '';
+        _machineController.text = _existingProject!.machine;
+        _subAssemblyController.text = _existingProject!.subAssembly;
         _tagsController.text = _existingProject!.tags.join(', ');
         _category = _existingProject!.category;
-        _status = _existingProject!.status;
+        _selectedPhase = _existingProject!.phase;
         _priority = _existingProject!.priority;
+        _nextPendingTaskId = _existingProject!.nextPendingTaskId;
       }
+    } else {
+      final activeCount = ref
+          .read(projectProvider)
+          .activeProjects
+          .length;
+      _priority = activeCount + 1;
     }
   }
 
@@ -63,9 +74,10 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
-    _budgetController.dispose();
-    _printHoursController.dispose();
-    _filamentGramsController.dispose();
+    _costController.dispose();
+    _machineController.dispose();
+    _subAssemblyController.dispose();
+    _customPhaseController.dispose();
     _tagsController.dispose();
     super.dispose();
   }
@@ -79,18 +91,24 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         .where((t) => t.isNotEmpty)
         .toList();
 
+    final finalPhase = _isCustomPhase && _customPhaseController.text.trim().isNotEmpty
+        ? _customPhaseController.text.trim()
+        : _selectedPhase;
+
+    final cost = double.tryParse(_costController.text.trim()) ?? 0.0;
+
     if (_existingProject != null) {
       final updated = _existingProject!.copyWith(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _category,
-        status: _status,
+        phase: finalPhase,
         priority: _priority,
-        budget: double.tryParse(_budgetController.text.trim()) ?? 0.0,
-        estimatedPrintHours:
-            double.tryParse(_printHoursController.text.trim()) ?? 0.0,
-        estimatedFilamentGrams:
-            double.tryParse(_filamentGramsController.text.trim()) ?? 0.0,
+        cost: cost,
+        machine: _machineController.text.trim(),
+        subAssembly: _subAssemblyController.text.trim(),
+        nextPendingTaskId: _nextPendingTaskId,
+        clearNextPendingTask: _nextPendingTaskId == null,
         tags: tags,
       );
       await ref.read(projectProvider.notifier).updateProject(updated);
@@ -99,13 +117,12 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _category,
-        status: _status,
+        phase: finalPhase,
         priority: _priority,
-        budget: double.tryParse(_budgetController.text.trim()) ?? 0.0,
-        estimatedPrintHours:
-            double.tryParse(_printHoursController.text.trim()) ?? 0.0,
-        estimatedFilamentGrams:
-            double.tryParse(_filamentGramsController.text.trim()) ?? 0.0,
+        cost: cost,
+        machine: _machineController.text.trim(),
+        subAssembly: _subAssemblyController.text.trim(),
+        nextPendingTaskId: _nextPendingTaskId,
         tags: tags,
       );
       await ref.read(projectProvider.notifier).addProject(newProject);
@@ -118,7 +135,13 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(projectProvider);
     final isNew = widget.projectId == null;
+    final activeCount = state.activeProjects.length + (isNew ? 1 : 0);
+
+    final availablePhases = state.availablePhases;
+    final availableMachines = state.availableMachines;
+    final availableSubAssemblies = state.availableSubAssemblies;
 
     return Scaffold(
       appBar: AppBar(
@@ -140,31 +163,37 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20.0),
           children: [
-            // Title
+            // Project Title (Only required field)
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
                 labelText: 'Project Title *',
-                hintText: 'e.g. Jokarz 3D Printed Dial Indicator Fixture',
-                prefixIcon: Icon(Icons.title),
+                hintText: 'e.g. Line 1 Filler Infeed Starwheel Jamming',
+                prefixIcon: Icon(Icons.title_rounded),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                  (v == null || v.trim().isEmpty) ? 'Project title is required' : null,
             ),
             const SizedBox(height: 16),
 
-            // Category & Status Row
+            // Category & Priority Row
             Row(
               children: [
+                // Category
                 Expanded(
                   child: DropdownButtonFormField<ProjectCategory>(
                     value: _category,
                     decoration: const InputDecoration(
-                      labelText: 'Discipline / Category',
-                      prefixIcon: Icon(Icons.category_outlined),
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category_rounded),
                     ),
                     items: ProjectCategory.values
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(c.label),
+                          ),
+                        )
                         .toList(),
                     onChanged: (val) {
                       if (val != null) setState(() => _category = val);
@@ -172,18 +201,26 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
+
+                // Priority Selector (1..X)
                 Expanded(
-                  child: DropdownButtonFormField<ProjectStatus>(
-                    value: _status,
+                  child: DropdownButtonFormField<int>(
+                    value: _priority.clamp(1, activeCount > 0 ? activeCount : 1),
                     decoration: const InputDecoration(
-                      labelText: 'Status Phase',
-                      prefixIcon: Icon(Icons.flag_outlined),
+                      labelText: 'Priority Ranking',
+                      prefixIcon: Icon(Icons.format_list_numbered_rounded),
                     ),
-                    items: ProjectStatus.values
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s.label)))
-                        .toList(),
+                    items: List.generate(
+                      activeCount > 0 ? activeCount : 1,
+                      (index) => DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(
+                          '#${index + 1}${index == 0 ? " (Top Urgent)" : ""}',
+                        ),
+                      ),
+                    ),
                     onChanged: (val) {
-                      if (val != null) setState(() => _status = val);
+                      if (val != null) setState(() => _priority = val);
                     },
                   ),
                 ),
@@ -191,76 +228,179 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Priority & Budget Row
+            // Phase Selector (Dropdown with existing + custom add option)
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<ProjectPriority>(
-                    value: _priority,
+                  child: DropdownButtonFormField<String>(
+                    value: _isCustomPhase
+                        ? '__custom__'
+                        : (availablePhases.contains(_selectedPhase)
+                            ? _selectedPhase
+                            : availablePhases.first),
                     decoration: const InputDecoration(
-                      labelText: 'Priority Level',
-                      prefixIcon: Icon(Icons.priority_high),
+                      labelText: 'Phase',
+                      prefixIcon: Icon(Icons.flag_rounded),
                     ),
-                    items: ProjectPriority.values
-                        .map((p) => DropdownMenuItem(value: p, child: Text(p.label)))
-                        .toList(),
+                    items: [
+                      ...availablePhases.map(
+                        (ph) => DropdownMenuItem(
+                          value: ph,
+                          child: Text(ph),
+                        ),
+                      ),
+                      const DropdownMenuItem(
+                        value: '__custom__',
+                        child: Text('➕ + Add Custom Phase...'),
+                      ),
+                    ],
                     onChanged: (val) {
-                      if (val != null) setState(() => _priority = val);
+                      if (val == '__custom__') {
+                        setState(() {
+                          _isCustomPhase = true;
+                        });
+                      } else if (val != null) {
+                        setState(() {
+                          _isCustomPhase = false;
+                          _selectedPhase = val;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (_isCustomPhase) ...[
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _customPhaseController,
+                decoration: const InputDecoration(
+                  labelText: 'Custom Phase Name',
+                  hintText: 'e.g. Fabrication, Factory Acceptance Test, CapEx Review',
+                  prefixIcon: Icon(Icons.edit_note_rounded),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+
+            // Machine & Sub-Assembly
+            Row(
+              children: [
+                // Machine autocomplete / dropdown
+                Expanded(
+                  child: Autocomplete<String>(
+                    initialValue: TextEditingValue(text: _machineController.text),
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return availableMachines;
+                      }
+                      return availableMachines.where((m) =>
+                          m.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                    },
+                    onSelected: (selection) {
+                      _machineController.text = selection;
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      _machineController = controller;
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Machine / Line',
+                          hintText: 'e.g. Line 1 Filler, Cell 621',
+                          prefixIcon: Icon(Icons.precision_manufacturing_outlined),
+                        ),
+                      );
                     },
                   ),
                 ),
                 const SizedBox(width: 12),
+
+                // SubAssembly autocomplete / dropdown
                 Expanded(
-                  child: TextFormField(
-                    controller: _budgetController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Budget Target (\$ USD)',
-                      prefixIcon: Icon(Icons.attach_money),
-                    ),
+                  child: Autocomplete<String>(
+                    initialValue: TextEditingValue(text: _subAssemblyController.text),
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return availableSubAssemblies;
+                      }
+                      return availableSubAssemblies.where((sa) =>
+                          sa.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                    },
+                    onSelected: (selection) {
+                      _subAssemblyController.text = selection;
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      _subAssemblyController = controller;
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Sub-Assembly',
+                          hintText: 'e.g. Infeed Starwheel, Gearbox',
+                          prefixIcon: Icon(Icons.account_tree_outlined),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
+
+            // Cost (formerly Budget)
+            TextFormField(
+              controller: _costController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Cost (\$ USD)',
+                hintText: 'e.g. 1250.00',
+                prefixIcon: Icon(Icons.attach_money_rounded),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Next Pending Task selector (if existing project has tasks)
+            if (_existingProject != null && _existingProject!.tasks.isNotEmpty) ...[
+              DropdownButtonFormField<String?>(
+                value: _existingProject!.tasks.any((t) => t.id == _nextPendingTaskId)
+                    ? _nextPendingTaskId
+                    : null,
+                decoration: const InputDecoration(
+                  labelText: 'Next Pending Task',
+                  prefixIcon: Icon(Icons.pending_actions_rounded),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Auto (First incomplete pending task)'),
+                  ),
+                  ..._existingProject!.tasks.map(
+                    (t) => DropdownMenuItem<String?>(
+                      value: t.id,
+                      child: Text(
+                        '${t.description}${t.pendingReason.isNotEmpty ? " [${t.pendingReason}]" : ""}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() => _nextPendingTaskId = val);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Description
             TextFormField(
               controller: _descController,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Project Description & Engineering Goals',
-                hintText: 'Describe CAD specs, materials, tolerances, electronics...',
+                labelText: 'Description',
+                hintText: 'Root cause, mechanical issue, upgrade details, downtime notes...',
                 alignLabelWithHint: true,
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // Print Estimates
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _printHoursController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Est. Print Hours',
-                      prefixIcon: Icon(Icons.timer_outlined),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _filamentGramsController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Filament (Grams)',
-                      prefixIcon: Icon(Icons.scale_outlined),
-                    ),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 16),
 
@@ -269,17 +409,17 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
               controller: _tagsController,
               decoration: const InputDecoration(
                 labelText: 'Tags (Comma separated)',
-                hintText: 'e.g. 3D Print, PETG, CNC, ESP32, Sorter',
-                prefixIcon: Icon(Icons.tag),
+                hintText: '100, 621, Shutdown, Line 4, Mill, Hydraulics',
+                prefixIcon: Icon(Icons.tag_rounded),
               ),
             ),
             const SizedBox(height: 28),
 
-            // Save Button
+            // Save Action
             ElevatedButton.icon(
               onPressed: _saveProject,
               icon: const Icon(Icons.save_rounded),
-              label: Text(isNew ? 'Create Engineering Project' : 'Save Changes'),
+              label: Text(isNew ? 'Create Project' : 'Save Changes'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
