@@ -231,11 +231,10 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                        label: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentCoral,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.switch_account_rounded, size: 18),
+                        label: const Text('Switch Account'),
+                        style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -244,14 +243,44 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                         onPressed: _isLoading
                             ? null
                             : () async {
-                                setState(() => _isLoading = true);
-                                await authService.signOut();
-                                setState(() => _isLoading = false);
-                                if (context.mounted) Navigator.pop(context);
+                                setState(() {
+                                  _isLoading = true;
+                                  _errorMessage = null;
+                                });
+                                try {
+                                  final cred = await authService.switchGoogleAccount();
+                                  if (cred != null) {
+                                    await syncNotifier.pushAllLocalToCloud();
+                                  }
+                                } catch (e) {
+                                  setState(() => _errorMessage = 'Switch error: $e');
+                                } finally {
+                                  if (mounted) setState(() => _isLoading = false);
+                                }
                               },
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                  label: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          setState(() => _isLoading = true);
+                          await authService.signOut();
+                          setState(() => _isLoading = false);
+                          if (context.mounted) Navigator.pop(context);
+                        },
                 ),
               ] else ...[
                 // Not signed in card

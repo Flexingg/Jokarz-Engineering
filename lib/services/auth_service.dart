@@ -80,10 +80,17 @@ class AuthService {
     }
   }
 
+  /// Switch / Change Google Account (forces account selector prompt)
+  Future<UserCredential?> switchGoogleAccount() async {
+    await signOut();
+    return await signInWithGoogle();
+  }
+
   /// Sign out
   Future<void> signOut() async {
     try {
       if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows) {
+        await _googleSignIn.disconnect().catchError((_) => null);
         await _googleSignIn.signOut();
       }
       await _auth?.signOut();

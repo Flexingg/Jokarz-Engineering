@@ -59,14 +59,14 @@ class SettingsScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     ),
                     Text(
-                      'Randall Engineering Suite • v1.0.0 Release',
+                      'Randall Engineering Suite • v1.0.1 Release',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
               ),
               const ExpressiveBadge(
-                label: 'v1.0.0',
+                label: 'v1.0.1',
                 color: AppTheme.accentEmerald,
               ),
             ],
