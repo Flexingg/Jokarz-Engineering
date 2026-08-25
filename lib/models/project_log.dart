@@ -27,7 +27,7 @@ class ProjectLog {
     this.content = '',
     this.type = LogType.update,
     List<String>? imagePaths,
-  })  : id = id ?? const Uuid().v4(),
+  })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         timestamp = timestamp ?? DateTime.now(),
         imagePaths = imagePaths ?? [];
 

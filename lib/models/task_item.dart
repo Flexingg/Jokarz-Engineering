@@ -13,7 +13,7 @@ class TaskItem {
     this.scheduledDate,
     this.pendingReason = '',
     this.isCompleted = false,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
 
   TaskItem copyWith({
     String? description,

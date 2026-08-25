@@ -17,7 +17,7 @@ class OrderItem {
     this.price = 0.0,
     this.eta,
     this.delivered = false,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
 
   OrderItem copyWith({
     String? pr,

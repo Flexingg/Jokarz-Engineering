@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/project.dart';
 import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/order_item.dart';
+import 'package:jokarz_engineering/models/voice_note.dart';
 import 'package:jokarz_engineering/models/bolt_spec.dart';
 import 'package:jokarz_engineering/ui/screens/calculators/heat_shrink_calculator_view.dart';
 
@@ -155,6 +156,49 @@ void main() {
       final hotClearance = (d0 + deltaD) - 50.050;
       expect(hotClearance, closeTo(0.0553, 0.001));
       expect(hotClearance > 0, true);
+    });
+
+    test('ID-less JSON import generates fresh UUIDs for all entities', () {
+      final idLessProjectJson = {
+        'title': 'Wiped DB Project Import Test',
+        'category': 'kaizen',
+        'phase': 'Pending',
+        'machine': 'Case Packer 2',
+        'cost': 1250.0,
+        'tasks': [
+          {
+            'description': 'Replace conveyor timing belt',
+            'scheduledDate': '2026-09-01T00:00:00.000Z',
+            'pendingReason': 'Pending line stop',
+            'isCompleted': false,
+          }
+        ],
+        'orders': [
+          {
+            'pr': 'PR-10022',
+            'po': 'PO-881122',
+            'description': 'Gates HTD 8M Timing Belt',
+            'price': 64.20,
+            'delivered': false,
+          }
+        ]
+      };
+
+      final project = Project.fromJson(idLessProjectJson);
+      expect(project.id.isNotEmpty, true);
+      expect(project.id.length, greaterThan(10));
+      expect(project.tasks.first.id.isNotEmpty, true);
+      expect(project.tasks.first.id.length, greaterThan(10));
+      expect(project.orders.first.id.isNotEmpty, true);
+      expect(project.orders.first.id.length, greaterThan(10));
+
+      final idLessNoteJson = {
+        'title': 'Vibration analysis on motor',
+        'transcript': 'Bearing frequency defect peak at 120Hz.',
+      };
+      final note = VoiceNote.fromJson(idLessNoteJson);
+      expect(note.id.isNotEmpty, true);
+      expect(note.id.length, greaterThan(10));
     });
   });
 }

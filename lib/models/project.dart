@@ -74,7 +74,7 @@ class Project {
     List<String>? photoPaths,
     DateTime? createdAt,
     DateTime? updatedAt,
-  })  : id = id ?? const Uuid().v4(),
+  })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         tags = tags ?? [],
         tasks = tasks ?? [],
         orders = orders ?? [],

@@ -15,7 +15,7 @@ class VoiceNote {
     required this.transcript,
     this.durationSeconds = 0,
     this.projectId,
-  })  : id = id ?? const Uuid().v4(),
+  })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         timestamp = timestamp ?? DateTime.now();
 
   VoiceNote copyWith({
