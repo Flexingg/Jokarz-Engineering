@@ -126,16 +126,60 @@ class AuthService {
     return base64Url.encode(digest.bytes).replaceAll('=', '');
   }
 
+  /// Launch URL in system browser on Windows with robust fallbacks
+  Future<void> _openBrowser(Uri url) async {
+    debugPrint('AuthService: Launching browser for: $url');
+    try {
+      if (await canLaunchUrl(url)) {
+        final launched = await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          debugPrint('AuthService: launchUrl succeeded');
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('AuthService: launchUrl failed: $e, trying cmd fallback');
+    }
+
+    // Fallback 1: cmd.exe start
+    try {
+      final res = await Process.run('cmd', ['/c', 'start', '', url.toString()]);
+      if (res.exitCode == 0) {
+        debugPrint('AuthService: cmd /c start succeeded');
+        return;
+      }
+    } catch (e) {
+      debugPrint('AuthService: cmd fallback failed: $e, trying rundll32 fallback');
+    }
+
+    // Fallback 2: rundll32 FileProtocolHandler
+    try {
+      await Process.run('rundll32', ['url.dll,FileProtocolHandler', url.toString()]);
+      debugPrint('AuthService: rundll32 succeeded');
+    } catch (e) {
+      debugPrint('AuthService: all browser launch methods failed: $e');
+      throw Exception('Could not launch system web browser: $e');
+    }
+  }
+
   /// Windows Desktop Google OAuth 2.0 Loopback Auth with PKCE
   Future<UserCredential?> _signInWithGoogleWindows(FirebaseAuth auth) async {
+    debugPrint('AuthService: Starting Windows Google Sign-In loopback flow...');
     final codeVerifier = _randomString(64);
     final codeChallenge = _deriveCodeChallenge(codeVerifier);
 
     HttpServer? server;
+    StreamSubscription<HttpRequest>? sub;
+    final completer = Completer<String>();
+
     try {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final port = server.port;
       final redirectUri = 'http://127.0.0.1:$port';
+      debugPrint('AuthService: Listening for OAuth callback on $redirectUri');
 
       final authUri = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
         'client_id': _webClientId,
@@ -148,73 +192,83 @@ class AuthService {
         'prompt': 'select_account',
       });
 
-      final launched =
-          await launchUrl(authUri, mode: LaunchMode.externalApplication);
-      if (!launched) {
-        throw Exception('Could not launch system browser for Google Sign-In');
-      }
+      sub = server.listen((HttpRequest request) async {
+        final path = request.uri.path;
+        if (path == '/favicon.ico') {
+          request.response.statusCode = HttpStatus.noContent;
+          await request.response.close();
+          return;
+        }
 
-      // Await incoming redirect request (timeout after 2 minutes)
-      final request = await server.first.timeout(
+        final code = request.uri.queryParameters['code'];
+        final error = request.uri.queryParameters['error'];
+
+        request.response.headers.contentType = ContentType.html;
+        if (code != null) {
+          request.response.write('''
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Jokarz Engineering Sign-In</title>
+              <style>
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                  background-color: #0b151e;
+                  color: #e2e8f0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 100vh;
+                  margin: 0;
+                }
+                .card {
+                  background: #122130;
+                  border: 1px solid #1f364d;
+                  border-radius: 16px;
+                  padding: 40px;
+                  text-align: center;
+                  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                  max-width: 380px;
+                }
+                h1 { color: #00e5ff; margin-top: 0; font-size: 22px; }
+                p { color: #94a3b8; font-size: 14px; line-height: 1.5; }
+                .icon { font-size: 48px; margin-bottom: 16px; }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="icon">⚙️</div>
+                <h1>Sign-In Successful!</h1>
+                <p>You have signed in to <strong>Jokarz Engineering</strong>.<br>You can close this tab and return to the desktop application.</p>
+              </div>
+            </body>
+            </html>
+          ''');
+          await request.response.close();
+          if (!completer.isCompleted) completer.complete(code);
+        } else if (error != null) {
+          request.response.write(
+              '<html><body style="background:#0b151e;color:#ff5252;padding:40px;font-family:sans-serif;"><h3>Sign-in cancelled or failed: $error</h3></body></html>');
+          await request.response.close();
+          if (!completer.isCompleted) completer.completeError(Exception('Google Sign-In error: $error'));
+        } else {
+          request.response.statusCode = HttpStatus.ok;
+          await request.response.close();
+        }
+      });
+
+      // Launch system browser
+      await _openBrowser(authUri);
+
+      // Await incoming redirect authorization code (timeout after 2 minutes)
+      final code = await completer.future.timeout(
         const Duration(minutes: 2),
         onTimeout: () =>
             throw TimeoutException('Sign in timed out waiting for browser response.'),
       );
 
-      final code = request.uri.queryParameters['code'];
-      final error = request.uri.queryParameters['error'];
-
-      request.response.headers.contentType = ContentType.html;
-      if (code != null) {
-        request.response.write('''
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Jokarz Engineering Sign-In</title>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                background-color: #0b151e;
-                color: #e2e8f0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                margin: 0;
-              }
-              .card {
-                background: #122130;
-                border: 1px solid #1f364d;
-                border-radius: 16px;
-                padding: 40px;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                max-width: 380px;
-              }
-              h1 { color: #00e5ff; margin-top: 0; font-size: 22px; }
-              p { color: #94a3b8; font-size: 14px; line-height: 1.5; }
-              .icon { font-size: 48px; margin-bottom: 16px; }
-            </style>
-          </head>
-          <body>
-            <div class="card">
-              <div class="icon">⚙️</div>
-              <h1>Sign-In Successful!</h1>
-              <p>You have signed in to <strong>Jokarz Engineering</strong>.<br>You can close this tab and return to the desktop application.</p>
-            </div>
-          </body>
-          </html>
-        ''');
-      } else {
-        request.response.write(
-            '<html><body style="background:#0b151e;color:#ff5252;padding:40px;font-family:sans-serif;"><h3>Sign-in cancelled or failed: $error</h3></body></html>');
-      }
-      await request.response.close();
-
-      if (code == null) {
-        throw Exception('Sign-in cancelled: $error');
-      }
+      debugPrint('AuthService: Received auth code, exchanging for tokens...');
 
       // Exchange authorization code for OAuth ID & Access tokens
       final tokenResponse = await http.post(
@@ -229,6 +283,7 @@ class AuthService {
         },
       );
 
+      debugPrint('AuthService: Token response status ${tokenResponse.statusCode}');
       if (tokenResponse.statusCode != 200) {
         throw Exception('Failed to exchange auth code: ${tokenResponse.body}');
       }
@@ -246,8 +301,10 @@ class AuthService {
         accessToken: accessToken,
       );
 
+      debugPrint('AuthService: Signing into Firebase Auth with credential...');
       return await auth.signInWithCredential(credential);
     } finally {
+      await sub?.cancel();
       await server?.close(force: true);
     }
   }
