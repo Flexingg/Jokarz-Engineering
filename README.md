@@ -3,17 +3,18 @@
 # ⚙️ JOKARZ ENGINEERING ⚙️
 ### *Corporate Manufacturing Plant Mechanical Engineering Suite & Workshop Companion*
 
-[![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.1%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.1/jokarz-engineering-v1.0.1.apk)
-[![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.1%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.1/jokarz-engineering-windows-v1.0.1.zip)
+[![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.2%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-v1.0.2.apk)
+[![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.2%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-windows-v1.0.2.zip)
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.32+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.8+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-00E676)](#)
+[![Google Cloud Sync](https://img.shields.io/badge/Sync-Firebase%20Firestore-FFA000?logo=firebase&logoColor=white)](#)
 [![Theme](https://img.shields.io/badge/Design-Material%20Expressive%20%2F%20Compose-FFB300)](#)
 [![License](https://img.shields.io/badge/License-MIT-FFB300.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.0.1-00E5FF.svg)](https://github.com/Flexingg/Jokarz-Engineering/releases/tag/v1.0.1)
+[![Release](https://img.shields.io/badge/Release-v1.0.2-00E5FF.svg)](https://github.com/Flexingg/Jokarz-Engineering/releases/tag/v1.0.2)
 
-### 📥 **[Download Android APK (v1.0.1)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.1/jokarz-engineering-v1.0.1.apk)** | **[Download Windows App (v1.0.1 .zip)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.1/jokarz-engineering-windows-v1.0.1.zip)**
+### 📥 **[Download Android APK (v1.0.2)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-v1.0.2.apk)** | **[Download Windows App (v1.0.2 .zip)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-windows-v1.0.2.zip)**
 
 *A personal mechanical engineering suite for corporate plant operations, tracking line maintenance, Kaizen improvements, capital projects, machine downtime tasks, purchase orders, Google cloud synchronization across Android and Windows workstations, and workshop mechanical diagnostics.*
 
@@ -102,6 +103,16 @@ Engineered specifically for plant floor mechanical engineers managing production
 ### 11. 📝 Field Notes & Notepad
 - Replaceable notepad on navigation bar for quick workshop memos, field observations, machine measurements, and hands-free voice speech-to-text dictation.
 
+### 12. ☁️ Google Cloud Account & Cross-Device Real-Time Sync (Android ⇄ Windows)
+- One-click Google Sign-In with standard OAuth 2.0 PKCE desktop loopback flow.
+- Real-time bi-directional synchronization powered by Cloud Firestore (`users/{uid}/projects` and `users/{uid}/voiceNotes`).
+- Real-time updates automatically replicate between multiple Android phones and Windows PC engineering workstations.
+- Full offline resilience: Work completely offline on the plant floor; changes automatically synchronize when reconnected.
+
+### 13. 🎨 Hardhat & Gear App Icon + Maximized Functional UI
+- Custom mechanical hardhat & gear icon on Android adaptive launcher and Windows taskbar/executable (`app_icon.ico`).
+- Clean, focused interface maximizing screen space for plant diagnostics and project tracking with branding quietly anchored in the Settings footer.
+
 ---
 
 ## 🛠️ Tech Stack & Architecture
@@ -110,9 +121,11 @@ Engineered specifically for plant floor mechanical engineers managing production
 - **Architecture**: Domain-Driven Layered Architecture (UI, Providers/Notifiers, Models, Services)
 - **State Management**: `flutter_riverpod: ^2.6.1`
 - **Navigation & Routing**: `go_router: ^13.2.5` (`StatefulShellRoute.indexedStack`)
+- **Cloud Backend**: Google Firebase (Firebase Auth, Cloud Firestore)
 - **Speech Recognition**: `speech_to_text: ^7.4.0`
 - **Deep Linking**: `url_launcher: ^6.3.2`
-- **Persistence**: Local offline JSON document store
+- **Persistence**: Local offline JSON document store + Cloud Firestore
+- **Security**: RFC 7636 PKCE OAuth 2.0 with loopback callback for Windows desktop
 
 ---
 
