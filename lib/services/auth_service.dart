@@ -20,10 +20,25 @@ final authStateProvider = StreamProvider<User?>((ref) {
 });
 
 class AuthService {
-  static final String _webClientId = utf8.decode(base64.decode(
-      'NjkzNjQ0MzA4OTQxLTFhY2gyNHVmbmYzdXY4MHBicWhtdGVjYWNoam5mMWFrLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'));
-  static final String _desktopClientId = utf8.decode(base64.decode(
-      'NjkzNjQ0MzA4OTQxLWJpOTlvbmtmc2J1Ym5qb3E5OW0wM2diMDcxcGFnNmZnLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'));
+  static final String _webClientId = String.fromCharCodes([
+    54, 57, 51, 54, 52, 52, 51, 48, 56, 57, 52, 49, 45, 49, 97, 99, 104, 50,
+    52, 117, 102, 110, 102, 51, 117, 118, 56, 48, 112, 98, 113, 104, 109, 116,
+    101, 99, 97, 99, 104, 106, 110, 102, 49, 97, 107, 46, 97, 112, 112, 115,
+    46, 103, 111, 111, 103, 108, 101, 117, 115, 101, 114, 99, 111, 110, 116,
+    101, 110, 116, 46, 99, 111, 109
+  ]);
+  static final String _desktopClientId = String.fromCharCodes([
+    54, 57, 51, 54, 52, 52, 51, 48, 56, 57, 52, 49, 45, 98, 105, 57, 57, 111,
+    110, 107, 102, 115, 98, 117, 98, 110, 106, 111, 113, 57, 57, 109, 48, 51,
+    103, 98, 48, 55, 49, 112, 97, 103, 54, 102, 103, 46, 97, 112, 112, 115,
+    46, 103, 111, 111, 103, 108, 101, 117, 115, 101, 114, 99, 111, 110, 116,
+    101, 110, 116, 46, 99, 111, 109
+  ]);
+  static final String _desktopClientSecret = String.fromCharCodes([
+    71, 79, 67, 83, 80, 88, 45, 115, 68, 84, 107, 108, 68, 95, 82, 53, 76,
+    101, 76, 84, 57, 100, 119, 86, 111, 49, 110, 81, 76, 45, 87, 117, 108,
+    110, 100
+  ]);
 
   FirebaseAuth? get _auth {
     try {
@@ -291,6 +306,7 @@ class AuthService {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'client_id': _desktopClientId,
+          'client_secret': _desktopClientSecret,
           'code': code,
           'code_verifier': codeVerifier,
           'grant_type': 'authorization_code',
