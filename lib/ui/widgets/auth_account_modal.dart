@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
@@ -22,6 +24,7 @@ class AuthAccountModal extends ConsumerStatefulWidget {
 class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
   bool _isLoading = false;
   String? _errorMessage;
+  Uri? _authUri;
 
   @override
   Widget build(BuildContext context) {
@@ -271,9 +274,14 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 setState(() {
                                   _isLoading = true;
                                   _errorMessage = null;
+                                  _authUri = null;
                                 });
                                 try {
-                                  final cred = await authService.switchGoogleAccount();
+                                  final cred = await authService.switchGoogleAccount(
+                                    onAuthUrl: (uri) {
+                                      if (mounted) setState(() => _authUri = uri);
+                                    },
+                                  );
                                   if (cred != null) {
                                     await syncNotifier.pushAllLocalToCloud();
                                   }
@@ -336,9 +344,14 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                           setState(() {
                             _isLoading = true;
                             _errorMessage = null;
+                            _authUri = null;
                           });
                           try {
-                            final cred = await authService.signInWithGoogle();
+                            final cred = await authService.signInWithGoogle(
+                              onAuthUrl: (uri) {
+                                if (mounted) setState(() => _authUri = uri);
+                              },
+                            );
                             if (cred != null) {
                               // Initial cloud sync
                               await syncNotifier.pushAllLocalToCloud();
@@ -373,6 +386,72 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                           ],
                         ),
                 ),
+
+                if (_isLoading && _authUri != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryCyan),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Browser authorization in progress...',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryCyan,
+                                  foregroundColor: Colors.black87,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                ),
+                                icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                                label: const Text('Open Browser', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                onPressed: () {
+                                  Process.run('explorer.exe', [_authUri.toString()]);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.copy_rounded, size: 16),
+                              label: const Text('Copy URL', style: TextStyle(fontSize: 12)),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: _authUri.toString()));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Sign-in URL copied to clipboard!')),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

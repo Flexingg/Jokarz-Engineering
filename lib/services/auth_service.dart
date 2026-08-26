@@ -54,16 +54,18 @@ class AuthService {
   String? get userId => currentUser?.uid;
 
   /// Sign in with Google (Supports Android, iOS, Windows, and Web)
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<UserCredential?> signInWithGoogle({
+    Function(Uri authUri)? onAuthUrl,
+  }) async {
     final auth = _auth;
     if (auth == null) {
       throw Exception('Firebase is not initialized');
     }
 
     try {
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || Platform.isWindows)) {
         // Windows Desktop OAuth 2.0 PKCE loopback flow
-        return await _signInWithGoogleWindows(auth);
+        return await _signInWithGoogleWindows(auth, onAuthUrl: onAuthUrl);
       } else if (kIsWeb) {
         // Web Google Sign-In flow
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
@@ -95,15 +97,17 @@ class AuthService {
   }
 
   /// Switch / Change Google Account (forces account selector prompt)
-  Future<UserCredential?> switchGoogleAccount() async {
+  Future<UserCredential?> switchGoogleAccount({
+    Function(Uri authUri)? onAuthUrl,
+  }) async {
     await signOut();
-    return await signInWithGoogle();
+    return await signInWithGoogle(onAuthUrl: onAuthUrl);
   }
 
   /// Sign out
   Future<void> signOut() async {
     try {
-      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows) {
+      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows && !Platform.isWindows) {
         await _googleSignIn.disconnect().catchError((_) => null);
         await _googleSignIn.signOut();
       }
@@ -128,45 +132,45 @@ class AuthService {
 
   /// Launch URL in system browser on Windows with robust fallbacks
   Future<void> _openBrowser(Uri url) async {
-    debugPrint('AuthService: Launching browser for: $url');
-    try {
-      if (await canLaunchUrl(url)) {
-        final launched = await launchUrl(
-          url,
-          mode: LaunchMode.externalApplication,
-        );
-        if (launched) {
-          debugPrint('AuthService: launchUrl succeeded');
-          return;
-        }
-      }
-    } catch (e) {
-      debugPrint('AuthService: launchUrl failed: $e, trying cmd fallback');
-    }
+    final urlStr = url.toString();
+    debugPrint('AuthService: Launching browser for: $urlStr');
 
-    // Fallback 1: cmd.exe start
+    // Method 1: Windows explorer.exe (fastest & most reliable on Windows)
     try {
-      final res = await Process.run('cmd', ['/c', 'start', '', url.toString()]);
-      if (res.exitCode == 0) {
-        debugPrint('AuthService: cmd /c start succeeded');
+      final res = await Process.run('explorer.exe', [urlStr]);
+      debugPrint('AuthService: explorer.exe exitCode=${res.exitCode}');
+      if (res.exitCode == 0 || res.exitCode == 1) {
         return;
       }
     } catch (e) {
-      debugPrint('AuthService: cmd fallback failed: $e, trying rundll32 fallback');
+      debugPrint('AuthService: explorer.exe error: $e');
     }
 
-    // Fallback 2: rundll32 FileProtocolHandler
+    // Method 2: Flutter launchUrl
     try {
-      await Process.run('rundll32', ['url.dll,FileProtocolHandler', url.toString()]);
-      debugPrint('AuthService: rundll32 succeeded');
+      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+      if (launched) {
+        debugPrint('AuthService: launchUrl succeeded');
+        return;
+      }
     } catch (e) {
-      debugPrint('AuthService: all browser launch methods failed: $e');
-      throw Exception('Could not launch system web browser: $e');
+      debugPrint('AuthService: launchUrl failed: $e');
+    }
+
+    // Method 3: cmd /c start "" "url"
+    try {
+      await Process.run('cmd', ['/c', 'start', '', urlStr]);
+      debugPrint('AuthService: cmd /c start triggered');
+    } catch (e) {
+      debugPrint('AuthService: cmd error: $e');
     }
   }
 
   /// Windows Desktop Google OAuth 2.0 Loopback Auth with PKCE
-  Future<UserCredential?> _signInWithGoogleWindows(FirebaseAuth auth) async {
+  Future<UserCredential?> _signInWithGoogleWindows(
+    FirebaseAuth auth, {
+    Function(Uri authUri)? onAuthUrl,
+  }) async {
     debugPrint('AuthService: Starting Windows Google Sign-In loopback flow...');
     final codeVerifier = _randomString(64);
     final codeChallenge = _deriveCodeChallenge(codeVerifier);
@@ -191,6 +195,9 @@ class AuthService {
         'access_type': 'offline',
         'prompt': 'select_account',
       });
+
+      // Notify caller of generated URL
+      onAuthUrl?.call(authUri);
 
       sub = server.listen((HttpRequest request) async {
         final path = request.uri.path;
