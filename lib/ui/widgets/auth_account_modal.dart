@@ -148,14 +148,18 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   decoration: BoxDecoration(
                     color: (syncState.status == SyncStatus.synced
                             ? AppTheme.accentEmerald
-                            : AppTheme.accentAmber)
-                        .withValues(alpha: 0.08),
+                            : syncState.status == SyncStatus.error
+                                ? AppTheme.accentCoral
+                                : AppTheme.accentAmber)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: (syncState.status == SyncStatus.synced
                               ? AppTheme.accentEmerald
-                              : AppTheme.accentAmber)
-                          .withValues(alpha: 0.25),
+                              : syncState.status == SyncStatus.error
+                                  ? AppTheme.accentCoral
+                                  : AppTheme.accentAmber)
+                          .withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -163,10 +167,14 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                       Icon(
                         syncState.status == SyncStatus.synced
                             ? Icons.check_circle_rounded
-                            : Icons.sync_rounded,
+                            : syncState.status == SyncStatus.error
+                                ? Icons.error_rounded
+                                : Icons.sync_rounded,
                         color: syncState.status == SyncStatus.synced
                             ? AppTheme.accentEmerald
-                            : AppTheme.accentAmber,
+                            : syncState.status == SyncStatus.error
+                                ? AppTheme.accentCoral
+                                : AppTheme.accentAmber,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -177,12 +185,29 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                             Text(
                               syncState.status == SyncStatus.synced
                                   ? 'Active Live Sync Enabled'
-                                  : 'Syncing in background...',
-                              style: const TextStyle(
+                                  : syncState.status == SyncStatus.error
+                                      ? 'Cloud Sync Error'
+                                      : 'Syncing in background...',
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
+                                color: syncState.status == SyncStatus.error
+                                    ? AppTheme.accentCoral
+                                    : null,
                               ),
                             ),
+                            if (syncState.errorMessage != null &&
+                                syncState.status == SyncStatus.error)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  syncState.errorMessage!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.accentCoral,
+                                  ),
+                                ),
+                              ),
                             if (syncState.lastSyncedAt != null)
                               Text(
                                 'Last synced: ${DateFormat('h:mm:ss a').format(syncState.lastSyncedAt!)}',
