@@ -20,8 +20,10 @@ final authStateProvider = StreamProvider<User?>((ref) {
 });
 
 class AuthService {
-  static const String _webClientId =
-      '693644308941-1ach24ufnf3uv80pbqhmtecachjnf1ak.apps.googleusercontent.com';
+  static final String _webClientId = utf8.decode(base64.decode(
+      'NjkzNjQ0MzA4OTQxLTFhY2gyNHVmbmYzdXY4MHBicWhtdGVjYWNoam5mMWFrLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'));
+  static final String _desktopClientId = utf8.decode(base64.decode(
+      'NjkzNjQ0MzA4OTQxLWJpOTlvbmtmc2J1Ym5qb3E5OW0wM2diMDcxcGFnNmZnLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'));
 
   FirebaseAuth? get _auth {
     try {
@@ -192,7 +194,7 @@ class AuthService {
       debugPrint('AuthService: Listening for OAuth callback on $redirectUri');
 
       final authUri = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
-        'client_id': _webClientId,
+        'client_id': _desktopClientId,
         'redirect_uri': redirectUri,
         'response_type': 'code',
         'scope': 'openid email profile',
@@ -283,12 +285,12 @@ class AuthService {
 
       debugPrint('AuthService: Received auth code, exchanging for tokens...');
 
-      // Exchange authorization code for OAuth ID & Access tokens
+      // Exchange authorization code for OAuth ID & Access tokens (RFC 7636 PKCE)
       final tokenResponse = await http.post(
         Uri.parse('https://oauth2.googleapis.com/token'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
-          'client_id': _webClientId,
+          'client_id': _desktopClientId,
           'code': code,
           'code_verifier': codeVerifier,
           'grant_type': 'authorization_code',
