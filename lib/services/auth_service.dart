@@ -131,38 +131,44 @@ class AuthService {
   }
 
   /// Launch URL in system browser on Windows with robust fallbacks
-  Future<void> _openBrowser(Uri url) async {
+  Future<void> openBrowser(Uri url) async {
     final urlStr = url.toString();
     debugPrint('AuthService: Launching browser for: $urlStr');
 
-    // Method 1: Windows explorer.exe (fastest & most reliable on Windows)
+    // Method 1: cmd /c start "" "url"
     try {
-      final res = await Process.run('explorer.exe', [urlStr]);
-      debugPrint('AuthService: explorer.exe exitCode=${res.exitCode}');
-      if (res.exitCode == 0 || res.exitCode == 1) {
-        return;
-      }
+      final res = await Process.run('cmd', ['/c', 'start', '', urlStr]);
+      debugPrint('AuthService: cmd /c start exitCode=${res.exitCode}');
+      if (res.exitCode == 0) return;
     } catch (e) {
-      debugPrint('AuthService: explorer.exe error: $e');
+      debugPrint('AuthService: cmd error: $e');
     }
 
     // Method 2: Flutter launchUrl
     try {
-      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
-      if (launched) {
-        debugPrint('AuthService: launchUrl succeeded');
-        return;
+      if (await canLaunchUrl(url)) {
+        final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+        if (launched) {
+          debugPrint('AuthService: launchUrl succeeded');
+          return;
+        }
       }
     } catch (e) {
       debugPrint('AuthService: launchUrl failed: $e');
     }
 
-    // Method 3: cmd /c start "" "url"
+    // Method 3: PowerShell Start-Process
     try {
-      await Process.run('cmd', ['/c', 'start', '', urlStr]);
-      debugPrint('AuthService: cmd /c start triggered');
+      await Process.run('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        'Start-Process',
+        '"$urlStr"',
+      ]);
+      debugPrint('AuthService: powershell Start-Process triggered');
     } catch (e) {
-      debugPrint('AuthService: cmd error: $e');
+      debugPrint('AuthService: powershell error: $e');
     }
   }
 
@@ -266,7 +272,7 @@ class AuthService {
       });
 
       // Launch system browser
-      await _openBrowser(authUri);
+      await openBrowser(authUri);
 
       // Await incoming redirect authorization code (timeout after 2 minutes)
       final code = await completer.future.timeout(

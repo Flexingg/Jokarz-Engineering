@@ -428,7 +428,9 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 icon: const Icon(Icons.open_in_browser_rounded, size: 16),
                                 label: const Text('Open Browser', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                 onPressed: () {
-                                  Process.run('explorer.exe', [_authUri.toString()]);
+                                  if (_authUri != null) {
+                                    authService.openBrowser(_authUri!);
+                                  }
                                 },
                               ),
                             ),
