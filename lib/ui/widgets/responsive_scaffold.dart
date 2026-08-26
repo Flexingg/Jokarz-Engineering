@@ -49,58 +49,38 @@ class ResponsiveScaffold extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 24),
-                      // App Brand & Logo
+                      const SizedBox(height: 16),
+                      // Navigation Header
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppTheme.primaryCyan,
-                                    AppTheme.primaryBlue,
-                                  ],
-                                ),
+                                color: AppTheme.primaryCyan.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                               ),
                               child: const Icon(
                                 Icons.precision_manufacturing_rounded,
-                                color: Colors.black87,
-                                size: 22,
+                                color: AppTheme.primaryCyan,
+                                size: 18,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'JOKARZ',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
-                                      color: AppTheme.primaryCyan,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ENGINEERING',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(width: 10),
+                            const Text(
+                              'WORKSPACE',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                                color: AppTheme.primaryCyan,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
                       // Navigation Items
                       _buildDesktopNavItem(

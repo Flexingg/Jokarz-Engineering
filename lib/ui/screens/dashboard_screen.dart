@@ -39,19 +39,9 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
-            SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Jokarz Engineering',
-                style: TextStyle(fontWeight: FontWeight.w900),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           const SyncStatusBadge(compact: true),

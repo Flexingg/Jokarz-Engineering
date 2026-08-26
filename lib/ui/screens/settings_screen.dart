@@ -32,47 +32,6 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20.0),
         children: [
-          // App Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryCyan, AppTheme.primaryBlue],
-                  ),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                ),
-                child: const Icon(
-                  Icons.precision_manufacturing_rounded,
-                  color: Colors.black87,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Jokarz Engineering',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-                    ),
-                    Text(
-                      'Randall Engineering Suite • v1.0.1 Release',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              const ExpressiveBadge(
-                label: 'v1.0.1',
-                color: AppTheme.accentEmerald,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
           // Google Account & Cloud Sync Section
           const Text(
             'Google Account & Cloud Synchronization',
@@ -241,7 +200,7 @@ class SettingsScreen extends ConsumerWidget {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Jokarz Engineering JSON Export'),
+                        title: const Text('Engineering JSON Database Export'),
                         content: SingleChildScrollView(
                           child: SelectableText(
                             jsonStr,
@@ -381,9 +340,9 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // About Randall Engineering
+          // About Application & Plant Engineering Suite
           const Text(
-            'About Jokarz Engineering',
+            'About Application',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 8),
@@ -404,6 +363,52 @@ class SettingsScreen extends ConsumerWidget {
                     color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Bottom Branding Footer (Only location in app)
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.primaryCyan, AppTheme.primaryBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  ),
+                  child: const Icon(
+                    Icons.precision_manufacturing_rounded,
+                    color: Colors.black87,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Jokarz Engineering',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Randall Engineering Suite • v1.0.1 Release',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const ExpressiveBadge(
+                  label: 'v1.0.1',
+                  color: AppTheme.accentEmerald,
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
