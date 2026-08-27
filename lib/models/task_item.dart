@@ -6,6 +6,8 @@ class TaskItem {
   final DateTime? scheduledDate;
   final String pendingReason; // e.g. "Pending parts", "Pending email", "Pending downtime"
   final bool isCompleted;
+  /// Explicit sort order for drag-and-drop reordering (0-based index)
+  final int sortOrder;
 
   TaskItem({
     String? id,
@@ -13,6 +15,7 @@ class TaskItem {
     this.scheduledDate,
     this.pendingReason = '',
     this.isCompleted = false,
+    this.sortOrder = 0,
   }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
 
   TaskItem copyWith({
@@ -21,6 +24,7 @@ class TaskItem {
     bool clearScheduledDate = false,
     String? pendingReason,
     bool? isCompleted,
+    int? sortOrder,
   }) {
     return TaskItem(
       id: id,
@@ -28,6 +32,7 @@ class TaskItem {
       scheduledDate: clearScheduledDate ? null : (scheduledDate ?? this.scheduledDate),
       pendingReason: pendingReason ?? this.pendingReason,
       isCompleted: isCompleted ?? this.isCompleted,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -38,6 +43,7 @@ class TaskItem {
       'scheduledDate': scheduledDate?.toIso8601String(),
       'pendingReason': pendingReason,
       'isCompleted': isCompleted,
+      'sortOrder': sortOrder,
     };
   }
 
@@ -50,6 +56,7 @@ class TaskItem {
           : null,
       pendingReason: json['pendingReason'] as String? ?? '',
       isCompleted: json['isCompleted'] as bool? ?? false,
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     );
   }
 }

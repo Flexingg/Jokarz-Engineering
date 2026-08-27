@@ -7,6 +7,7 @@ import '../models/order_item.dart';
 import '../models/project_log.dart';
 import '../models/voice_note.dart';
 import '../models/filament_profile.dart';
+import '../models/standalone_order.dart';
 import '../services/storage_service.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -24,6 +25,7 @@ class EngineeringState {
   final List<Project> projects;
   final List<VoiceNote> voiceNotes;
   final List<FilamentProfile> filaments;
+  final List<StandaloneOrder> standaloneOrders;
   final bool isLoading;
   final String searchQuery;
   final ProjectCategory? selectedCategory;
@@ -34,6 +36,7 @@ class EngineeringState {
     this.projects = const [],
     this.voiceNotes = const [],
     this.filaments = const [],
+    this.standaloneOrders = const [],
     this.isLoading = true,
     this.searchQuery = '',
     this.selectedCategory,
@@ -64,8 +67,11 @@ class EngineeringState {
           selectedCategory == null || p.category == selectedCategory;
       final matchesPhase =
           selectedPhase == null || p.phase.toLowerCase() == selectedPhase!.toLowerCase();
-      final matchesMachine =
-          selectedMachine == null || p.machine.toLowerCase() == selectedMachine!.toLowerCase();
+      // Multi-machine: match if any segment contains the filter value
+      final matchesMachine = selectedMachine == null ||
+          p.machineList.any((m) =>
+              m.toLowerCase().contains(selectedMachine!.toLowerCase())) ||
+          p.machine.toLowerCase().contains(selectedMachine!.toLowerCase());
 
       return matchesSearch && matchesCategory && matchesPhase && matchesMachine;
     }).toList();
@@ -90,6 +96,19 @@ class EngineeringState {
     return list;
   }
 
+  /// Returns active projects sorted by "needs attention" score (highest first).
+  /// Score = daysSinceLastAction / priority  →  low priority + long ignored = top of queue.
+  List<Project> get queuedProjects {
+    final active = activeProjects; // already sorted by priority
+    final scored = active.map((p) {
+      final days = p.daysSinceLastAction.toDouble();
+      final score = days / p.priority.toDouble();
+      return _ScoredProject(p, score);
+    }).toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    return scored.map((s) => s.project).toList();
+  }
+
   List<String> get availablePhases {
     final set = <String>{...ProjectPhases.standardPhases};
     for (final p in projects) {
@@ -110,10 +129,15 @@ class EngineeringState {
     return list;
   }
 
+  /// Unique individual machine names across all projects (split on '/').
   List<String> get availableMachines {
     final set = <String>{};
     for (final p in projects) {
-      if (p.machine.trim().isNotEmpty) {
+      for (final m in p.machineList) {
+        if (m.isNotEmpty) set.add(m);
+      }
+      // Also include unsplit if no slash (single machine)
+      if (p.machine.trim().isNotEmpty && !p.machine.contains('/')) {
         set.add(p.machine.trim());
       }
     }
@@ -136,6 +160,7 @@ class EngineeringState {
     List<Project>? projects,
     List<VoiceNote>? voiceNotes,
     List<FilamentProfile>? filaments,
+    List<StandaloneOrder>? standaloneOrders,
     bool? isLoading,
     String? searchQuery,
     ProjectCategory? selectedCategory,
@@ -149,6 +174,7 @@ class EngineeringState {
       projects: projects ?? this.projects,
       voiceNotes: voiceNotes ?? this.voiceNotes,
       filaments: filaments ?? this.filaments,
+      standaloneOrders: standaloneOrders ?? this.standaloneOrders,
       isLoading: isLoading ?? this.isLoading,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory:
@@ -159,6 +185,12 @@ class EngineeringState {
           clearMachine ? null : (selectedMachine ?? this.selectedMachine),
     );
   }
+}
+
+class _ScoredProject {
+  final Project project;
+  final double score;
+  const _ScoredProject(this.project, this.score);
 }
 
 class ProjectNotifier extends StateNotifier<EngineeringState> {
@@ -178,6 +210,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       projects: loadedProjects,
       voiceNotes: data['voiceNotes'] as List<VoiceNote>,
       filaments: data['filaments'] as List<FilamentProfile>,
+      standaloneOrders: data['standaloneOrders'] as List<StandaloneOrder>? ?? [],
       isLoading: false,
     );
   }
@@ -187,6 +220,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       projects: state.projects,
       voiceNotes: state.voiceNotes,
       customFilaments: state.filaments,
+      standaloneOrders: state.standaloneOrders,
     );
   }
 
@@ -359,7 +393,10 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       }
       return t;
     }).toList();
-    final updatedProject = project.copyWith(tasks: updatedTasks);
+    final updatedProject = project.copyWith(
+      tasks: updatedTasks,
+      lastActionAt: DateTime.now(),
+    );
     await updateProject(updatedProject);
   }
 
@@ -378,6 +415,48 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       clearNextPendingTask: clearPending,
     );
     await updateProject(updatedProject);
+  }
+
+  /// Reorders tasks by dragging. Completed tasks are ignored (they stay at bottom).
+  Future<void> reorderTasks(String projectId, int oldIndex, int newIndex) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+
+    // Only reorder incomplete tasks; completed tasks stay at the end
+    final incompleteTasks = project.tasks
+        .where((t) => !t.isCompleted)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final completedTasks = project.tasks
+        .where((t) => t.isCompleted)
+        .toList();
+
+    if (oldIndex >= incompleteTasks.length || newIndex > incompleteTasks.length) return;
+
+    final item = incompleteTasks.removeAt(oldIndex);
+    if (newIndex > oldIndex) newIndex--;
+    incompleteTasks.insert(newIndex, item);
+
+    // Reassign sortOrder values
+    final reindexed = incompleteTasks
+        .asMap()
+        .entries
+        .map((e) => e.value.copyWith(sortOrder: e.key))
+        .toList();
+
+    final updatedProject = project.copyWith(
+      tasks: [...reindexed, ...completedTasks],
+      lastActionAt: DateTime.now(),
+    );
+    await updateProject(updatedProject);
+  }
+
+  /// Stamps lastActionAt to mark the engineer has taken action on this project today.
+  Future<void> markProjectActioned(String projectId) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final updated = project.copyWith(lastActionAt: DateTime.now());
+    await updateProject(updated);
   }
 
   // --- Order Management ---
@@ -428,7 +507,10 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     if (project == null) return;
 
     final updatedLogs = [log, ...project.logs];
-    final updatedProject = project.copyWith(logs: updatedLogs);
+    final updatedProject = project.copyWith(
+      logs: updatedLogs,
+      lastActionAt: DateTime.now(),
+    );
     await updateProject(updatedProject);
   }
 
@@ -533,9 +615,58 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   }
 
   Future<void> clearAllData() async {
-    state = state.copyWith(projects: [], voiceNotes: []);
+    state = state.copyWith(projects: [], voiceNotes: [], standaloneOrders: []);
     await _storage.clearAllData();
     await _persist();
+  }
+
+  // --- Standalone Orders ---
+  Future<void> addStandaloneOrder(StandaloneOrder order) async {
+    final updated = [...state.standaloneOrders, order];
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  Future<void> updateStandaloneOrder(StandaloneOrder order) async {
+    final updated = state.standaloneOrders
+        .map((o) => o.id == order.id ? order : o)
+        .toList();
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  Future<void> deleteStandaloneOrder(String id) async {
+    final updated = state.standaloneOrders.where((o) => o.id != id).toList();
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  /// Moves a standalone order into a project's orders list and removes it from standaloneOrders.
+  Future<void> linkOrderToProject(String standaloneOrderId, String projectId) async {
+    final project = getProjectById(projectId);
+    final standalone = state.standaloneOrders
+        .where((o) => o.id == standaloneOrderId)
+        .firstOrNull;
+    if (project == null || standalone == null) return;
+
+    // Convert StandaloneOrder → OrderItem
+    final orderItem = OrderItem(
+      id: standalone.id,
+      pr: standalone.pr,
+      po: standalone.po,
+      description: standalone.description,
+      price: standalone.price,
+      eta: standalone.eta,
+      delivered: standalone.delivered,
+    );
+
+    final updatedOrders = [...project.orders, orderItem];
+    final updatedProject = project.copyWith(orders: updatedOrders);
+    final remainingStandalone =
+        state.standaloneOrders.where((o) => o.id != standaloneOrderId).toList();
+
+    state = state.copyWith(standaloneOrders: remainingStandalone);
+    await updateProject(updatedProject);
   }
 }
 

@@ -10,6 +10,8 @@ import '../ui/screens/workbench_screen.dart';
 import '../ui/screens/voice_notes_screen.dart';
 import '../ui/screens/settings_screen.dart';
 import '../ui/screens/tasks_calendar_screen.dart';
+import '../ui/screens/what_next_screen.dart';
+import '../ui/screens/report_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,7 +48,16 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: 'new',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const ProjectEditScreen(),
+                  builder: (context, state) {
+                    final extra = state.extra as Map<String, dynamic>?;
+                    final initialTitle = extra?['initialTitle'] as String?;
+                    return ProjectEditScreen(initialTitle: initialTitle);
+                  },
+                ),
+                GoRoute(
+                  path: 'queue',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const WhatNextScreen(),
                 ),
                 GoRoute(
                   path: ':id',
@@ -124,6 +135,11 @@ final appRouter = GoRouter(
       path: '/calendar',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const TasksCalendarScreen(),
+    ),
+    GoRoute(
+      path: '/report',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReportScreen(),
     ),
   ],
 );

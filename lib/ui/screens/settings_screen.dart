@@ -397,7 +397,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Randall Engineering Suite • v1.0.2 Release',
+                  'Randall Engineering Suite • v1.0.3 Release',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
@@ -405,7 +405,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 const ExpressiveBadge(
-                  label: 'v1.0.2',
+                  label: 'v1.0.3',
                   color: AppTheme.accentEmerald,
                 ),
                 const SizedBox(height: 16),

@@ -54,6 +54,22 @@ class Project {
   final List<String> photoPaths;
   final DateTime createdAt;
   final DateTime updatedAt;
+  /// Tracks when the engineer last took a meaningful action on this project
+  /// (logged a note, toggled a task, changed a phase). Used for queue scoring.
+  final DateTime? lastActionAt;
+
+  /// Returns individual machine names split on '/' separator.
+  /// e.g. "Line 3 / Packer A" → ['Line 3', 'Packer A']
+  List<String> get machineList {
+    if (machine.trim().isEmpty) return [];
+    return machine.split('/').map((m) => m.trim()).where((m) => m.isNotEmpty).toList();
+  }
+
+  /// Days since last action (or since creation if never actioned).
+  int get daysSinceLastAction {
+    final ref = lastActionAt ?? createdAt;
+    return DateTime.now().difference(ref).inDays;
+  }
 
   Project({
     String? id,
@@ -74,6 +90,7 @@ class Project {
     List<String>? photoPaths,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.lastActionAt,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         tags = tags ?? [],
         tasks = tasks ?? [],
@@ -131,6 +148,8 @@ class Project {
     List<ProjectLog>? logs,
     List<String>? photoPaths,
     DateTime? updatedAt,
+    DateTime? lastActionAt,
+    bool clearLastActionAt = false,
   }) {
     return Project(
       id: id,
@@ -153,6 +172,7 @@ class Project {
       photoPaths: photoPaths ?? this.photoPaths,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      lastActionAt: clearLastActionAt ? null : (lastActionAt ?? this.lastActionAt),
     );
   }
 
@@ -176,6 +196,7 @@ class Project {
       'photoPaths': photoPaths,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'lastActionAt': lastActionAt?.toIso8601String(),
     };
   }
 
@@ -224,6 +245,9 @@ class Project {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      lastActionAt: json['lastActionAt'] != null
+          ? DateTime.tryParse(json['lastActionAt'] as String)
+          : null,
     );
   }
 }

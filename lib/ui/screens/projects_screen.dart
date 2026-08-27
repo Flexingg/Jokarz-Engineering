@@ -77,6 +77,16 @@ class ProjectsScreen extends ConsumerWidget {
           ),
           const SyncStatusBadge(compact: true),
           IconButton(
+            icon: const Icon(Icons.print_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Daily Walk-Around Report',
+            onPressed: () => context.push('/report'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.queue_play_next_rounded, color: AppTheme.accentEmerald),
+            tooltip: 'What\'s Next? Priority Queue',
+            onPressed: () => context.push('/projects/queue'),
+          ),
+          IconButton(
             icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
             tooltip: 'New Project',
             onPressed: () => context.push('/projects/new'),
@@ -176,7 +186,7 @@ class ProjectsScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           state.searchQuery.isNotEmpty
-                              ? 'Try adjusting your search query or filters'
+                              ? 'No matches — create it now?'
                               : 'Tap + to create a new project',
                           style: TextStyle(
                             fontSize: 12,
@@ -184,11 +194,26 @@ class ProjectsScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => context.push('/projects/new'),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Project'),
-                        ),
+                        // Search→Create: if search has text and no results, offer to create with that title
+                        if (state.searchQuery.isNotEmpty)
+                          ElevatedButton.icon(
+                            onPressed: () => context.push(
+                              '/projects/new',
+                              extra: {'initialTitle': state.searchQuery},
+                            ),
+                            icon: const Icon(Icons.add_rounded),
+                            label: Text('Create "${state.searchQuery}"'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryCyan,
+                              foregroundColor: Colors.white,
+                            ),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: () => context.push('/projects/new'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Project'),
+                          ),
                       ],
                     ),
                   )
@@ -271,30 +296,62 @@ class ProjectsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
 
-                            // Machine / Sub-Assembly
+                            // Machine chips (split on /) + Sub-Assembly
                             if (project.machine.isNotEmpty || project.subAssembly.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 6.0),
-                                child: Row(
+                                child: Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 4,
+                                  runSpacing: 2,
                                   children: [
-                                    if (project.machine.isNotEmpty) ...[
-                                      const Icon(Icons.precision_manufacturing_outlined, size: 13, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        project.machine,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                    const Icon(Icons.precision_manufacturing_outlined, size: 13, color: Colors.grey),
+                                    ...project.machineList.map((m) => Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.4), width: 0.6),
                                       ),
-                                    ],
-                                    if (project.machine.isNotEmpty && project.subAssembly.isNotEmpty)
-                                      const Text('  ▸  ', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                      child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                                    )),
                                     if (project.subAssembly.isNotEmpty) ...[
                                       const Icon(Icons.account_tree_outlined, size: 13, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        project.subAssembly,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                                      ),
+                                      Text(project.subAssembly, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                                     ],
+                                  ],
+                                ),
+                              ),
+
+                            // Last action badge (only active projects)
+                            if (!isTerminal && project.daysSinceLastAction > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.history_rounded,
+                                      size: 12,
+                                      color: project.daysSinceLastAction >= 7
+                                          ? Colors.red.shade400
+                                          : project.daysSinceLastAction >= 3
+                                              ? AppTheme.accentAmber
+                                              : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      project.daysSinceLastAction == 1
+                                          ? 'Last action: 1 day ago'
+                                          : 'Last action: ${project.daysSinceLastAction}d ago',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: project.daysSinceLastAction >= 7
+                                            ? Colors.red.shade400
+                                            : project.daysSinceLastAction >= 3
+                                                ? AppTheme.accentAmber
+                                                : Colors.grey,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),

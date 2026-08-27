@@ -7,8 +7,9 @@ import '../../providers/project_provider.dart';
 
 class ProjectEditScreen extends ConsumerStatefulWidget {
   final String? projectId; // null for new project
+  final String? initialTitle; // pre-fill title from search→create
 
-  const ProjectEditScreen({super.key, this.projectId});
+  const ProjectEditScreen({super.key, this.projectId, this.initialTitle});
 
   @override
   ConsumerState<ProjectEditScreen> createState() => _ProjectEditScreenState();
@@ -62,6 +63,10 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         _nextPendingTaskId = _existingProject!.nextPendingTaskId;
       }
     } else {
+      // Pre-fill title from search→create flow
+      if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+        _titleController.text = widget.initialTitle!;
+      }
       final activeCount = ref
           .read(projectProvider)
           .activeProjects
@@ -307,7 +312,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                         focusNode: focusNode,
                         decoration: const InputDecoration(
                           labelText: 'Machine / Line',
-                          hintText: 'e.g. Line 1 Filler, Cell 621',
+                          hintText: 'e.g. Line 1 Filler / Packer A (use / to add multiple)',
                           prefixIcon: Icon(Icons.precision_manufacturing_outlined),
                         ),
                       );

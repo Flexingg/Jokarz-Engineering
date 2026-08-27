@@ -738,84 +738,110 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  itemCount: project.tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = project.tasks[index];
-                    final dateText = task.scheduledDate != null
-                        ? DateFormat('MMM d, y').format(task.scheduledDate!)
-                        : null;
+              : Builder(builder: (ctx) {
+                  // Sort: incomplete by sortOrder first, then completed
+                  final incomplete = project.tasks
+                      .where((t) => !t.isCompleted)
+                      .toList()
+                    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+                  final completed = project.tasks
+                      .where((t) => t.isCompleted)
+                      .toList();
+                  final sorted = [...incomplete, ...completed];
 
-                    return ExpressiveCard(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: task.isCompleted,
-                            activeColor: AppTheme.accentEmerald,
-                            onChanged: (_) {
-                              ref
-                                  .read(projectProvider.notifier)
-                                  .toggleTaskCompleted(project.id, task.id);
-                            },
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  task.description,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    decoration: task.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children: [
-                                    if (task.pendingReason.isNotEmpty)
-                                      ExpressiveBadge(
-                                        label: task.pendingReason,
-                                        icon: Icons.hourglass_empty_rounded,
-                                        color: AppTheme.accentAmber,
-                                        fontSize: 10,
-                                      ),
-                                    if (dateText != null)
-                                      ExpressiveBadge(
-                                        label: 'Scheduled: $dateText',
-                                        icon: Icons.calendar_today_rounded,
-                                        color: AppTheme.primaryCyan,
-                                        fontSize: 10,
-                                      ),
-                                  ],
-                                ),
-                              ],
+                  return ReorderableListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    itemCount: sorted.length,
+                    onReorder: (oldIndex, newIndex) {
+                      // Only allow reordering within incomplete tasks
+                      if (oldIndex < incomplete.length) {
+                        ref.read(projectProvider.notifier)
+                            .reorderTasks(project.id, oldIndex, newIndex);
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      final task = sorted[index];
+                      final dateText = task.scheduledDate != null
+                          ? DateFormat('MMM d, y').format(task.scheduledDate!)
+                          : null;
+                      final canDrag = !task.isCompleted;
+
+                      return ExpressiveCard(
+                        key: ValueKey(task.id),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Drag handle (incomplete tasks only)
+                            if (canDrag)
+                              const Icon(Icons.drag_handle_rounded, size: 20, color: Colors.grey)
+                            else
+                              const SizedBox(width: 20),
+                            Checkbox(
+                              value: task.isCompleted,
+                              activeColor: AppTheme.accentEmerald,
+                              onChanged: (_) {
+                                ref
+                                    .read(projectProvider.notifier)
+                                    .toggleTaskCompleted(project.id, task.id);
+                              },
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                            onPressed: () => _showAddTaskDialog(context, existingTask: task),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                            onPressed: () => ref
-                                .read(projectProvider.notifier)
-                                .deleteTask(project.id, task.id),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    task.description,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      decoration: task.isCompleted
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      if (task.pendingReason.isNotEmpty)
+                                        ExpressiveBadge(
+                                          label: task.pendingReason,
+                                          icon: Icons.hourglass_empty_rounded,
+                                          color: AppTheme.accentAmber,
+                                          fontSize: 10,
+                                        ),
+                                      if (dateText != null)
+                                        ExpressiveBadge(
+                                          label: 'Scheduled: $dateText',
+                                          icon: Icons.calendar_today_rounded,
+                                          color: AppTheme.primaryCyan,
+                                          fontSize: 10,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                              onPressed: () => _showAddTaskDialog(context, existingTask: task),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                              onPressed: () => ref
+                                  .read(projectProvider.notifier)
+                                  .deleteTask(project.id, task.id),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }),
         ),
       ],
     );
