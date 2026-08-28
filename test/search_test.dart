@@ -14,6 +14,20 @@ void main() {
       expect(titleCase(''), '');
       expect(titleCase('   '), '');
     });
+
+    test('splitMachines splits on / and ,', () {
+      expect(splitMachines('621 / Packer A, Mill 3'), ['621', 'Packer A', 'Mill 3']);
+      expect(splitMachines('621'), ['621']);
+      expect(splitMachines(''), isEmpty);
+      expect(splitMachines('   '), isEmpty);
+    });
+
+    test('decodeUnicodeEscapes decodes literal \\uXXXX sequences', () {
+      expect(decodeUnicodeEscapes(r'\u201cHello\u201d'), '\u201cHello\u201d');
+      expect(decodeUnicodeEscapes('plain text'), 'plain text');
+      expect(decodeUnicodeEscapes(''), '');
+      expect(decodeUnicodeEscapes('a\\u2019s'), "a\u2019s");
+    });
   });
 
   group('EngineeringState.searchAll', () {
@@ -112,6 +126,20 @@ void main() {
     test('standalone order matches by PO', () {
       final r = state.searchAll('PO-9921004');
       expect(r.orders.any((o) => o.isStandalone), isTrue);
+    });
+
+    test('availableSubAssembliesFor drills down by machine', () {
+      final s = EngineeringState(projects: [
+        Project(id: 'a', title: 'A', machine: '621', subAssembly: 'Spindle'),
+        Project(
+            id: 'b', title: 'B', machine: '621 / Packer A', subAssembly: 'Packer Guides'),
+        Project(id: 'c', title: 'C', machine: 'Line 3', subAssembly: 'Starwheel'),
+      ]);
+      expect(s.availableSubAssembliesFor('621').toSet(),
+          {'Spindle', 'Packer Guides'});
+      expect(s.availableSubAssembliesFor('Packer A').toSet(),
+          {'Packer Guides'});
+      expect(s.availableSubAssembliesFor('').length, 3);
     });
   });
 }

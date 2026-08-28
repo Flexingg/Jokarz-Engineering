@@ -87,6 +87,64 @@ class StorageService {
     }
   }
 
+  // --- Key Bindings ---
+  static const String _bindingsFile = 'jokarz_keybindings.json';
+
+  Future<File> _getBindingsFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_bindingsFile');
+  }
+
+  Future<Map<String, String>> loadKeyBindings() async {
+    try {
+      final file = await _getBindingsFile();
+      if (!await file.exists()) return {};
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return {};
+      final jsonMap = jsonDecode(content) as Map<String, dynamic>;
+      return jsonMap.map((k, v) => MapEntry(k, v.toString()));
+    } catch (e) {
+      debugPrint('Error loading keybindings: $e');
+      return {};
+    }
+  }
+
+  Future<void> saveKeyBindings(Map<String, String> bindings) async {
+    try {
+      final file = await _getBindingsFile();
+      await file.writeAsString(jsonEncode(bindings), flush: true);
+    } catch (e) {
+      debugPrint('Error saving keybindings: $e');
+    }
+  }
+
+  // --- Report Settings ---
+  static const String _reportFile = 'jokarz_report_config.json';
+
+  Future<File> _getReportFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_reportFile');
+  }
+
+  Future<Map<String, dynamic>?> loadReportSettings() async {
+    try {
+      final file = await _getReportFile();
+      if (!await file.exists()) return null;
+      return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveReportSettings(Map<String, dynamic> data) async {
+    try {
+      final file = await _getReportFile();
+      await file.writeAsString(jsonEncode(data), flush: true);
+    } catch (e) {
+      debugPrint('Error saving report settings: $e');
+    }
+  }
+
   Future<void> saveData({
     required List<Project> projects,
     required List<VoiceNote> voiceNotes,

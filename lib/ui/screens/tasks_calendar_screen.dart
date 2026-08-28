@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/task_item.dart';
+import '../../models/voice_note.dart';
 import '../../providers/project_provider.dart';
+import '../../services/sync_service.dart';
+import '../../utils/text_utils.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 
@@ -66,6 +69,15 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
     final selectedKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
     List<({Project project, TaskItem task})> dayTasks =
         tasksByDate[selectedKey] ?? [];
+
+    // Date-attached notes (one per date)
+    final notesByDate = <String, VoiceNote>{};
+    for (final n in state.voiceNotes) {
+      if (n.date != null) {
+        notesByDate[DateFormat('yyyy-MM-dd').format(n.date!)] = n;
+      }
+    }
+    final dayNote = notesByDate[selectedKey];
 
     if (_filterMode == 0) {
       dayTasks = dayTasks.where((e) => !e.task.isCompleted).toList();
@@ -136,6 +148,71 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               ],
             ),
           ),
+          // ===== DAY NOTE =====
+          if (dayNote != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: ExpressiveCard(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.sticky_note_2_outlined,
+                            size: 16, color: AppTheme.accentAmber),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text('Day Note',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.accentAmber)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined,
+                              size: 16, color: AppTheme.primaryCyan),
+                          tooltip: 'Edit Note',
+                          onPressed: () => _showDateNoteDialog(_selectedDate),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              size: 16, color: AppTheme.accentCoral),
+                          tooltip: 'Delete Note',
+                          onPressed: () => _deleteDateNote(_selectedDate),
+                        ),
+                      ],
+                    ),
+                    if (dayNote.title.isNotEmpty) ...[
+                      Text(dayNote.title,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                    ],
+                    SelectableText(
+                      decodeUnicodeEscapes(dayNote.transcript),
+                      style: const TextStyle(fontSize: 12, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _showDateNoteDialog(_selectedDate),
+                  icon: const Icon(Icons.note_add_outlined,
+                      size: 16, color: AppTheme.accentAmber),
+                  label: const Text('Add note for this day',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.accentAmber)),
+                ),
+              ),
+            ),
+
           const SizedBox(height: 6),
 
           if (dayTasks.isEmpty)
@@ -309,6 +386,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               daysInMonth: daysInMonth,
               firstWeekday: firstWeekday,
               tasksByDate: tasksByDate,
+              notesByDate: notesByDate,
               isDark: isDark,
             ),
           ),
@@ -321,6 +399,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
     required int daysInMonth,
     required int firstWeekday,
     required Map<String, List<({Project project, TaskItem task})>> tasksByDate,
+    required Map<String, VoiceNote> notesByDate,
     required bool isDark,
   }) {
     final totalCells = ((daysInMonth + firstWeekday - 1) / 7).ceil() * 7;
@@ -355,10 +434,12 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             cellDate.day == DateTime.now().day;
 
         final hasIncomplete = tasksOnDay.any((e) => !e.task.isCompleted);
+        final hasNote = notesByDate.containsKey(dateKey);
 
-        return InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        return GestureDetector(
           onTap: () => setState(() => _selectedDate = cellDate),
+          onLongPress: () => _showDateNoteDialog(cellDate),
+          onSecondaryTap: () => _showDateNoteDialog(cellDate),
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
@@ -393,17 +474,28 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                         : (isDark ? Colors.white : Colors.black87),
                   ),
                 ),
-                if (tasksOnDay.isNotEmpty) ...[
+                if (tasksOnDay.isNotEmpty || hasNote) ...[
                   const SizedBox(height: 2),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: hasIncomplete
-                          ? AppTheme.accentCoral
-                          : AppTheme.accentEmerald,
-                      shape: BoxShape.circle,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (tasksOnDay.isNotEmpty)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: hasIncomplete
+                                ? AppTheme.accentCoral
+                                : AppTheme.accentEmerald,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      if (hasNote) ...[
+                        const SizedBox(width: 3),
+                        const Icon(Icons.sticky_note_2_outlined,
+                            size: 10, color: AppTheme.accentAmber),
+                      ],
+                    ],
                   ),
                 ],
               ],
@@ -412,6 +504,123 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showDateNoteDialog(DateTime date) async {
+    final current = ref.read(projectProvider);
+    final key = DateFormat('yyyy-MM-dd').format(date);
+    VoiceNote? existing;
+    for (final n in current.voiceNotes) {
+      if (n.date != null && DateFormat('yyyy-MM-dd').format(n.date!) == key) {
+        existing = n;
+        break;
+      }
+    }
+
+    final titleCtrl = TextEditingController(
+        text: existing?.title ?? DateFormat('MM/dd/yyyy').format(date));
+    final contentCtrl =
+        TextEditingController(text: existing?.transcript ?? '');
+    final dateLabel = DateFormat('MMM d').format(date);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(existing == null ? 'Add Note — $dateLabel' : 'Edit Note — $dateLabel'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Defaults to date (MM/DD/YYYY)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: contentCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Note',
+                  hintText: 'Details for this date...',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true || !mounted) return;
+
+    final title = titleCtrl.text.trim();
+    final content = contentCtrl.text.trim();
+    final notifier = ref.read(projectProvider.notifier);
+    final fallbackTitle = DateFormat('MM/dd/yyyy').format(date);
+
+    if (existing != null) {
+      await notifier.updateVoiceNote(existing.copyWith(
+        title: title.isEmpty ? fallbackTitle : title,
+        transcript: content,
+        date: date,
+      ));
+    } else {
+      await notifier.addVoiceNote(VoiceNote(
+        title: title.isEmpty ? fallbackTitle : title,
+        transcript: content,
+        durationSeconds: 0,
+        date: date,
+      ));
+    }
+  }
+
+  Future<void> _deleteDateNote(DateTime date) async {
+    final current = ref.read(projectProvider);
+    final key = DateFormat('yyyy-MM-dd').format(date);
+    VoiceNote? existing;
+    for (final n in current.voiceNotes) {
+      if (n.date != null && DateFormat('yyyy-MM-dd').format(n.date!) == key) {
+        existing = n;
+        break;
+      }
+    }
+    if (existing == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Note?'),
+        content: Text('Delete the note for ${DateFormat('MMM d').format(date)}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentCoral),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ref
+          .read(syncStatusProvider.notifier)
+          .deleteVoiceNoteEverywhere(existing.id);
+    }
   }
 }
 

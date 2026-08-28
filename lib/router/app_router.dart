@@ -152,3 +152,6 @@ final appRouter = GoRouter(
     ),
   ],
 );
+
+/// The root navigator's BuildContext, used by global shortcuts to show dialogs.
+BuildContext? get appRootContext => _rootNavigatorKey.currentContext;

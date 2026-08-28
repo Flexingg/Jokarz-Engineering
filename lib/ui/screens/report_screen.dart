@@ -3,13 +3,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
-import '../../models/project.dart';
+import '../../models/report_config.dart';
 import '../../providers/project_provider.dart';
+import '../../providers/report_provider.dart';
+import '../../utils/report_builder.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
   const ReportScreen({super.key});
@@ -19,421 +20,516 @@ class ReportScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportScreenState extends ConsumerState<ReportScreen> {
-  final GlobalKey _reportKey = GlobalKey();
-  bool _isSharing = false;
-
-  Future<void> _shareReport() async {
-    setState(() => _isSharing = true);
-    try {
-      final boundary =
-          _reportKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final image = await boundary.toImage(pixelRatio: 2.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      final bytes = byteData.buffer.asUint8List();
-      final dir = await getTemporaryDirectory();
-      final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final file = File('${dir.path}/jokarz_report_$dateStr.png');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Jokarz Engineering Daily Report - $dateStr',
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Share failed: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSharing = false);
-    }
-  }
+  final GlobalKey _repaintKey = GlobalKey();
+  final DateTime _today = DateTime.now();
+  String? _selectedTemplate;
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(projectProvider);
-    final today = DateTime.now();
-    final weekEnd = today.add(const Duration(days: 7));
-    final dateFormat = DateFormat('MMM d, y');
-    final dateShort = DateFormat('MMM d');
-
-    final activeProjects = state.activeProjects;
-    final openOrders = state.openOrders;
-    final standaloneOrders =
-        state.standaloneOrders.where((o) => !o.delivered).toList();
-
-    final tasksDueThisWeek = <Map<String, dynamic>>[];
-    for (final p in activeProjects) {
-      for (final t in p.tasks) {
-        if (!t.isCompleted &&
-            t.scheduledDate != null &&
-            !t.scheduledDate!.isBefore(today) &&
-            t.scheduledDate!.isBefore(weekEnd)) {
-          tasksDueThisWeek.add({'project': p, 'task': t});
-        }
-      }
-    }
-    tasksDueThisWeek.sort((a, b) =>
-        (a['task'].scheduledDate as DateTime)
-            .compareTo(b['task'].scheduledDate as DateTime));
+    final settings = ref.watch(reportSettingsProvider);
+    final cfg = settings.current;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final data = buildReportData(state, cfg, _today);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daily Report',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
-        ),
         actions: [
-          _isSharing
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2)))
-              : IconButton(
-                  icon: const Icon(Icons.share_rounded,
-                      color: AppTheme.primaryCyan),
-                  tooltip: 'Share / Print',
-                  onPressed: _shareReport,
-                ),
+          IconButton(
+            tooltip: 'Customize Report',
+            icon: const Icon(Icons.tune_rounded, color: AppTheme.primaryCyan),
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => _ReportCustomizeSheet(initial: cfg),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Save as Template',
+            icon: const Icon(Icons.bookmark_add_outlined, color: AppTheme.accentAmber),
+            onPressed: () => _saveAsTemplate(cfg),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.ios_share_rounded),
+            tooltip: 'Export Report',
+            onSelected: (v) => _export(v, cfg),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'png', child: Text('PNG Image')),
+              PopupMenuItem(value: 'pdf', child: Text('PDF')),
+              PopupMenuItem(value: 'txt', child: Text('Plain Text')),
+              PopupMenuItem(value: 'csv', child: Text('CSV')),
+            ],
+          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: RepaintBoundary(
-            key: _reportKey,
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: DefaultTextStyle(
-                style: const TextStyle(color: Colors.black),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ReportHeader(date: dateFormat.format(today)),
-                    const SizedBox(height: 24),
+      body: Column(
+        children: [
+          // Template toolbar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedTemplate,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      labelText: 'Template',
+                      prefixIcon: Icon(Icons.file_copy_outlined, size: 18),
+                    ),
+                    items: [
+                      if (_selectedTemplate == null)
+                        const DropdownMenuItem<String>(
+                            value: null, child: Text('— current config —')),
+                      ...settings.templates.keys.map(
+                        (k) => DropdownMenuItem<String>(
+                            value: k, child: Text(k, overflow: TextOverflow.ellipsis)),
+                      ),
+                    ],
+                    onChanged: (name) {
+                      if (name == null) return;
+                      setState(() => _selectedTemplate = name);
+                      ref.read(reportSettingsProvider.notifier).loadTemplate(name);
+                    },
+                  ),
+                ),
+                if (_selectedTemplate != null)
+                  IconButton(
+                    tooltip: 'Delete Template',
+                    icon: const Icon(Icons.delete_outline, color: AppTheme.accentCoral),
+                    onPressed: () {
+                      final n = _selectedTemplate!;
+                      ref.read(reportSettingsProvider.notifier).deleteTemplate(n);
+                      setState(() => _selectedTemplate = null);
+                    },
+                  ),
+              ],
+            ),
+          ),
 
-                    // Active Projects
-                    _ReportSection(
-                      title: '1. Active Projects by Priority',
-                      tagText: 'PROJ',
-                      child: activeProjects.isEmpty
-                          ? const Text('No active projects.',
-                              style: TextStyle(color: Colors.grey, fontSize: 13))
-                          : Table(
-                              border: TableBorder.all(
-                                  color: const Color(0xFFBDBDBD), width: 0.5),
-                              columnWidths: const {
-                                0: FixedColumnWidth(36),
-                                1: FlexColumnWidth(3),
-                                2: FlexColumnWidth(2),
-                                3: FlexColumnWidth(2),
-                                4: FlexColumnWidth(2),
-                              },
-                              children: [
-                                const TableRow(
-                                  decoration: BoxDecoration(
-                                      color: Color(0xFFF5F5F5)),
-                                  children: [
-                                    _TH('#'),
-                                    _TH('Project'),
-                                    _TH('Phase'),
-                                    _TH('Machine'),
-                                    _TH('Next Task'),
-                                  ],
-                                ),
-                                ...activeProjects.map((p) {
-                                  final nextTask = p.nextPendingTask;
-                                  return TableRow(children: [
-                                    _TD('${p.priority}', center: true),
-                                    _TD(p.title, bold: true),
-                                    _TD(p.phase),
-                                    _TD(
-                                        p.machine.isEmpty ? '-' : p.machine),
-                                    _TD(
-                                        nextTask?.description ?? '-',
-                                        maxLines: 2),
-                                  ]);
-                                }),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Open Orders
-                    _ReportSection(
-                      title: '2. Open Purchase Orders',
-                      tagText: 'PO',
-                      child: (openOrders.isEmpty && standaloneOrders.isEmpty)
-                          ? const Text('No open orders.',
-                              style: TextStyle(color: Colors.grey, fontSize: 13))
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (openOrders.isNotEmpty)
-                                  Table(
-                                    border: TableBorder.all(
-                                        color: const Color(0xFFBDBDBD),
-                                        width: 0.5),
-                                    columnWidths: const {
-                                      0: FlexColumnWidth(3),
-                                      1: FlexColumnWidth(1.5),
-                                      2: FlexColumnWidth(1.5),
-                                      3: FlexColumnWidth(1.5),
-                                      4: FlexColumnWidth(2),
-                                    },
-                                    children: [
-                                      const TableRow(
-                                        decoration: BoxDecoration(
-                                            color: Color(0xFFF5F5F5)),
-                                        children: [
-                                          _TH('Description'),
-                                          _TH('PR'),
-                                          _TH('PO'),
-                                          _TH('ETA'),
-                                          _TH('Project'),
-                                        ],
-                                      ),
-                                      ...openOrders.map((e) => TableRow(children: [
-                                        _TD(e.order.description.isEmpty
-                                            ? '-'
-                                            : e.order.description,
-                                            maxLines: 2),
-                                        _TD(e.order.pr.isEmpty ? '-' : e.order.pr),
-                                        _TD(e.order.po.isEmpty ? '-' : e.order.po),
-                                        _TD(e.order.eta != null
-                                            ? dateShort.format(e.order.eta!)
-                                            : '-'),
-                                        _TD(e.project.title, maxLines: 2),
-                                      ])),
-                                    ],
-                                  ),
-                                if (standaloneOrders.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  const Text('Unlinked Orders:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  ...standaloneOrders.map((o) {
-                                    final parts = <String>[
-                                      '\u2022 ${o.description.isEmpty ? "(no description)" : o.description}',
-                                      if (o.pr.isNotEmpty) 'PR: ${o.pr}',
-                                      if (o.po.isNotEmpty) 'PO: ${o.po}',
-                                      if (o.eta != null)
-                                        'ETA: ${dateShort.format(o.eta!)}',
-                                    ];
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(parts.join('  '),
-                                          style:
-                                              const TextStyle(fontSize: 12)),
-                                    );
-                                  }),
-                                ],
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Tasks Due This Week
-                    _ReportSection(
-                      title: '3. Tasks Due This Week',
-                      tagText: 'CAL',
-                      child: tasksDueThisWeek.isEmpty
-                          ? const Text('No tasks scheduled this week.',
-                              style: TextStyle(color: Colors.grey, fontSize: 13))
-                          : Table(
-                              border: TableBorder.all(
-                                  color: const Color(0xFFBDBDBD), width: 0.5),
-                              columnWidths: const {
-                                0: FixedColumnWidth(70),
-                                1: FlexColumnWidth(3),
-                                2: FlexColumnWidth(2),
-                              },
-                              children: [
-                                const TableRow(
-                                  decoration: BoxDecoration(
-                                      color: Color(0xFFF5F5F5)),
-                                  children: [
-                                    _TH('Date'),
-                                    _TH('Task'),
-                                    _TH('Project'),
-                                  ],
-                                ),
-                                ...tasksDueThisWeek.map((e) {
-                                  final task = e['task'];
-                                  final project = e['project'] as Project;
-                                  return TableRow(children: [
-                                    _TD(dateShort
-                                        .format(task.scheduledDate as DateTime)),
-                                    _TD(task.description as String,
-                                        maxLines: 2),
-                                    _TD(project.title, maxLines: 2),
-                                  ]);
-                                }),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(color: Colors.grey),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Jokarz Engineering',
-                            style: TextStyle(fontSize: 11, color: Colors.grey)),
-                        Text(
-                          'Generated: ${DateFormat('MMM d, y HH:mm').format(today)}',
-                          style: const TextStyle(
-                              fontSize: 11, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ],
+          // Scrollable report
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: RepaintBoundary(
+                key: _repaintKey,
+                child: DefaultTextStyle(
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.black87 : Colors.black87,
+                  ),
+                  child: _buildReportContent(data, cfg, isDark),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: ElevatedButton.icon(
-            onPressed: _isSharing ? null : _shareReport,
-            icon: _isSharing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.share_rounded),
-            label: const Text('Share / Print Report'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryCyan,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
-}
 
-class _ReportHeader extends StatelessWidget {
-  final String date;
-  const _ReportHeader({required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('JOKARZ ENGINEERING',
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: 1.5)),
-        const SizedBox(height: 4),
-        Text('Daily Walk-Around Report \u2014 $date',
-            style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        Container(height: 3, color: Colors.black87),
-      ],
-    );
-  }
-}
-
-class _ReportSection extends StatelessWidget {
-  final String title;
-  final String tagText;
-  final Widget child;
-  const _ReportSection(
-      {required this.title, required this.tagText, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(4)),
-            child: Text(tagText,
-                style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold)),
+  Widget _buildReportContent(ReportData data, ReportConfig cfg, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: Colors.black26),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            DateFormat('EEEE, MMM d, y').format(_today),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
           ),
-          const SizedBox(width: 8),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-        ]),
-        const SizedBox(height: 2),
-        Container(height: 1, color: const Color(0xFFBDBDBD)),
-        const SizedBox(height: 10),
-        child,
-      ],
+          const Divider(color: Colors.black87, height: 14),
+
+          if (cfg.showPriority) ...[
+            _Section('Top Projects & Next Steps', () {
+              if (data.projects.isEmpty) return const _None();
+              if (cfg.groupByMachine) {
+                final groups = <String, List<ReportProject>>{};
+                for (final p in data.projects) {
+                  final key = p.machine.isNotEmpty ? p.machine : 'General';
+                  groups.putIfAbsent(key, () => []).add(p);
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final entry in groups.entries) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('▸ ${entry.key}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black)),
+                      ),
+                      ...entry.value.map((p) => _projectRow(p)),
+                    ],
+                  ],
+                );
+              }
+              return Column(children: [for (final p in data.projects) _projectRow(p)]);
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showOrders) ...[
+            _Section('Orders Due (${cfg.ordersDueDays} Days)', () {
+              if (data.orders.isEmpty) return const _None();
+              return Column(children: [for (final o in data.orders) _orderRow(o)]);
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showStores) ...[
+            _Section('Stores Requests Pending', () {
+              if (data.stores.isEmpty) return const _None();
+              return Column(children: [for (final o in data.stores) _orderRow(o)]);
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showDueToday) ...[
+            _Section('Due / Happening Today', () {
+              if (data.dueToday.isEmpty) return const _None();
+              return Column(
+                children: [
+                  for (final t in data.dueToday)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text('${t.project}: ${t.task}',
+                          style: const TextStyle(fontSize: 11, color: Colors.black87)),
+                    ),
+                ],
+              );
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showNotes) ...[
+            _Section('Notes (${DateFormat('MM/dd/yyyy').format(_today)})', () {
+              if (data.notes.isEmpty) return const _None();
+              return Column(
+                children: [
+                  for (final n in data.notes)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Text('• ${n.label}: ${n.text}',
+                          style: const TextStyle(fontSize: 11, color: Colors.black87, height: 1.3)),
+                    ),
+                ],
+              );
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showCost) ...[
+            _Section('Cost Summary', () {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Open PO: \$${data.totalOpenCost.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
+                  for (final p in data.topByCost)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text('  ${p.title} — \$${p.cost.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 11, color: Colors.black87)),
+                    ),
+                ],
+              );
+            }),
+            const _Sp(),
+          ],
+
+          if (cfg.showClosed) ...[
+            _Section('Recently Closed', () {
+              if (data.closed.isEmpty) return const _None();
+              return Column(children: [for (final p in data.closed) _projectRow(p)]);
+            }),
+          ],
+        ],
+      ),
     );
   }
-}
 
-class _TH extends StatelessWidget {
-  final String text;
-  const _TH(this.text);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _projectRow(ReportProject p) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-      child: Text(text,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-              color: Colors.black)),
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('#${p.priority}  ${p.title}  [${p.phase}]',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black)),
+          if (p.machine.isNotEmpty)
+            Text('   Machine: ${p.machine}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+          Text('   Next: ${p.nextStep}', style: const TextStyle(fontSize: 10, color: Colors.black87)),
+        ],
+      ),
     );
   }
-}
 
-class _TD extends StatelessWidget {
-  final String text;
-  final bool bold;
-  final bool center;
-  final int maxLines;
-  const _TD(this.text,
-      {this.bold = false, this.center = false, this.maxLines = 1});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _orderRow(ReportOrder o) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Text(
-        text,
-        textAlign: center ? TextAlign.center : TextAlign.start,
-        maxLines: maxLines,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-            fontSize: 11,
-            color: Colors.black),
+        '${o.eta}  ${o.project}  PO ${o.po.isEmpty ? '—' : o.po}  \$${o.price.toStringAsFixed(2)}  ${o.desc}'
+        '${o.store.isNotEmpty ? '  [${o.store}]' : ''}',
+        style: const TextStyle(fontSize: 11, color: Colors.black87, height: 1.3),
       ),
+    );
+  }
+
+  Future<void> _saveAsTemplate(ReportConfig cfg) async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save Report Template'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Template name', hintText: 'e.g. Morning 5-day'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim().isNotEmpty ? ctrl.text.trim() : 'Template'),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null) return;
+    await ref.read(reportSettingsProvider.notifier).saveTemplate(name, cfg);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Template "$name" saved'),
+        backgroundColor: AppTheme.accentEmerald,
+      ));
+    }
+  }
+
+  Future<void> _export(String format, ReportConfig cfg) async {
+    final state = ref.read(projectProvider);
+    final data = buildReportData(state, cfg, _today);
+    final dir = await getTemporaryDirectory();
+    final base = 'jokarz_report_${DateFormat('MMddyy').format(_today)}';
+    try {
+      if (format == 'png') {
+        final boundary = _repaintKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        final image = await boundary.toImage(pixelRatio: 2);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        final f = File('${dir.path}/$base.png');
+        await f.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+        await Share.shareXFiles([XFile(f.path, mimeType: 'image/png')], text: 'Jokarz Daily Report');
+      } else if (format == 'pdf') {
+        final pdfBytes = await reportToPdf(data, cfg, _today);
+        final f = File('${dir.path}/$base.pdf');
+        await f.writeAsBytes(pdfBytes, flush: true);
+        await Share.shareXFiles([XFile(f.path, mimeType: 'application/pdf')], text: 'Jokarz Daily Report');
+      } else if (format == 'txt') {
+        final f = File('${dir.path}/$base.txt');
+        await f.writeAsString(reportToText(data, cfg, _today), flush: true);
+        await Share.shareXFiles([XFile(f.path, mimeType: 'text/plain')], text: 'Jokarz Daily Report');
+      } else if (format == 'csv') {
+        final f = File('${dir.path}/$base.csv');
+        await f.writeAsString(reportToCsv(data, cfg, _today), flush: true);
+        await Share.shareXFiles([XFile(f.path, mimeType: 'text/csv')], text: 'Jokarz Daily Report');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget Function() buildChild;
+  const _Section(this.title, this.buildChild);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.black)),
+        const Divider(color: Colors.black54, height: 10),
+        buildChild(),
+      ],
+    );
+  }
+}
+
+class _None extends StatelessWidget {
+  const _None();
+  @override
+  Widget build(BuildContext context) =>
+      const Text('None.', style: TextStyle(fontSize: 11, color: Colors.black54, fontStyle: FontStyle.italic));
+}
+
+class _Sp extends StatelessWidget {
+  const _Sp();
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: 16);
+}
+
+class _ReportCustomizeSheet extends ConsumerStatefulWidget {
+  final ReportConfig initial;
+  const _ReportCustomizeSheet({required this.initial});
+
+  @override
+  ConsumerState<_ReportCustomizeSheet> createState() => _ReportCustomizeSheetState();
+}
+
+class _ReportCustomizeSheetState extends ConsumerState<_ReportCustomizeSheet> {
+  late ReportConfig _cfg = widget.initial;
+
+  void _apply(ReportConfig next) {
+    setState(() => _cfg = next);
+    ref.read(reportSettingsProvider.notifier).setConfig(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Customize Report',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Sections', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Top Projects & Next Steps'),
+              value: _cfg.showPriority,
+              onChanged: (v) => _apply(_cfg.copyWith(showPriority: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Orders Due'),
+              value: _cfg.showOrders,
+              onChanged: (v) => _apply(_cfg.copyWith(showOrders: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Stores Requests Pending'),
+              value: _cfg.showStores,
+              onChanged: (v) => _apply(_cfg.copyWith(showStores: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Due / Happening Today'),
+              value: _cfg.showDueToday,
+              onChanged: (v) => _apply(_cfg.copyWith(showDueToday: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Notes (today\u2019s date)'),
+              value: _cfg.showNotes,
+              onChanged: (v) => _apply(_cfg.copyWith(showNotes: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Cost Summary'),
+              value: _cfg.showCost,
+              onChanged: (v) => _apply(_cfg.copyWith(showCost: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Recently Closed'),
+              value: _cfg.showClosed,
+              onChanged: (v) => _apply(_cfg.copyWith(showClosed: v)),
+            ),
+            const Divider(),
+            const Text('Settings', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+            _SliderRow('Orders due within N days', _cfg.ordersDueDays, 1, 30, (v) => _apply(_cfg.copyWith(ordersDueDays: v))),
+            _SliderRow('Recently closed within N days', _cfg.notTouchedDays, 1, 60, (v) => _apply(_cfg.copyWith(notTouchedDays: v))),
+            _SliderRow('Top projects shown', _cfg.topProjectsLimit, 1, 25, (v) => _apply(_cfg.copyWith(topProjectsLimit: v))),
+            _SliderRow('Max orders per section', _cfg.maxOrders, 1, 30, (v) => _apply(_cfg.copyWith(maxOrders: v))),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ReportSort>(
+              value: _cfg.sortBy,
+              decoration: const InputDecoration(labelText: 'Sort top projects by', isDense: true),
+              items: const [
+                DropdownMenuItem(value: ReportSort.priority, child: Text('Priority')),
+                DropdownMenuItem(value: ReportSort.cost, child: Text('Cost')),
+                DropdownMenuItem(value: ReportSort.nextAction, child: Text('Next action (last touched)')),
+              ],
+              onChanged: (v) => v == null ? null : _apply(_cfg.copyWith(sortBy: v)),
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Group projects by Machine/Line'),
+              value: _cfg.groupByMachine,
+              onChanged: (v) => _apply(_cfg.copyWith(groupByMachine: v)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Include completed projects'),
+              value: _cfg.includeCompleted,
+              onChanged: (v) => _apply(_cfg.copyWith(includeCompleted: v)),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SliderRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+  const _SliderRow(this.label, this.value, this.min, this.max, this.onChanged);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+        SizedBox(width: 120, child: Slider(
+          value: value.toDouble().clamp(min.toDouble(), max.toDouble()),
+          min: min.toDouble(),
+          max: max.toDouble(),
+          divisions: max - min,
+          label: '$value',
+          onChanged: (v) => onChanged(v.round()),
+        )),
+        SizedBox(width: 30, child: Text('$value', style: const TextStyle(fontWeight: FontWeight.bold))),
+      ],
     );
   }
 }

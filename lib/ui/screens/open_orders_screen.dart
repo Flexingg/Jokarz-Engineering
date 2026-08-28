@@ -328,7 +328,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                 // Search Bar
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search PR, PO, vendor, description, machine...',
+                    hintText: 'Search',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _search.isNotEmpty
                         ? IconButton(

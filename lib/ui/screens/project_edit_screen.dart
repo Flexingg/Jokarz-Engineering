@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../providers/project_provider.dart';
+import '../../utils/text_utils.dart';
 
 class ProjectEditScreen extends ConsumerStatefulWidget {
   final String? projectId; // null for new project
@@ -131,6 +132,11 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         tags: tags,
       );
       await ref.read(projectProvider.notifier).addProject(newProject);
+      // Jump straight to the new project's detail view.
+      if (mounted) {
+        context.go('/projects/${newProject.id}');
+      }
+      return;
     }
 
     if (mounted) {
@@ -146,7 +152,6 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
 
     final availablePhases = state.availablePhases;
     final availableMachines = state.availableMachines;
-    final availableSubAssemblies = state.availableSubAssemblies;
 
     return Scaffold(
       appBar: AppBar(
@@ -310,9 +315,10 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                       return TextFormField(
                         controller: controller,
                         focusNode: focusNode,
+                        onChanged: (_) => setState(() {}),
                         decoration: const InputDecoration(
-                          labelText: 'Machine / Line',
-                          hintText: 'e.g. Line 1 Filler / Packer A (use / to add multiple)',
+                          labelText: 'Machine',
+                          hintText: 'e.g. 621 / Packer A (use / or , for multiple)',
                           prefixIcon: Icon(Icons.precision_manufacturing_outlined),
                         ),
                       );
@@ -321,15 +327,17 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                // SubAssembly autocomplete / dropdown
+                // SubAssembly autocomplete / dropdown (drill-down by machine)
                 Expanded(
                   child: Autocomplete<String>(
                     initialValue: TextEditingValue(text: _subAssemblyController.text),
                     optionsBuilder: (textEditingValue) {
+                      final scoped =
+                          state.availableSubAssembliesFor(_machineController.text);
                       if (textEditingValue.text.isEmpty) {
-                        return availableSubAssemblies;
+                        return scoped;
                       }
-                      return availableSubAssemblies.where((sa) =>
+                      return scoped.where((sa) =>
                           sa.toLowerCase().contains(textEditingValue.text.toLowerCase()));
                     },
                     onSelected: (selection) {
@@ -351,6 +359,33 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                 ),
               ],
             ),
+
+            // Machine chips/pills (one per machine, split on / or ,)
+            if (splitMachines(_machineController.text).isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Icon(Icons.precision_manufacturing_outlined,
+                      size: 13, color: Colors.grey),
+                  ...splitMachines(_machineController.text).map((m) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                          border: Border.all(
+                              color: AppTheme.primaryCyan.withValues(alpha: 0.4),
+                              width: 0.6),
+                        ),
+                        child: Text(m,
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w600)),
+                      )),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Cost (formerly Budget)

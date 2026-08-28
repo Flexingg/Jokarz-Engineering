@@ -45,7 +45,7 @@ Future<void> showNewFieldNoteDialog(
                   items: [
                     const DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('Global Workshop Note'),
+                      child: Text('General'),
                     ),
                     ...projects.map(
                       (p) => DropdownMenuItem<String?>(

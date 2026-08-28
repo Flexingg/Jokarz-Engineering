@@ -203,7 +203,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
               items: [
                 const DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('General Workshop Note (No Project)'),
+                  child: Text('General'),
                 ),
                 ...state.projects.map(
                   (p) => DropdownMenuItem<String?>(

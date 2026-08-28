@@ -6,7 +6,6 @@ import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/voice_memo_modal.dart';
-import '../widgets/sync_status_badge.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -30,6 +29,15 @@ class DashboardScreen extends ConsumerWidget {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    int todayTaskCount = 0;
+    for (final p in state.projects) {
+      for (final t in p.tasks) {
+        if (!t.isCompleted && t.scheduledDate != null &&
+            DateUtils.isSameDay(t.scheduledDate!, today)) {
+          todayTaskCount++;
+        }
+      }
+    }
     // Open orders due within the next 14 days (including overdue), by ETA.
     final dueOrders = state.openOrders
         .where((e) => e.order.eta != null)
@@ -48,26 +56,20 @@ class DashboardScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          const SyncStatusBadge(compact: true),
-          IconButton(
-            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
-            tooltip: 'Maintenance Task Calendar',
-            onPressed: () => context.push('/calendar'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.search_rounded, color: AppTheme.primaryCyan),
-            tooltip: 'Search & Quick Add',
-            onPressed: () => context.push('/search'),
-          ),
           IconButton(
             icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
             tooltip: 'Record Field Memo',
             onPressed: () => VoiceMemoModal.show(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
-            tooltip: 'New Project',
-            onPressed: () => context.push('/projects/new'),
+            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Maintenance Task Calendar',
+            onPressed: () => context.push('/calendar'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle_rounded, color: AppTheme.primaryCyan),
+            tooltip: 'Settings & Account',
+            onPressed: () => context.go('/settings'),
           ),
           const SizedBox(width: 4),
         ],
@@ -90,6 +92,12 @@ class DashboardScreen extends ConsumerWidget {
                   : null,
               onTapProjects: () => context.go('/projects'),
               onTapOrders: () => context.go('/orders'),
+            ),
+            const SizedBox(height: 16),
+            _TodayTile(
+              today: today,
+              taskCount: todayTaskCount,
+              onTap: () => context.push('/calendar'),
             ),
             const SizedBox(height: 20),
 
@@ -147,6 +155,67 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => context.push('/search'),
         tooltip: 'Search & Quick Add',
         child: const Icon(Icons.search),
+      ),
+    );
+  }
+}
+
+class _TodayTile extends StatelessWidget {
+  final DateTime today;
+  final int taskCount;
+  final VoidCallback onTap;
+  const _TodayTile({
+    required this.today,
+    required this.taskCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [AppTheme.primaryBlue.withValues(alpha: 0.28), AppTheme.darkSurface]
+                  : [AppTheme.primaryBlue.withValues(alpha: 0.08), AppTheme.lightSurface],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_month_rounded, color: AppTheme.primaryCyan),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE, MMM d').format(today),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      taskCount == 1
+                          ? '1 task due today • tap to open calendar'
+                          : '$taskCount tasks due today • tap to open calendar',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppTheme.primaryCyan),
+            ],
+          ),
+        ),
       ),
     );
   }

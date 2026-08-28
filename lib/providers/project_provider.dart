@@ -157,6 +157,33 @@ class EngineeringState {
     return list;
   }
 
+  /// Sub-assemblies that exist under the given machine(s) for drill-down
+  /// suggestions. [machineText] may contain multiple machines split on `/` or
+  /// `,`. Falls back to all sub-assemblies when no machine is specified.
+  List<String> availableSubAssembliesFor(String machineText) {
+    final tokens = machineText
+        .split(RegExp(r'[/,]'))
+        .map((m) => m.trim().toLowerCase())
+        .where((m) => m.isNotEmpty)
+        .toList();
+    if (tokens.isEmpty) return availableSubAssemblies;
+
+    final set = <String>{};
+    for (final p in projects) {
+      if (p.subAssembly.trim().isEmpty) continue;
+      final pMachines = p.machine
+          .split(RegExp(r'[/,]'))
+          .map((m) => m.trim().toLowerCase())
+          .where((m) => m.isNotEmpty)
+          .toList();
+      final matches =
+          tokens.any((t) => pMachines.any((pm) => pm.contains(t) || t.contains(pm)));
+      if (matches) set.add(p.subAssembly.trim());
+    }
+    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+
   /// Universal live search across projects, orders (attached + standalone),
   /// and notes (voice/written + project-attached). Tokenized: every non-empty
   /// query token must match at least one field on the entity.

@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 import 'services/sync_service.dart';
 import 'router/app_router.dart';
+import 'ui/widgets/app_shortcuts.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,8 @@ class JokarzEngineeringApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       routerConfig: appRouter,
+      builder: (context, child) =>
+          AppShortcuts(child: child ?? const SizedBox.shrink()),
     );
   }
 }

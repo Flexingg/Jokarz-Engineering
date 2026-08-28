@@ -111,7 +111,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onSubmitted: (_) => _openFirstResult(results),
               onChanged: (val) => setState(() => _query = val),
               decoration: InputDecoration(
-                hintText: 'Search projects, orders, notes...',
+                hintText: 'Search',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(

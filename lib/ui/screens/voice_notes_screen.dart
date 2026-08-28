@@ -7,6 +7,7 @@ import '../../models/project.dart';
 import '../../models/voice_note.dart';
 import '../../providers/project_provider.dart';
 import '../../services/sync_service.dart';
+import '../../utils/text_utils.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
@@ -59,7 +60,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                     items: [
                       const DropdownMenuItem<String?>(
                         value: null,
-                        child: Text('Global Workshop Note'),
+                        child: Text('General'),
                       ),
                       ...projects.map(
                         (p) => DropdownMenuItem<String?>(
@@ -240,7 +241,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search field notes, observations, machine logs...',
+                hintText: 'Search',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
@@ -401,13 +402,13 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              entry.title,
+                              decodeUnicodeEscapes(entry.title),
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                             if (entry.content.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               SelectableText(
-                                entry.content,
+                                decodeUnicodeEscapes(entry.content),
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,

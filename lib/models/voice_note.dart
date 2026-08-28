@@ -7,6 +7,7 @@ class VoiceNote {
   final String transcript;
   final int durationSeconds;
   final String? projectId;
+  final DateTime? date; // calendar-attached date (if any)
 
   VoiceNote({
     String? id,
@@ -15,6 +16,7 @@ class VoiceNote {
     required this.transcript,
     this.durationSeconds = 0,
     this.projectId,
+    this.date,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         timestamp = timestamp ?? DateTime.now();
 
@@ -24,6 +26,8 @@ class VoiceNote {
     int? durationSeconds,
     String? projectId,
     bool clearProjectId = false,
+    DateTime? date,
+    bool clearDate = false,
   }) {
     return VoiceNote(
       id: id,
@@ -32,6 +36,7 @@ class VoiceNote {
       transcript: transcript ?? this.transcript,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
+      date: clearDate ? null : (date ?? this.date),
     );
   }
 
@@ -43,6 +48,7 @@ class VoiceNote {
       'transcript': transcript,
       'durationSeconds': durationSeconds,
       'projectId': projectId,
+      'date': date?.toIso8601String(),
     };
   }
 
@@ -56,6 +62,7 @@ class VoiceNote {
       transcript: json['transcript'] as String? ?? '',
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
       projectId: json['projectId'] as String?,
+      date: json['date'] != null ? DateTime.tryParse(json['date'] as String) : null,
     );
   }
 }

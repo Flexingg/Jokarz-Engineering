@@ -7,7 +7,6 @@ import '../../models/project.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
-import '../widgets/sync_status_badge.dart';
 
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
@@ -35,55 +34,9 @@ class ProjectsScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline_rounded, color: Colors.grey),
-            tooltip: 'Engineering Guide & Help',
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, color: AppTheme.primaryCyan),
-                      SizedBox(width: 8),
-                      Text('Engineering Guide'),
-                    ],
-                  ),
-                  content: const SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('📌 Priority Ranking (1..X)', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
-                        SizedBox(height: 4),
-                        Text('Active projects are uniquely ranked 1 to X. Changing a project to #1 automatically shifts other active projects down. When completed/cancelled, the project freezes its lifetime record and exits the active queue.', style: TextStyle(fontSize: 12)),
-                        SizedBox(height: 12),
-                        Text('🏭 Categories', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentAmber)),
-                        SizedBox(height: 4),
-                        Text('• Maintenance: Line repairs, preventative maintenance, wear parts.\n• Kaizen: Quick-change improvements, cycle-time reductions.\n• Capital: CapEx machinery overhauls, new automation lines.', style: TextStyle(fontSize: 12)),
-                        SizedBox(height: 12),
-                        Text('⚙️ Phases & Auto-Completion', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
-                        SizedBox(height: 4),
-                        Text('Moving to "Complete" or "Cancelled" automatically stamps the completion time. You can add custom phases anytime.', style: TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got it')),
-                  ],
-                ),
-              );
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
             tooltip: 'Maintenance Task Calendar',
             onPressed: () => context.push('/calendar'),
-          ),
-          const SyncStatusBadge(compact: true),
-          IconButton(
-            icon: const Icon(Icons.print_rounded, color: AppTheme.accentAmber),
-            tooltip: 'Daily Walk-Around Report',
-            onPressed: () => context.push('/report'),
           ),
           IconButton(
             icon: const Icon(Icons.queue_play_next_rounded, color: AppTheme.accentEmerald),
@@ -91,9 +44,9 @@ class ProjectsScreen extends ConsumerWidget {
             onPressed: () => context.push('/projects/queue'),
           ),
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
-            tooltip: 'New Project',
-            onPressed: () => context.push('/projects/new'),
+            icon: const Icon(Icons.print_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Daily Walk-Around Report',
+            onPressed: () => context.push('/report'),
           ),
           const SizedBox(width: 8),
         ],
@@ -105,7 +58,7 @@ class ProjectsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search projects, machines, 621, shutdown, tags...',
+                hintText: 'Search',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: state.searchQuery.isNotEmpty
                     ? IconButton(

@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
+import '../../models/key_bindings.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/project_provider.dart';
+import '../../providers/keybindings_provider.dart';
 import '../../services/auth_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/auth_account_modal.dart';
+import '../widgets/key_bind_recorder.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -164,6 +167,37 @@ class SettingsScreen extends ConsumerWidget {
                   value: themeMode == ThemeMode.dark,
                   activeColor: AppTheme.primaryCyan,
                   onChanged: (_) => themeNotifier.toggleTheme(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Keyboard Shortcuts (Desktop)
+          const Text(
+            'Keyboard Shortcuts (Desktop)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          ExpressiveCard(
+            child: Column(
+              children: [
+                ...keyBindingsLabels.keys.map(
+                  (id) => KeyBindRecorder(actionId: id),
+                ),
+                const Divider(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => ref
+                        .read(keyBindingsProvider.notifier)
+                        .resetToDefaults(),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                    label: const Text(
+                      'Reset to Defaults',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
               ],
             ),
