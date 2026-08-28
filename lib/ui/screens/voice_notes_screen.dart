@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
+import '../../models/project.dart';
 import '../../models/voice_note.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
@@ -182,16 +184,104 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     );
   }
 
+  void _showEditProjectNotesDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(text: project.notes);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.sticky_note_2_outlined, color: AppTheme.accentAmber),
+            SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Project Notes',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              project.title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              maxLines: 8,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Key observations, measurements, decisions, follow-ups...',
+                alignLabelWithHint: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await ref
+                  .read(projectProvider.notifier)
+                  .updateProjectNotes(project.id, ctrl.text.trim());
+              if (context.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save Notes'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(projectProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final notes = state.voiceNotes.where((n) {
-      return _search.isEmpty ||
-          n.title.toLowerCase().contains(_search.toLowerCase()) ||
-          n.transcript.toLowerCase().contains(_search.toLowerCase());
+    // Merge voice/written notes with project-attached notes into one feed.
+    final projectById = {for (final p in state.projects) p.id: p};
+    final entries = <_NoteEntry>[];
+    for (final n in state.voiceNotes) {
+      final proj = n.projectId != null ? projectById[n.projectId] : null;
+      entries.add(_NoteEntry(
+        voiceNote: n,
+        title: n.title,
+        content: n.transcript,
+        timestamp: n.timestamp,
+        projectId: n.projectId,
+        projectTitle: proj?.title,
+      ));
+    }
+    for (final p in state.projects) {
+      if (p.notes.trim().isNotEmpty) {
+        entries.add(_NoteEntry(
+          project: p,
+          isProjectNote: true,
+          title: p.title,
+          content: p.notes,
+          timestamp: p.updatedAt,
+          projectId: p.id,
+          projectTitle: p.title,
+        ));
+      }
+    }
+    entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    final filtered = entries.where((e) {
+      if (_search.isEmpty) return true;
+      final q = _search.toLowerCase();
+      return e.title.toLowerCase().contains(q) ||
+          e.content.toLowerCase().contains(q) ||
+          (e.projectTitle?.toLowerCase().contains(q) ?? false);
     }).toList();
 
     return Scaffold(
@@ -243,7 +333,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
 
           // Notes List
           Expanded(
-            child: notes.isEmpty
+            child: filtered.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -288,34 +378,42 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16.0),
-                    itemCount: notes.length,
+                    itemCount: filtered.length,
                     itemBuilder: (context, index) {
-                      final note = notes[index];
-                      final project = note.projectId != null
-                          ? ref.read(projectProvider.notifier).getProjectById(note.projectId!)
-                          : null;
+                      final entry = filtered[index];
+                      final isProjectNote = entry.isProjectNote;
 
                       return ExpressiveCard(
                         margin: const EdgeInsets.only(bottom: 12),
+                        onTap: entry.isProjectNote
+                            ? () => context.push('/projects/${entry.project!.id}')
+                            : null,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                ExpressiveBadge(
-                                  label: note.durationSeconds > 0
-                                      ? '🎙️ Voice (${note.durationSeconds}s)'
-                                      : '📝 Written Note',
-                                  color: note.durationSeconds > 0
-                                      ? AppTheme.accentAmber
-                                      : AppTheme.primaryCyan,
-                                  fontSize: 10,
-                                ),
-                                if (project != null) ...[
+                                if (isProjectNote)
+                                  const ExpressiveBadge(
+                                    label: '📌 Project Note',
+                                    color: AppTheme.accentAmber,
+                                    fontSize: 10,
+                                  )
+                                else
+                                  ExpressiveBadge(
+                                    label: entry.voiceNote!.durationSeconds > 0
+                                        ? '🎙️ Voice (${entry.voiceNote!.durationSeconds}s)'
+                                        : '📝 Written Note',
+                                    color: entry.voiceNote!.durationSeconds > 0
+                                        ? AppTheme.accentAmber
+                                        : AppTheme.primaryCyan,
+                                    fontSize: 10,
+                                  ),
+                                if (entry.projectId != null) ...[
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      '• ${project.title}',
+                                      '• ${entry.projectTitle ?? ''}',
                                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -323,37 +421,66 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                 ],
                                 const Spacer(),
                                 Text(
-                                  DateFormat('MMM d, y • h:mm a').format(note.timestamp),
+                                  DateFormat('MMM d, y • h:mm a').format(entry.timestamp),
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
-                                  tooltip: 'Edit Note',
-                                  onPressed: () => _showEditNoteDialog(context, note),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
-                                  tooltip: 'Delete Note',
-                                  onPressed: () => ref.read(projectProvider.notifier).deleteVoiceNote(note.id),
-                                ),
+                                if (isProjectNote)
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.accentAmber),
+                                    tooltip: 'Edit Project Notes',
+                                    onPressed: () => _showEditProjectNotesDialog(context, entry.project!),
+                                  )
+                                else ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
+                                    tooltip: 'Edit Note',
+                                    onPressed: () => _showEditNoteDialog(context, entry.voiceNote!),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
+                                    tooltip: 'Delete Note',
+                                    onPressed: () => ref.read(projectProvider.notifier).deleteVoiceNote(entry.voiceNote!.id),
+                                  ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              note.title,
+                              entry.title,
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                             ),
-                            if (note.transcript.isNotEmpty) ...[
+                            if (entry.content.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               SelectableText(
-                                note.transcript,
+                                entry.content,
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
                                   color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                ),
+                              ),
+                            ],
+                            if (isProjectNote) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () async {
+                                    await ref
+                                        .read(projectProvider.notifier)
+                                        .updateProjectNotes(entry.project!.id, '');
+                                  },
+                                  icon: const Icon(Icons.delete_outline, size: 14),
+                                  label: const Text('Clear Notes', style: TextStyle(fontSize: 11)),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                 ),
                               ),
                             ],
@@ -371,4 +498,28 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
       ),
     );
   }
+}
+
+/// A unified display entry for the Field Notes feed — either a voice/written
+/// `VoiceNote` or a project-attached `Project.notes` entry.
+class _NoteEntry {
+  final VoiceNote? voiceNote;
+  final Project? project;
+  final String title;
+  final String content;
+  final DateTime timestamp;
+  final String? projectId;
+  final String? projectTitle;
+  final bool isProjectNote;
+
+  const _NoteEntry({
+    this.voiceNote,
+    this.project,
+    required this.title,
+    required this.content,
+    required this.timestamp,
+    this.projectId,
+    this.projectTitle,
+    this.isProjectNote = false,
+  });
 }

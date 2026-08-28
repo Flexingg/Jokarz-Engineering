@@ -349,6 +349,45 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     await updateProject(updated);
   }
 
+  /// Reorders active projects by drag-and-drop. Indices refer to the
+  /// displayed sorted order (active projects come first, then terminal).
+  /// Only active projects are reordered; priorities are rebalanced 1..X.
+  Future<void> reorderProjects(int oldIndex, int newIndex) async {
+    final active = state.projects
+        .where((p) => !p.isCompletedOrCancelled)
+        .toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+
+    if (oldIndex < 0 || oldIndex >= active.length) return;
+    newIndex = newIndex.clamp(0, active.length);
+    if (newIndex > oldIndex) newIndex--;
+
+    final item = active.removeAt(oldIndex);
+    active.insert(newIndex, item);
+
+    final reindexed = active
+        .asMap()
+        .entries
+        .map((e) => e.value.copyWith(priority: e.key + 1))
+        .toList();
+    final terminal =
+        state.projects.where((p) => p.isCompletedOrCancelled).toList();
+
+    state = state.copyWith(projects: [...reindexed, ...terminal]);
+    await _persist();
+  }
+
+  /// Updates the free-form notes attached directly to the project.
+  Future<void> updateProjectNotes(String projectId, String notes) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final updated = project.copyWith(
+      notes: notes.trim(),
+      lastActionAt: DateTime.now(),
+    );
+    await updateProject(updated);
+  }
+
   Future<void> deleteProject(String id) async {
     final list = state.projects.where((p) => p.id != id).toList();
     final rebalanced = _rebalancePriorities(list);

@@ -210,6 +210,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       Expanded(
                         child: TextField(
                           controller: prCtrl,
+                          keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'PR (Requisition)',
                             hintText: 'PR-48901',
@@ -220,6 +221,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       Expanded(
                         child: TextField(
                           controller: poCtrl,
+                          keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'PO (Purchase Order)',
                             hintText: 'PO-9921004',
@@ -404,6 +406,282 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     );
   }
 
+  void _showEditNotesDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(text: project.notes);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.sticky_note_2_outlined, color: AppTheme.accentAmber),
+            SizedBox(width: 8),
+            Text('Project Notes'),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          maxLines: 8,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Notes',
+            hintText: 'Key observations, measurements, decisions, follow-ups...',
+            alignLabelWithHint: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await ref
+                  .read(projectProvider.notifier)
+                  .updateProjectNotes(project.id, ctrl.text.trim());
+              if (context.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save Notes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(BuildContext context, Project project) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Category'),
+        content: DropdownButtonFormField<ProjectCategory>(
+          value: project.category,
+          items: ProjectCategory.values
+              .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
+              .toList(),
+          onChanged: (val) {
+            if (val == null || val == project.category) {
+              Navigator.pop(ctx);
+              return;
+            }
+            ref
+                .read(projectProvider.notifier)
+                .updateProject(project.copyWith(category: val));
+            Navigator.pop(ctx);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showEditPriorityDialog(BuildContext context, Project project) {
+    if (project.isCompletedOrCancelled) return;
+    final activeCount = ref.read(projectProvider).activeProjects.length;
+    final maxPriority = activeCount > 0 ? activeCount : 1;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Priority Ranking'),
+        content: DropdownButtonFormField<int>(
+          value: project.priority.clamp(1, maxPriority),
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.format_list_numbered_rounded),
+          ),
+          items: List.generate(
+            maxPriority,
+            (index) => DropdownMenuItem(
+              value: index + 1,
+              child: Text(
+                '#${index + 1}${index == 0 ? " (Top Urgent)" : ""}',
+              ),
+            ),
+          ),
+          onChanged: (val) {
+            if (val == null || val == project.priority) {
+              Navigator.pop(ctx);
+              return;
+            }
+            ref
+                .read(projectProvider.notifier)
+                .updateProject(project.copyWith(priority: val));
+            Navigator.pop(ctx);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showEditPhaseDialog(BuildContext context, Project project) {
+    final availablePhases = ref.read(projectProvider).availablePhases;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Phase / Status'),
+        content: DropdownButtonFormField<String>(
+          value: availablePhases.contains(project.phase)
+              ? project.phase
+              : availablePhases.first,
+          items: availablePhases
+              .map((ph) => DropdownMenuItem(value: ph, child: Text(ph)))
+              .toList(),
+          onChanged: (val) {
+            if (val == null || val == project.phase) {
+              Navigator.pop(ctx);
+              return;
+            }
+            ref
+                .read(projectProvider.notifier)
+                .updateProject(project.copyWith(phase: val));
+            Navigator.pop(ctx);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showEditMachineDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(text: project.machine);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Machine / Line'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Machine / Line',
+            hintText: 'Use / to add multiple machines',
+            prefixIcon: Icon(Icons.precision_manufacturing_outlined),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref
+                  .read(projectProvider.notifier)
+                  .updateProject(project.copyWith(machine: ctrl.text.trim()));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditSubAssemblyDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(text: project.subAssembly);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Sub-Assembly'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Sub-Assembly',
+            hintText: 'e.g. Infeed Starwheel, Gearbox',
+            prefixIcon: Icon(Icons.account_tree_outlined),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref
+                  .read(projectProvider.notifier)
+                  .updateProject(
+                      project.copyWith(subAssembly: ctrl.text.trim()));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditCostDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(
+      text: project.cost > 0 ? project.cost.toStringAsFixed(2) : '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Cost'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Cost (\$ USD)',
+            prefixIcon: Icon(Icons.attach_money_rounded),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final cost = double.tryParse(ctrl.text.trim()) ?? 0.0;
+              ref
+                  .read(projectProvider.notifier)
+                  .updateProject(project.copyWith(cost: cost));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditTagsDialog(BuildContext context, Project project) {
+    final ctrl = TextEditingController(text: project.tags.join(', '));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Tags'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Tags (Comma separated)',
+            hintText: '100, 621, Shutdown, Line 4, Mill, Hydraulics',
+            prefixIcon: Icon(Icons.tag_rounded),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final tags = ctrl.text
+                  .split(',')
+                  .map((t) => t.trim())
+                  .where((t) => t.isNotEmpty)
+                  .toList();
+              ref
+                  .read(projectProvider.notifier)
+                  .updateProject(project.copyWith(tags: tags));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(projectProvider);
@@ -529,6 +807,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     bool isDark,
     bool isTerminal,
   ) {
+    final priorityColor = project.priority == 1
+        ? AppTheme.accentCoral
+        : (project.priority <= 3 ? AppTheme.accentAmber : AppTheme.primaryCyan);
+    final phaseColor = project.phase.toLowerCase() == 'complete'
+        ? AppTheme.accentEmerald
+        : (project.phase.toLowerCase() == 'cancelled'
+            ? AppTheme.accentCoral
+            : AppTheme.accentAmber);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -542,16 +829,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badges Row
-          Row(
+          // Tappable Badges Row
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // Category
-              ExpressiveBadge(
-                label: project.category.label,
-                color: AppTheme.primaryCyan,
-                fontSize: 11,
+              Tooltip(
+                message: 'Tap to change category',
+                child: InkWell(
+                  onTap: () => _showEditCategoryDialog(context, project),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  child: ExpressiveBadge(
+                    label: '${project.category.label} ✎',
+                    color: AppTheme.primaryCyan,
+                    fontSize: 11,
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
 
               // Priority
               if (isTerminal)
@@ -561,62 +857,103 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   fontSize: 11,
                 )
               else
-                ExpressiveBadge(
-                  label: 'Priority #${project.priority}',
-                  color: project.priority == 1
-                      ? AppTheme.accentCoral
-                      : (project.priority <= 3
-                          ? AppTheme.accentAmber
-                          : AppTheme.primaryCyan),
-                  fontSize: 11,
+                Tooltip(
+                  message: 'Tap to change priority',
+                  child: InkWell(
+                    onTap: () => _showEditPriorityDialog(context, project),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                    child: ExpressiveBadge(
+                      label: 'Priority #${project.priority} ✎',
+                      color: priorityColor,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-              const SizedBox(width: 8),
 
-              // Phase
-              ExpressiveBadge(
-                label: project.phase,
-                color: project.phase.toLowerCase() == 'complete'
-                    ? AppTheme.accentEmerald
-                    : (project.phase.toLowerCase() == 'cancelled'
-                        ? AppTheme.accentCoral
-                        : AppTheme.accentAmber),
-                fontSize: 11,
+              // Phase / Status
+              Tooltip(
+                message: 'Tap to change phase / status',
+                child: InkWell(
+                  onTap: () => _showEditPhaseDialog(context, project),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  child: ExpressiveBadge(
+                    label: '${project.phase} ✎',
+                    color: phaseColor,
+                    fontSize: 11,
+                  ),
+                ),
               ),
-
-              const Spacer(),
 
               // Cost
               if (project.cost > 0)
-                Text(
-                  'Cost: ${currency.format(project.cost)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                Tooltip(
+                  message: 'Tap to edit cost',
+                  child: InkWell(
+                    onTap: () => _showEditCostDialog(context, project),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Cost: ${currency.format(project.cost)} ✎',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),
 
-          // Machine & Sub-Assembly Row
+          // Machine & Sub-Assembly Row (tappable)
           if (project.machine.isNotEmpty || project.subAssembly.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (project.machine.isNotEmpty) ...[
-                  const Icon(Icons.precision_manufacturing_outlined, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    project.machine,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                if (project.machine.isNotEmpty)
+                  Tooltip(
+                    message: 'Tap to edit machine / line',
+                    child: InkWell(
+                      onTap: () => _showEditMachineDialog(context, project),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.precision_manufacturing_outlined,
+                              size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${project.machine} ✎',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-                if (project.machine.isNotEmpty && project.subAssembly.isNotEmpty)
-                  const Text('  ▸  ', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                if (project.subAssembly.isNotEmpty) ...[
-                  const Icon(Icons.account_tree_outlined, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    project.subAssembly,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                if (project.subAssembly.isNotEmpty)
+                  Tooltip(
+                    message: 'Tap to edit sub-assembly',
+                    child: InkWell(
+                      onTap: () => _showEditSubAssemblyDialog(context, project),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.account_tree_outlined,
+                              size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${project.subAssembly} ✎',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
               ],
             ),
           ],
@@ -636,7 +973,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ),
           ],
 
-          // Description & Tags
+          // Description
           if (project.description.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
@@ -646,6 +983,90 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+
+          // Tags (tappable to edit)
+          if (project.tags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Tooltip(
+              message: 'Tap to edit tags',
+              child: InkWell(
+                onTap: () => _showEditTagsDialog(context, project),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                child: Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: project.tags.map((tag) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                      border: Border.all(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.4),
+                        width: 0.6,
+                      ),
+                    ),
+                    child: Text(
+                      '#$tag',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )).toList(),
+                ),
+              ),
+            ),
+          ],
+
+          // Project Notes (editable)
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.sticky_note_2_outlined, size: 14, color: AppTheme.accentAmber),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Project Notes',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentAmber,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _showEditNotesDialog(context, project),
+                icon: const Icon(Icons.edit_outlined, size: 14),
+                label: Text(
+                  project.notes.isEmpty ? 'Add' : 'Edit',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: AppTheme.accentAmber,
+                ),
+              ),
+            ],
+          ),
+          if (project.notes.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.accentAmber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                border: Border.all(
+                  color: AppTheme.accentAmber.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                project.notes,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, height: 1.4),
               ),
             ),
           ],

@@ -39,6 +39,9 @@ class Project {
   final String id;
   final String title;
   final String description;
+  /// Free-form engineering notes attached directly to the project
+  /// (distinct from per-entry field logs in `logs`).
+  final String notes;
   final ProjectCategory category;
   final String phase;
   final DateTime? completedAt;
@@ -75,6 +78,7 @@ class Project {
     String? id,
     required this.title,
     this.description = '',
+    this.notes = '',
     this.category = ProjectCategory.maintenance,
     this.phase = ProjectPhases.idea,
     this.completedAt,
@@ -132,6 +136,7 @@ class Project {
   Project copyWith({
     String? title,
     String? description,
+    String? notes,
     ProjectCategory? category,
     String? phase,
     DateTime? completedAt,
@@ -155,6 +160,7 @@ class Project {
       id: id,
       title: title ?? this.title,
       description: description ?? this.description,
+      notes: notes ?? this.notes,
       category: category ?? this.category,
       phase: phase ?? this.phase,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
@@ -181,6 +187,7 @@ class Project {
       'id': id,
       'title': title,
       'description': description,
+      'notes': notes,
       'category': category.name,
       'phase': phase,
       'completedAt': completedAt?.toIso8601String(),
@@ -205,6 +212,7 @@ class Project {
       id: json['id'] as String?,
       title: json['title'] as String? ?? 'Untitled Project',
       description: json['description'] as String? ?? '',
+      notes: json['notes'] as String? ?? '',
       category: ProjectCategory.values.firstWhere(
         (e) => e.name == json['category'],
         orElse: () => ProjectCategory.maintenance,

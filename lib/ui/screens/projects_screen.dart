@@ -18,10 +18,14 @@ class ProjectsScreen extends ConsumerWidget {
     final notifier = ref.read(projectProvider.notifier);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final dateFormat = DateFormat('MMM d, y');
 
     final projects = state.filteredProjects;
+
+    // Drag-to-reorder is only meaningful on the unfiltered priority list.
+    final isFiltering = state.searchQuery.isNotEmpty ||
+        state.selectedCategory != null ||
+        state.selectedPhase != null ||
+        state.selectedMachine != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -217,221 +221,28 @@ class ProjectsScreen extends ConsumerWidget {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: projects.length,
-                    itemBuilder: (context, index) {
-                      final project = projects[index];
-                      final isTerminal = project.isCompletedOrCancelled;
-                      final nextTask = project.nextPendingTask;
-
-                      return ExpressiveCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        onTap: () => context.push('/projects/${project.id}'),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Top Row: Priority & Category & Phase
-                            Row(
-                              children: [
-                                if (isTerminal)
-                                  ExpressiveBadge(
-                                    label: 'Prev #${project.priority}',
-                                    color: Colors.grey,
-                                    fontSize: 10,
-                                  )
-                                else
-                                  ExpressiveBadge(
-                                    label: '#${project.priority}',
-                                    color: project.priority == 1
-                                        ? AppTheme.accentCoral
-                                        : (project.priority <= 3
-                                            ? AppTheme.accentAmber
-                                            : AppTheme.primaryCyan),
-                                    fontSize: 11,
-                                  ),
-                                const SizedBox(width: 6),
-                                ExpressiveBadge(
-                                  label: project.category.label,
-                                  color: AppTheme.primaryCyan,
-                                  fontSize: 10,
-                                ),
-                                const SizedBox(width: 6),
-                                ExpressiveBadge(
-                                  label: project.phase,
-                                  color: project.phase.toLowerCase() == 'complete'
-                                      ? AppTheme.accentEmerald
-                                      : (project.phase.toLowerCase() == 'cancelled'
-                                          ? AppTheme.accentCoral
-                                          : AppTheme.accentAmber),
-                                  isOutlined: true,
-                                  fontSize: 10,
-                                ),
-                                const Spacer(),
-                                if (project.cost > 0)
-                                  Text(
-                                    currency.format(project.cost),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Title
-                            Text(
-                              project.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isTerminal
-                                    ? (isDark ? Colors.grey : Colors.black54)
-                                    : null,
-                                decoration: isTerminal && project.phase.toLowerCase() == 'complete'
-                                    ? TextDecoration.none
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Machine chips (split on /) + Sub-Assembly
-                            if (project.machine.isNotEmpty || project.subAssembly.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6.0),
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 4,
-                                  runSpacing: 2,
-                                  children: [
-                                    const Icon(Icons.precision_manufacturing_outlined, size: 13, color: Colors.grey),
-                                    ...project.machineList.map((m) => Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryCyan.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.4), width: 0.6),
-                                      ),
-                                      child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                                    )),
-                                    if (project.subAssembly.isNotEmpty) ...[
-                                      const Icon(Icons.account_tree_outlined, size: 13, color: Colors.grey),
-                                      Text(project.subAssembly, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                                    ],
-                                  ],
-                                ),
-                              ),
-
-                            // Last action badge (only active projects)
-                            if (!isTerminal && project.daysSinceLastAction > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.history_rounded,
-                                      size: 12,
-                                      color: project.daysSinceLastAction >= 7
-                                          ? Colors.red.shade400
-                                          : project.daysSinceLastAction >= 3
-                                              ? AppTheme.accentAmber
-                                              : Colors.grey,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      project.daysSinceLastAction == 1
-                                          ? 'Last action: 1 day ago'
-                                          : 'Last action: ${project.daysSinceLastAction}d ago',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: project.daysSinceLastAction >= 7
-                                            ? Colors.red.shade400
-                                            : project.daysSinceLastAction >= 3
-                                                ? AppTheme.accentAmber
-                                                : Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // Next Pending Task Banner
-                            if (nextTask != null && !isTerminal)
-                              Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accentAmber.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.pending_actions_rounded, size: 14, color: AppTheme.accentAmber),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Next: ${nextTask.description}${nextTask.pendingReason.isNotEmpty ? " • ${nextTask.pendingReason}" : ""}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.accentAmber,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            const SizedBox(height: 6),
-
-                            // Footer: Tasks count, Orders count, CompletedAt
-                            Row(
-                              children: [
-                                Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${project.completedTasksCount}/${project.tasks.length} Tasks',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-
-                                if (project.orders.isNotEmpty) ...[
-                                  Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                ],
-
-                                const Spacer(),
-
-                                if (project.completedAt != null)
-                                  Text(
-                                    'Closed ${dateFormat.format(project.completedAt!)}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppTheme.accentEmerald,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
+                : (isFiltering
+                    ? ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: projects.length,
+                        itemBuilder: (context, index) => _ProjectCard(
+                          key: ValueKey(projects[index].id),
+                          project: projects[index],
                         ),
-                      );
-                    },
-                  ),
+                      )
+                    : ReorderableListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: projects.length,
+                        onReorder: (oldIndex, newIndex) {
+                          ref
+                              .read(projectProvider.notifier)
+                              .reorderProjects(oldIndex, newIndex);
+                        },
+                        itemBuilder: (context, index) => _ProjectCard(
+                          key: ValueKey(projects[index].id),
+                          project: projects[index],
+                        ),
+                      )),
           ),
         ],
       ),
@@ -439,6 +250,230 @@ class ProjectsScreen extends ConsumerWidget {
         onPressed: () => context.push('/projects/new'),
         icon: const Icon(Icons.add),
         label: const Text('New Project'),
+      ),
+    );
+  }
+}
+
+/// A single project list card. Has a `ValueKey` so it can be used inside a
+/// `ReorderableListView` for drag-and-drop priority reordering.
+class _ProjectCard extends ConsumerWidget {
+  final Project project;
+  const _ProjectCard({super.key, required this.project});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final dateFormat = DateFormat('MMM d, y');
+    final isTerminal = project.isCompletedOrCancelled;
+    final nextTask = project.nextPendingTask;
+
+    return ExpressiveCard(
+      key: ValueKey(project.id),
+      margin: const EdgeInsets.only(bottom: 12),
+      onTap: () => context.push('/projects/${project.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Priority & Category & Phase
+          Row(
+            children: [
+              if (isTerminal)
+                ExpressiveBadge(
+                  label: 'Prev #${project.priority}',
+                  color: Colors.grey,
+                  fontSize: 10,
+                )
+              else
+                ExpressiveBadge(
+                  label: '#${project.priority}',
+                  color: project.priority == 1
+                      ? AppTheme.accentCoral
+                      : (project.priority <= 3
+                          ? AppTheme.accentAmber
+                          : AppTheme.primaryCyan),
+                  fontSize: 11,
+                ),
+              const SizedBox(width: 6),
+              ExpressiveBadge(
+                label: project.category.label,
+                color: AppTheme.primaryCyan,
+                fontSize: 10,
+              ),
+              const SizedBox(width: 6),
+              ExpressiveBadge(
+                label: project.phase,
+                color: project.phase.toLowerCase() == 'complete'
+                    ? AppTheme.accentEmerald
+                    : (project.phase.toLowerCase() == 'cancelled'
+                        ? AppTheme.accentCoral
+                        : AppTheme.accentAmber),
+                isOutlined: true,
+                fontSize: 10,
+              ),
+              const Spacer(),
+              if (project.cost > 0)
+                Text(
+                  currency.format(project.cost),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Title
+          Text(
+            project.title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isTerminal
+                  ? (isDark ? Colors.grey : Colors.black54)
+                  : null,
+              decoration: isTerminal && project.phase.toLowerCase() == 'complete'
+                  ? TextDecoration.none
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // Machine chips (split on /) + Sub-Assembly
+          if (project.machine.isNotEmpty || project.subAssembly.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6.0),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                runSpacing: 2,
+                children: [
+                  const Icon(Icons.precision_manufacturing_outlined, size: 13, color: Colors.grey),
+                  ...project.machineList.map((m) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.4), width: 0.6),
+                    ),
+                    child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                  )),
+                  if (project.subAssembly.isNotEmpty) ...[
+                    const Icon(Icons.account_tree_outlined, size: 13, color: Colors.grey),
+                    Text(project.subAssembly, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  ],
+                ],
+              ),
+            ),
+
+          // Last action badge (only active projects)
+          if (!isTerminal && project.daysSinceLastAction > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.history_rounded,
+                    size: 12,
+                    color: project.daysSinceLastAction >= 7
+                        ? Colors.red.shade400
+                        : project.daysSinceLastAction >= 3
+                            ? AppTheme.accentAmber
+                            : Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    project.daysSinceLastAction == 1
+                        ? 'Last action: 1 day ago'
+                        : 'Last action: ${project.daysSinceLastAction}d ago',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: project.daysSinceLastAction >= 7
+                          ? Colors.red.shade400
+                          : project.daysSinceLastAction >= 3
+                              ? AppTheme.accentAmber
+                              : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Next Pending Task Banner
+          if (nextTask != null && !isTerminal)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.accentAmber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions_rounded, size: 14, color: AppTheme.accentAmber),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Next: ${nextTask.description}${nextTask.pendingReason.isNotEmpty ? " • ${nextTask.pendingReason}" : ""}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.accentAmber,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 6),
+
+          // Footer: Tasks count, Orders count, CompletedAt
+          Row(
+            children: [
+              Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
+              const SizedBox(width: 4),
+              Text(
+                '${project.completedTasksCount}/${project.tasks.length} Tasks',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              if (project.orders.isNotEmpty) ...[
+                Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
+                const SizedBox(width: 4),
+                Text(
+                  '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+              ],
+
+              const Spacer(),
+
+              if (project.completedAt != null)
+                Text(
+                  'Closed ${dateFormat.format(project.completedAt!)}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.accentEmerald,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

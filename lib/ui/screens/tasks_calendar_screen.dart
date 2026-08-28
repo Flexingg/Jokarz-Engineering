@@ -93,11 +93,178 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
           ],
         ),
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
         children: [
+          // ===== TASK LIST (top) =====
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('EEE, MMM d').format(_selectedDate),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.primaryCyan,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ExpressiveBadge(
+                      label: '${dayTasks.length} Scheduled',
+                      color: AppTheme.primaryCyan,
+                      fontSize: 10,
+                    ),
+                  ],
+                ),
+                // Filter Dropdown
+                DropdownButton<int>(
+                  value: _filterMode,
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Incomplete Only', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 1, child: Text('All Scheduled', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 2, child: Text('Has Pending Bottlecks', style: TextStyle(fontSize: 12))),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _filterMode = val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          if (dayTasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.event_available_rounded,
+                    size: 44,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No maintenance tasks scheduled for ${DateFormat("MMM d").format(_selectedDate)}',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Assign scheduled dates to project tasks to track plant shutdowns and PMs.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...dayTasks.map((entry) {
+              final project = entry.project;
+              final task = entry.task;
+
+              return ExpressiveCard(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Project & Machine Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        InkWell(
+                          onTap: () =>
+                              context.push('/projects/${project.id}'),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.precision_manufacturing_outlined,
+                                size: 14,
+                                color: AppTheme.primaryCyan,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                project.title,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryCyan,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (project.machine.isNotEmpty)
+                          ExpressiveBadge(
+                            label: project.machine,
+                            color: AppTheme.accentAmber,
+                            fontSize: 10,
+                          ),
+                      ],
+                    ),
+                    const Divider(height: 12),
+
+                    // Task Checkbox & Description
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: task.isCompleted,
+                          activeColor: AppTheme.accentEmerald,
+                          onChanged: (_) {
+                            notifier.toggleTask(project.id, task.id);
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                task.description,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                              if (task.pendingReason.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                ExpressiveBadge(
+                                  label: '⏳ ${task.pendingReason}',
+                                  color: AppTheme.accentCoral,
+                                  fontSize: 10,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+          const Divider(height: 28),
+
+          // ===== CALENDAR (bottom) =====
           // Month Header Controls
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -144,178 +311,6 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               tasksByDate: tasksByDate,
               isDark: isDark,
             ),
-          ),
-          const Divider(height: 20),
-
-          // Selected Day Header & Filter Chips
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      DateFormat('EEE, MMM d').format(_selectedDate),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.primaryCyan,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ExpressiveBadge(
-                      label: '${dayTasks.length} Scheduled',
-                      color: AppTheme.primaryCyan,
-                      fontSize: 10,
-                    ),
-                  ],
-                ),
-                // Filter Dropdown
-                DropdownButton<int>(
-                  value: _filterMode,
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('Incomplete Only', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 1, child: Text('All Scheduled', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 2, child: Text('Has Pending Bottlecks', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _filterMode = val);
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Task List for Selected Date
-          Expanded(
-            child: dayTasks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.event_available_rounded,
-                          size: 44,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No maintenance tasks scheduled for ${DateFormat("MMM d").format(_selectedDate)}',
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Assign scheduled dates to project tasks to track plant shutdowns and PMs.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: dayTasks.length,
-                    itemBuilder: (context, index) {
-                      final entry = dayTasks[index];
-                      final project = entry.project;
-                      final task = entry.task;
-
-                      return ExpressiveCard(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Project & Machine Link
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                InkWell(
-                                  onTap: () =>
-                                      context.push('/projects/${project.id}'),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.precision_manufacturing_outlined,
-                                        size: 14,
-                                        color: AppTheme.primaryCyan,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        project.title,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryCyan,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (project.machine.isNotEmpty)
-                                  ExpressiveBadge(
-                                    label: project.machine,
-                                    color: AppTheme.accentAmber,
-                                    fontSize: 10,
-                                  ),
-                              ],
-                            ),
-                            const Divider(height: 12),
-
-                            // Task Checkbox & Description
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: task.isCompleted,
-                                  activeColor: AppTheme.accentEmerald,
-                                  onChanged: (_) {
-                                    notifier.toggleTask(project.id, task.id);
-                                  },
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        task.description,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          decoration: task.isCompleted
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                        ),
-                                      ),
-                                      if (task.pendingReason.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        ExpressiveBadge(
-                                          label: '⏳ ${task.pendingReason}',
-                                          color: AppTheme.accentCoral,
-                                          fontSize: 10,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
           ),
         ],
       ),

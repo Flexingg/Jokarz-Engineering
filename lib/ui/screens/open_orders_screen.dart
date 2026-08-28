@@ -60,6 +60,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                       Expanded(
                         child: TextField(
                           controller: prCtrl,
+                          keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'PR (Requisition)',
                           ),
@@ -69,6 +70,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                       Expanded(
                         child: TextField(
                           controller: poCtrl,
+                          keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'PO Number',
                           ),
@@ -709,9 +711,9 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description *')),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: prCtrl, decoration: const InputDecoration(labelText: 'PR #'))),
+                Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR #'))),
                 const SizedBox(width: 10),
-                Expanded(child: TextField(controller: poCtrl, decoration: const InputDecoration(labelText: 'PO #'))),
+                Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO #'))),
               ]),
               const SizedBox(height: 10),
               TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ ')),
@@ -773,9 +775,9 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description *')),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: prCtrl, decoration: const InputDecoration(labelText: 'PR #'))),
+                Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR #'))),
                 const SizedBox(width: 10),
-                Expanded(child: TextField(controller: poCtrl, decoration: const InputDecoration(labelText: 'PO #'))),
+                Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO #'))),
               ]),
               const SizedBox(height: 10),
               TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ ')),

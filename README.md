@@ -3,8 +3,8 @@
 # ⚙️ JOKARZ ENGINEERING ⚙️
 ### *Corporate Manufacturing Plant Mechanical Engineering Suite & Workshop Companion*
 
-[![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.2%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-v1.0.2.apk)
-[![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.2%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-windows-v1.0.2.zip)
+[![Direct Android APK Download](https://img.shields.io/badge/⬇️%20ANDROID%20APK-v1.0.4%20Release-00E5FF?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.4/jokarz-engineering-v1.0.4.apk)
+[![Direct Windows App Download](https://img.shields.io/badge/⬇️%20WINDOWS%20APP-v1.0.4%20Release-00E676?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.4/jokarz-engineering-windows-v1.0.4.zip)
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.32+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.8+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
@@ -12,9 +12,9 @@
 [![Google Cloud Sync](https://img.shields.io/badge/Sync-Firebase%20Firestore-FFA000?logo=firebase&logoColor=white)](#)
 [![Theme](https://img.shields.io/badge/Design-Material%20Expressive%20%2F%20Compose-FFB300)](#)
 [![License](https://img.shields.io/badge/License-MIT-FFB300.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.0.2-00E5FF.svg)](https://github.com/Flexingg/Jokarz-Engineering/releases/tag/v1.0.2)
+[![Release](https://img.shields.io/badge/Release-v1.0.4-00E5FF.svg)](https://github.com/Flexingg/Jokarz-Engineering/releases/tag/v1.0.4)
 
-### 📥 **[Download Android APK (v1.0.2)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-v1.0.2.apk)** | **[Download Windows App (v1.0.2 .zip)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.2/jokarz-engineering-windows-v1.0.2.zip)**
+### 📥 **[Download Android APK (v1.0.4)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.4/jokarz-engineering-v1.0.4.apk)** | **[Download Windows App (v1.0.4 .zip)](https://github.com/Flexingg/Jokarz-Engineering/releases/download/v1.0.4/jokarz-engineering-windows-v1.0.4.zip)**
 
 *A personal mechanical engineering suite for corporate plant operations, tracking line maintenance, Kaizen improvements, capital projects, machine downtime tasks, purchase orders, Google cloud synchronization across Android and Windows workstations, and workshop mechanical diagnostics.*
 
