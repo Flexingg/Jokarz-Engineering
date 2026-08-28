@@ -542,6 +542,32 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                                               color: AppTheme.accentAmber,
                                               fontSize: 10,
                                             ),
+                                          if (order.addToStores) ...[
+                                            if (order.storeRequestNumber.isNotEmpty)
+                                              ExpressiveBadge(
+                                                label: 'Stores #${order.storeRequestNumber} ✓',
+                                                color: AppTheme.accentEmerald,
+                                                fontSize: 10,
+                                              )
+                                            else if (order.storeRequested)
+                                              const ExpressiveBadge(
+                                                label: 'Stores: Requested',
+                                                color: AppTheme.accentAmber,
+                                                fontSize: 10,
+                                              )
+                                            else if (order.po.isNotEmpty)
+                                              const ExpressiveBadge(
+                                                label: 'Stores: Pending',
+                                                color: AppTheme.accentAmber,
+                                                fontSize: 10,
+                                              )
+                                            else
+                                              const ExpressiveBadge(
+                                                label: 'Add to Stores',
+                                                color: Colors.grey,
+                                                fontSize: 10,
+                                              ),
+                                          ],
                                         ],
                                       ),
                                     ],

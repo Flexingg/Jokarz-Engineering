@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../providers/project_provider.dart';
-import '../widgets/expressive_card.dart';
-import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/sync_status_badge.dart';
 
@@ -16,26 +14,32 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(projectProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
     final activeProjects = state.activeProjects;
-    final openOrders = state.openOrders;
     final maintenanceCount = activeProjects
         .where((p) => p.category == ProjectCategory.maintenance)
         .length;
-    final kaizenCount = activeProjects
-        .where((p) => p.category == ProjectCategory.kaizen)
-        .length;
-    final capitalCount = activeProjects
-        .where((p) => p.category == ProjectCategory.capital)
-        .length;
-
-    final totalOpenOrderValue = openOrders.fold(
+    final kaizenCount =
+        activeProjects.where((p) => p.category == ProjectCategory.kaizen).length;
+    final capitalCount =
+        activeProjects.where((p) => p.category == ProjectCategory.capital).length;
+    final totalOpenOrderValue = state.openOrders.fold(
       0.0,
-      (prev, entry) => prev + entry.order.price,
+      (prev, e) => prev + e.order.price,
     );
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // Open orders due within the next 14 days (including overdue), by ETA.
+    final dueOrders = state.openOrders
+        .where((e) => e.order.eta != null)
+        .where((e) {
+          final eta = e.order.eta!;
+          final days = DateTime(eta.year, eta.month, eta.day).difference(today).inDays;
+          return days <= 14;
+        })
+        .toList();
+    final queue = state.queuedProjects;
 
     return Scaffold(
       appBar: AppBar(
@@ -69,343 +73,73 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // Re-load data if needed
-        },
+        onRefresh: () async {},
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // Engineering Plant HUD Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isDark
-                      ? [
-                          AppTheme.primaryBlue.withValues(alpha: 0.3),
-                          AppTheme.darkSurface,
-                        ]
-                      : [
-                          AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          AppTheme.lightSurface,
-                        ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                border: Border.all(
-                  color: AppTheme.primaryCyan.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'PLANT ENGINEERING WORKSPACE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                          color: AppTheme.primaryCyan,
-                        ),
-                      ),
-                      ExpressiveBadge(
-                        label: 'Live Operations',
-                        color: AppTheme.accentEmerald,
-                        fontSize: 10,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${activeProjects.length} Active Ranked Projects',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$maintenanceCount Maintenance • $kaizenCount Kaizen • $capitalCount Capital',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Metrics Cards Row
-            Row(
-              children: [
-                // Open Orders Card
-                Expanded(
-                  child: ExpressiveCard(
-                    onTap: () => context.go('/orders'),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.local_shipping_outlined, color: AppTheme.accentAmber, size: 18),
-                            Spacer(),
-                            Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${openOrders.length}',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.accentAmber,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Open Orders',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          currency.format(totalOpenOrderValue),
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Top Priority Project Card
-                Expanded(
-                  child: ExpressiveCard(
-                    onTap: activeProjects.isNotEmpty
-                        ? () => context.push('/projects/${activeProjects.first.id}')
-                        : null,
-                    isGlowing: activeProjects.isNotEmpty,
-                    glowColor: AppTheme.accentCoral,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.flag_rounded, color: AppTheme.accentCoral, size: 18),
-                            Spacer(),
-                            ExpressiveBadge(
-                              label: '#1 Urgent',
-                              color: AppTheme.accentCoral,
-                              fontSize: 9,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          activeProjects.isNotEmpty
-                              ? activeProjects.first.title
-                              : 'No Active Projects',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          activeProjects.isNotEmpty
-                              ? (activeProjects.first.machine.isNotEmpty
-                                  ? activeProjects.first.machine
-                                  : activeProjects.first.phase)
-                              : 'All Complete',
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            // Compact Plant Summary
+            _CompactSummary(
+              activeCount: activeProjects.length,
+              maintenance: maintenanceCount,
+              kaizen: kaizenCount,
+              capital: capitalCount,
+              openPoValue: totalOpenOrderValue,
+              topProject: activeProjects.isNotEmpty ? activeProjects.first : null,
+              onTapTop: activeProjects.isNotEmpty
+                  ? () => context.push('/projects/${activeProjects.first.id}')
+                  : null,
+              onTapProjects: () => context.go('/projects'),
+              onTapOrders: () => context.go('/orders'),
             ),
             const SizedBox(height: 20),
 
-            // Top Priority Projects Feed
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Top Priority Projects',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/projects'),
-                  child: const Text('View All'),
-                ),
-              ],
+            // Top Priority
+            _SectionHeader(
+              'Top Priority',
+              onViewAll: () => context.go('/projects'),
             ),
-            const SizedBox(height: 6),
-
+            const SizedBox(height: 4),
             if (activeProjects.isEmpty)
-              ExpressiveCard(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.check_circle_outline, size: 40, color: AppTheme.accentEmerald),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'No Active Engineering Projects',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Create a project or log plant maintenance.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              const _EmptyHint(
+                'No active projects. Tap ＋ to create one.',
               )
             else
-              ...activeProjects.take(3).map((project) {
-                final nextTask = project.nextPendingTask;
-                return ExpressiveCard(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  onTap: () => context.push('/projects/${project.id}'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          ExpressiveBadge(
-                            label: '#${project.priority}',
-                            color: project.priority == 1
-                                ? AppTheme.accentCoral
-                                : AppTheme.accentAmber,
-                            fontSize: 10,
-                          ),
-                          const SizedBox(width: 6),
-                          ExpressiveBadge(
-                            label: project.category.label,
-                            color: AppTheme.primaryCyan,
-                            fontSize: 10,
-                          ),
-                          const SizedBox(width: 6),
-                          ExpressiveBadge(
-                            label: project.phase,
-                            color: AppTheme.primaryBlue,
-                            isOutlined: true,
-                            fontSize: 10,
-                          ),
-                          const Spacer(),
-                          if (project.machine.isNotEmpty)
-                            Text(
-                              project.machine,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        project.title,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      if (nextTask != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentAmber.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.pending_actions_rounded, size: 13, color: AppTheme.accentAmber),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Next: ${nextTask.description}${nextTask.pendingReason.isNotEmpty ? " • ${nextTask.pendingReason}" : ""}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.accentAmber,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              }),
+              ...activeProjects.take(5).map((p) => _ProjectRow(
+                    p: p,
+                    onTap: () => context.push('/projects/${p.id}'),
+                  )),
+            const SizedBox(height: 18),
 
-            const SizedBox(height: 16),
+            // Needs Attention (queue: not worked on recently)
+            _SectionHeader(
+              'Needs Attention',
+              onViewAll: () => context.push('/projects/queue'),
+            ),
+            const SizedBox(height: 4),
+            if (queue.isEmpty)
+              const _EmptyHint('Nothing sitting untouched. Nice.')
+            else
+              ...queue.take(5).map((p) => _QueueRow(
+                    p: p,
+                    onTap: () => context.push('/projects/${p.id}'),
+                  )),
+            const SizedBox(height: 18),
 
-            // Open Purchase Orders Preview
-            if (openOrders.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Open Purchase Orders',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/orders'),
-                    child: const Text('View All'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ...openOrders.take(2).map((entry) {
-                return ExpressiveCard(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  onTap: () => context.push('/projects/${entry.project.id}'),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.local_shipping_outlined, color: AppTheme.accentAmber, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.order.description,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              '${entry.project.title} • PO: ${entry.order.po.isNotEmpty ? entry.order.po : "Pending"}',
-                              style: const TextStyle(fontSize: 11, color: Colors.grey),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        NumberFormat.currency(symbol: '\$', decimalDigits: 2).format(entry.order.price),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
+            // Orders Due Soon
+            _SectionHeader(
+              'Orders Due Soon',
+              onViewAll: () => context.go('/orders'),
+            ),
+            const SizedBox(height: 4),
+            if (dueOrders.isEmpty)
+              const _EmptyHint('No orders due in the next 14 days.')
+            else
+              ...dueOrders.take(6).map((e) => _OrderRow(
+                    entry: e,
+                    onTap: () =>
+                        context.push('/projects/${e.project.id}?tab=orders'),
+                  )),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -413,6 +147,401 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => context.push('/search'),
         tooltip: 'Search & Quick Add',
         child: const Icon(Icons.search),
+      ),
+    );
+  }
+}
+
+class _CompactSummary extends StatelessWidget {
+  final int activeCount;
+  final int maintenance;
+  final int kaizen;
+  final int capital;
+  final double openPoValue;
+  final Project? topProject;
+  final VoidCallback? onTapTop;
+  final VoidCallback? onTapProjects;
+  final VoidCallback? onTapOrders;
+
+  const _CompactSummary({
+    required this.activeCount,
+    required this.maintenance,
+    required this.kaizen,
+    required this.capital,
+    required this.openPoValue,
+    required this.topProject,
+    this.onTapTop,
+    this.onTapProjects,
+    this.onTapOrders,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  AppTheme.primaryBlue.withValues(alpha: 0.25),
+                  AppTheme.darkSurface,
+                ]
+              : [
+                  AppTheme.primaryBlue.withValues(alpha: 0.08),
+                  AppTheme.lightSurface,
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Line 1: compact counts + open PO spend
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onTapProjects,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  child: Text(
+                    '$activeCount Active • $maintenance Maint • $kaizen Kaizen • $capital Capital',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: onTapOrders,
+                borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                child: Text(
+                  '${currency.format(openPoValue)} open PO',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentAmber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Line 2: #1 priority project
+          Row(
+            children: [
+              const Icon(Icons.flag_rounded, size: 14, color: AppTheme.accentCoral),
+              const SizedBox(width: 6),
+              Expanded(
+                child: InkWell(
+                  onTap: onTapTop,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  child: Text(
+                    topProject != null ? '#1: ${topProject!.title}' : 'No active projects',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              if (topProject != null)
+                TextButton(
+                  onPressed: onTapTop,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Open', style: TextStyle(fontSize: 11)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback? onViewAll;
+
+  const _SectionHeader(this.title, {this.onViewAll});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        if (onViewAll != null)
+          TextButton(
+            onPressed: onViewAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('View All', style: TextStyle(fontSize: 12)),
+          ),
+      ],
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  final String message;
+  const _EmptyHint(this.message);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline,
+              size: 16, color: isDark ? Colors.grey : Colors.black38),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectRow extends StatelessWidget {
+  final Project p;
+  final VoidCallback onTap;
+
+  const _ProjectRow({required this.p, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final priorityColor = p.priority == 1
+        ? AppTheme.accentCoral
+        : (p.priority <= 3 ? AppTheme.accentAmber : AppTheme.primaryCyan);
+    final nextTask = p.nextPendingTask;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: priorityColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                border: Border.all(color: priorityColor.withValues(alpha: 0.5)),
+              ),
+              child: Center(
+                child: Text(
+                  '#${p.priority}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: priorityColor,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.title,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (nextTask != null)
+                    Text(
+                      'Next: ${nextTask.description}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else if (p.machine.isNotEmpty)
+                    Text(
+                      p.machine,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueRow extends StatelessWidget {
+  final Project p;
+  final VoidCallback onTap;
+
+  const _QueueRow({required this.p, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final days = p.daysSinceLastAction;
+    final col = days >= 7
+        ? Colors.red.shade400
+        : (days >= 3 ? AppTheme.accentAmber : Colors.grey);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Icon(Icons.history_rounded, size: 14, color: col),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.title,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    days == 1
+                        ? 'Last touched 1 day ago • #${p.priority}'
+                        : 'Last touched $days days ago • #${p.priority}',
+                    style: TextStyle(fontSize: 11, color: col, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderRow extends StatelessWidget {
+  final OpenOrderEntry entry;
+  final VoidCallback onTap;
+
+  const _OrderRow({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final order = entry.order;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            _EtaBadge(order.eta!),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.description.isEmpty ? 'Parts / Material Order' : order.description,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '${entry.project.title} • PO: ${order.po.isNotEmpty ? order.po : "—"}',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              currency.format(order.price),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EtaBadge extends StatelessWidget {
+  final DateTime eta;
+  const _EtaBadge(this.eta);
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final etaDate = DateTime(eta.year, eta.month, eta.day);
+    final days = etaDate.difference(today).inDays;
+
+    String label;
+    Color col;
+    if (days < 0) {
+      label = '⚠ ${days.abs()}d overdue';
+      col = AppTheme.accentCoral;
+    } else if (days == 0) {
+      label = 'Arriving Today';
+      col = AppTheme.accentEmerald;
+    } else if (days == 1) {
+      label = 'Arriving Tomorrow';
+      col = AppTheme.primaryCyan;
+    } else {
+      label = 'in $days days';
+      col = AppTheme.primaryCyan;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: col.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+        border: Border.all(color: col.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: col,
+        ),
       ),
     );
   }

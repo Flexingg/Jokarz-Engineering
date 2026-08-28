@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/voice_note.dart';
 import '../../providers/project_provider.dart';
+import '../../services/sync_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
@@ -364,7 +365,36 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
                                     tooltip: 'Delete Note',
-                                    onPressed: () => ref.read(projectProvider.notifier).deleteVoiceNote(entry.voiceNote!.id),
+                                    onPressed: () async {
+                                      final note = entry.voiceNote!;
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete Note?'),
+                                          content: Text(
+                                            'Delete "${note.title}"? This cannot be undone.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.accentCoral,
+                                              ),
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await ref
+                                            .read(syncStatusProvider.notifier)
+                                            .deleteVoiceNoteEverywhere(note.id);
+                                      }
+                                    },
                                   ),
                                 ],
                               ],

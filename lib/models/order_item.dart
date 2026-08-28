@@ -8,6 +8,12 @@ class OrderItem {
   final double price;
   final DateTime? eta;
   final bool delivered;
+  /// Whether this item should be added to the plant storeroom.
+  final bool addToStores;
+  /// Whether a storeroom request has been made (requires a PO number first).
+  final bool storeRequested;
+  /// The storeroom request / requisition number.
+  final String storeRequestNumber;
 
   OrderItem({
     String? id,
@@ -17,6 +23,9 @@ class OrderItem {
     this.price = 0.0,
     this.eta,
     this.delivered = false,
+    this.addToStores = false,
+    this.storeRequested = false,
+    this.storeRequestNumber = '',
   }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
 
   OrderItem copyWith({
@@ -27,6 +36,9 @@ class OrderItem {
     DateTime? eta,
     bool clearEta = false,
     bool? delivered,
+    bool? addToStores,
+    bool? storeRequested,
+    String? storeRequestNumber,
   }) {
     return OrderItem(
       id: id,
@@ -36,6 +48,10 @@ class OrderItem {
       price: price ?? this.price,
       eta: clearEta ? null : (eta ?? this.eta),
       delivered: delivered ?? this.delivered,
+      addToStores: addToStores ?? this.addToStores,
+      storeRequested: storeRequested ?? this.storeRequested,
+      storeRequestNumber:
+          storeRequestNumber ?? this.storeRequestNumber,
     );
   }
 
@@ -48,6 +64,9 @@ class OrderItem {
       'price': price,
       'eta': eta?.toIso8601String(),
       'delivered': delivered,
+      'addToStores': addToStores,
+      'storeRequested': storeRequested,
+      'storeRequestNumber': storeRequestNumber,
     };
   }
 
@@ -60,6 +79,9 @@ class OrderItem {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       eta: json['eta'] != null ? DateTime.tryParse(json['eta'] as String) : null,
       delivered: json['delivered'] as bool? ?? false,
+      addToStores: json['addToStores'] as bool? ?? false,
+      storeRequested: json['storeRequested'] as bool? ?? false,
+      storeRequestNumber: json['storeRequestNumber'] as String? ?? '',
     );
   }
 }

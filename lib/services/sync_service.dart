@@ -59,7 +59,9 @@ class SyncNotifier extends StateNotifier<SyncState> {
   StreamSubscription? _authSub;
   StreamSubscription? _projectsSub;
   StreamSubscription? _notesSub;
+  ProviderSubscription? _localStateSub;
   bool _isProcessingRemoteUpdate = false;
+  bool _initialRemoteReceived = false;
 
   SyncNotifier(this._ref, this._authService) : super(const SyncState()) {
     _init();
@@ -116,6 +118,14 @@ class SyncNotifier extends StateNotifier<SyncState> {
         debugPrint('Firestore voice notes sync error: $e');
       },
     );
+
+    // Push local changes (creates/edits) to the cloud automatically so edits on
+    // one device propagate to others without pressing the manual sync button.
+    _localStateSub = _ref.listen<EngineeringState>(projectProvider, (prev, next) {
+      if (_isProcessingRemoteUpdate) return;
+      if (!_initialRemoteReceived) return;
+      unawaited(_syncChangedEntities(prev, next));
+    });
   }
 
   void _handleProjectsSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
@@ -137,6 +147,16 @@ class SyncNotifier extends StateNotifier<SyncState> {
         // Initial cloud push if cloud is empty
         pushAllLocalToCloud();
       }
+
+      // Push any local-only projects (e.g. created while offline) not on cloud.
+      final remoteProjectIds = {for (final p in remoteProjects) p.id};
+      final localAfter = _ref.read(projectProvider);
+      for (final p in localAfter.projects) {
+        if (!remoteProjectIds.contains(p.id)) {
+          syncProject(p);
+        }
+      }
+      _initialRemoteReceived = true;
 
       state = state.copyWith(
         status: SyncStatus.synced,
@@ -166,6 +186,16 @@ class SyncNotifier extends StateNotifier<SyncState> {
       } else if (localState.voiceNotes.isNotEmpty) {
         pushAllLocalToCloud();
       }
+
+      // Push any local-only notes (e.g. created while offline) not on cloud.
+      final remoteNoteIds = {for (final n in remoteNotes) n.id};
+      final localAfter = _ref.read(projectProvider);
+      for (final n in localAfter.voiceNotes) {
+        if (!remoteNoteIds.contains(n.id)) {
+          syncVoiceNote(n);
+        }
+      }
+      _initialRemoteReceived = true;
 
       state = state.copyWith(
         status: SyncStatus.synced,
@@ -260,6 +290,23 @@ class SyncNotifier extends StateNotifier<SyncState> {
     }
   }
 
+  /// Deletes a voice/written note from BOTH local state and Firestore so it is
+  /// not resurrected by the next cloud snapshot. Local delete happens first so
+  /// the UI updates immediately; the cloud delete is best-effort and never
+  /// blocks the caller (the change watcher also handles it automatically).
+  Future<void> deleteVoiceNoteEverywhere(String noteId) async {
+    await _ref.read(projectProvider.notifier).deleteVoiceNote(noteId);
+    unawaited(deleteCloudVoiceNote(noteId));
+  }
+
+  /// Deletes a project from BOTH local state and Firestore so it is not
+  /// resurrected by the next cloud snapshot. Local delete happens first so the
+  /// UI updates immediately; the cloud delete is best-effort and non-blocking.
+  Future<void> deleteProjectEverywhere(String projectId) async {
+    await _ref.read(projectProvider.notifier).deleteProject(projectId);
+    unawaited(deleteCloudProject(projectId));
+  }
+
   /// Push all local projects and notes to cloud
   Future<void> pushAllLocalToCloud() async {
     final user = _authService.currentUser;
@@ -304,11 +351,67 @@ class SyncNotifier extends StateNotifier<SyncState> {
     }
   }
 
+  /// Diffs the previous and next local states and pushes only what changed to
+  /// the cloud (creates/edits of projects and notes, plus deletes for safety).
+  Future<void> _syncChangedEntities(
+      EngineeringState? prev, EngineeringState next) async {
+    final user = _authService.currentUser;
+    final firestore = _firestore;
+    if (user == null || firestore == null) return;
+
+    final prevProjects = {
+      for (final p in prev?.projects ?? const <Project>[]) p.id: p,
+    };
+    final prevNotes = {
+      for (final n in prev?.voiceNotes ?? const <VoiceNote>[]) n.id: n,
+    };
+
+    final futures = <Future<void>>[];
+
+    // Created or edited projects
+    for (final p in next.projects) {
+      final old = prevProjects[p.id];
+      if (old == null || old.updatedAt != p.updatedAt) {
+        futures.add(syncProject(p));
+      }
+    }
+    // Deleted projects
+    for (final old in prevProjects.values) {
+      if (!next.projects.any((p) => p.id == old.id)) {
+        futures.add(deleteCloudProject(old.id));
+      }
+    }
+
+    // Created or edited notes
+    for (final n in next.voiceNotes) {
+      final old = prevNotes[n.id];
+      if (old == null ||
+          old.title != n.title ||
+          old.transcript != n.transcript ||
+          old.projectId != n.projectId ||
+          old.timestamp != n.timestamp) {
+        futures.add(syncVoiceNote(n));
+      }
+    }
+    // Deleted notes
+    for (final old in prevNotes.values) {
+      if (!next.voiceNotes.any((n) => n.id == old.id)) {
+        futures.add(deleteCloudVoiceNote(old.id));
+      }
+    }
+
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+    }
+  }
+
   void _stopListening() {
     _projectsSub?.cancel();
     _notesSub?.cancel();
+    _localStateSub?.close();
     _projectsSub = null;
     _notesSub = null;
+    _localStateSub = null;
   }
 
   @override

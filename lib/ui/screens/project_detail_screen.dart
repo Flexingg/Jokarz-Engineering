@@ -10,6 +10,7 @@ import '../../models/task_item.dart';
 import '../../models/order_item.dart';
 import '../../models/project_log.dart';
 import '../../providers/project_provider.dart';
+import '../../services/sync_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
@@ -751,7 +752,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 ),
               );
               if (confirm == true && context.mounted) {
-                await ref.read(projectProvider.notifier).deleteProject(project.id);
+                await ref
+                    .read(syncStatusProvider.notifier)
+                    .deleteProjectEverywhere(project.id);
                 if (context.mounted) {
                   context.pop();
                 }
@@ -1343,92 +1346,98 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     return ExpressiveCard(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Checkbox(
-                            value: order.delivered,
-                            activeColor: AppTheme.accentEmerald,
-                            onChanged: (_) {
-                              ref
-                                  .read(projectProvider.notifier)
-                                  .toggleOrderDelivered(project.id, order.id);
-                            },
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: order.delivered,
+                                activeColor: AppTheme.accentEmerald,
+                                onChanged: (_) {
+                                  ref
+                                      .read(projectProvider.notifier)
+                                      .toggleOrderDelivered(project.id, order.id);
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (order.po.isNotEmpty)
-                                      ExpressiveBadge(
-                                        label: 'PO: ${order.po}',
-                                        color: AppTheme.primaryCyan,
-                                        fontSize: 10,
+                                    Row(
+                                      children: [
+                                        if (order.po.isNotEmpty)
+                                          ExpressiveBadge(
+                                            label: 'PO: ${order.po}',
+                                            color: AppTheme.primaryCyan,
+                                            fontSize: 10,
+                                          ),
+                                        if (order.pr.isNotEmpty) ...[
+                                          const SizedBox(width: 4),
+                                          ExpressiveBadge(
+                                            label: 'PR: ${order.pr}',
+                                            color: AppTheme.primaryBlue,
+                                            isOutlined: true,
+                                            fontSize: 10,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      order.description,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        decoration: order.delivered
+                                            ? TextDecoration.lineThrough
+                                            : null,
                                       ),
-                                    if (order.pr.isNotEmpty) ...[
-                                      const SizedBox(width: 4),
-                                      ExpressiveBadge(
-                                        label: 'PR: ${order.pr}',
-                                        color: AppTheme.primaryBlue,
-                                        isOutlined: true,
-                                        fontSize: 10,
-                                      ),
-                                    ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'ETA: $etaText',
+                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  order.description,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    decoration: order.delivered
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'ETA: $etaText',
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                currency.format(order.price),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
                               ),
-                              Text(
-                                order.delivered ? 'Delivered' : 'Pending',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: order.delivered
-                                      ? AppTheme.accentEmerald
-                                      : AppTheme.accentAmber,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    currency.format(order.price),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    order.delivered ? 'Delivered' : 'Pending',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: order.delivered
+                                          ? AppTheme.accentEmerald
+                                          : AppTheme.accentAmber,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                                onPressed: () => _showAddOrderDialog(context, existingOrder: order),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                onPressed: () => ref
+                                    .read(projectProvider.notifier)
+                                    .deleteOrder(project.id, order.id),
                               ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                            onPressed: () => _showAddOrderDialog(context, existingOrder: order),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                            onPressed: () => ref
-                                .read(projectProvider.notifier)
-                                .deleteOrder(project.id, order.id),
-                          ),
+                          _buildOrderStoresSection(context, project, order, isDark),
                         ],
                       ),
                     );
@@ -1436,6 +1445,183 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 ),
         ),
       ],
+    );
+  }
+
+  /// Storeroom tracking controls for an order card: "Add to Stores" toggle and
+  /// the request workflow (PO-gated request button → store request number).
+  Widget _buildOrderStoresSection(
+    BuildContext context,
+    Project project,
+    OrderItem order,
+    bool isDark,
+  ) {
+    final notifier = ref.read(projectProvider.notifier);
+    final storesColor = order.addToStores
+        ? AppTheme.accentEmerald
+        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 16),
+        InkWell(
+          onTap: () =>
+              notifier.setOrderAddToStores(project.id, order.id, !order.addToStores),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          child: Row(
+            children: [
+              Icon(Icons.warehouse_outlined, size: 16, color: storesColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Add to Stores',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: storesColor,
+                  ),
+                ),
+              ),
+              Switch(
+                value: order.addToStores,
+                activeColor: AppTheme.accentEmerald,
+                onChanged: (v) =>
+                    notifier.setOrderAddToStores(project.id, order.id, v),
+              ),
+            ],
+          ),
+        ),
+        if (order.addToStores) ...[
+          const SizedBox(height: 6),
+          if (order.po.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      size: 14, color: AppTheme.accentAmber),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Add a PO number, then request from storeroom.',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.accentAmber,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (!order.storeRequested)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Request from Stores?'),
+                      content: Text(
+                        'Send a storeroom request for "${order.description}"?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Request'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    await notifier.markOrderStoreRequested(project.id, order.id);
+                  }
+                },
+                icon: const Icon(Icons.warehouse_rounded, size: 16),
+                label: const Text('Request for Stores'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.accentEmerald,
+                  side: const BorderSide(color: AppTheme.accentEmerald),
+                ),
+              ),
+            )
+          else if (order.storeRequestNumber.isEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Store request sent — add the request #:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _showStoreRequestNumberDialog(context, project, order),
+                  icon: const Icon(Icons.edit_outlined, size: 14),
+                  label: const Text('Add #'),
+                ),
+              ],
+            )
+          else
+            ExpressiveBadge(
+              label: 'Stores #${order.storeRequestNumber} ✓ Requested',
+              icon: Icons.warehouse_rounded,
+              color: AppTheme.accentEmerald,
+              fontSize: 10,
+            ),
+        ],
+      ],
+    );
+  }
+
+  void _showStoreRequestNumberDialog(
+    BuildContext context,
+    Project project,
+    OrderItem order,
+  ) {
+    final ctrl = TextEditingController(text: order.storeRequestNumber);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Store Request Number'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Store Request #',
+            hintText: 'e.g. 80231',
+            prefixIcon: Icon(Icons.warehouse_rounded),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref
+                  .read(projectProvider.notifier)
+                  .setOrderStoreRequestNumber(project.id, order.id, ctrl.text.trim());
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 

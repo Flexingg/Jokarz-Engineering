@@ -633,6 +633,62 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     await updateProject(updatedProject);
   }
 
+  // --- Order Storeroom Tracking ---
+  Future<void> setOrderAddToStores(String projectId, String orderId, bool value) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final updatedOrders = project.orders.map((o) {
+      if (o.id == orderId) return o.copyWith(addToStores: value);
+      return o;
+    }).toList();
+    await updateProject(project.copyWith(orders: updatedOrders));
+  }
+
+  /// Marks an order's storeroom request as sent and appends a project log entry
+  /// for traceability. Requires the order to have a PO number.
+  Future<void> markOrderStoreRequested(String projectId, String orderId) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final order = project.orders.where((o) => o.id == orderId).firstOrNull;
+    if (order == null) return;
+
+    final updatedOrders = project.orders.map((o) {
+      if (o.id == orderId) return o.copyWith(storeRequested: true);
+      return o;
+    }).toList();
+
+    final log = ProjectLog(
+      title: '📦 Store request: ${order.description}',
+      content: 'Requested "${order.description}" for the storeroom.'
+          '${order.po.isNotEmpty ? " (PO: ${order.po})" : ""}',
+      type: LogType.update,
+    );
+
+    final updatedProject = project.copyWith(
+      orders: updatedOrders,
+      logs: [log, ...project.logs],
+      lastActionAt: DateTime.now(),
+    );
+    await updateProject(updatedProject);
+  }
+
+  /// Records the storeroom request number (and marks the request done).
+  Future<void> setOrderStoreRequestNumber(
+      String projectId, String orderId, String number) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final updatedOrders = project.orders.map((o) {
+      if (o.id == orderId) {
+        return o.copyWith(
+          storeRequestNumber: number.trim(),
+          storeRequested: true,
+        );
+      }
+      return o;
+    }).toList();
+    await updateProject(project.copyWith(orders: updatedOrders));
+  }
+
   // --- Project Logs ---
   Future<void> addProjectLog(String projectId, ProjectLog log) async {
     final project = getProjectById(projectId);
