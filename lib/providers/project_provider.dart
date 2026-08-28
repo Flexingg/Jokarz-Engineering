@@ -6,6 +6,8 @@ import '../models/task_item.dart';
 import '../models/order_item.dart';
 import '../models/project_log.dart';
 import '../models/voice_note.dart';
+import '../models/activity_log.dart';
+import '../models/downtime_event.dart';
 import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
 import '../models/search_result.dart';
@@ -27,6 +29,8 @@ class EngineeringState {
   final List<VoiceNote> voiceNotes;
   final List<FilamentProfile> filaments;
   final List<StandaloneOrder> standaloneOrders;
+  final List<ActivityLog> activityLog;
+  final List<DowntimeEvent> downtimes;
   final bool isLoading;
   final String searchQuery;
   final ProjectCategory? selectedCategory;
@@ -38,6 +42,8 @@ class EngineeringState {
     this.voiceNotes = const [],
     this.filaments = const [],
     this.standaloneOrders = const [],
+    this.activityLog = const [],
+    this.downtimes = const [],
     this.isLoading = true,
     this.searchQuery = '',
     this.selectedCategory,
@@ -205,6 +211,7 @@ class EngineeringState {
     final projectHits = <ProjectSearchHit>[];
     final orderHits = <OrderSearchHit>[];
     final noteHits = <NoteSearchHit>[];
+    final taskHits = <TaskSearchHit>[];
 
     for (final p in projects) {
       final projectMatch = matches(p.title) ||
@@ -232,6 +239,12 @@ class EngineeringState {
           projectTitle: p.title,
           isProjectNote: true,
         ));
+      }
+
+      for (final t in p.tasks) {
+        if (matches(t.description) || matches(t.pendingReason)) {
+          taskHits.add(TaskSearchHit(p, t));
+        }
       }
     }
 
@@ -265,6 +278,7 @@ class EngineeringState {
       projects: projectHits,
       orders: orderHits,
       notes: noteHits,
+      tasks: taskHits,
     );
   }
 
@@ -281,6 +295,8 @@ class EngineeringState {
     List<VoiceNote>? voiceNotes,
     List<FilamentProfile>? filaments,
     List<StandaloneOrder>? standaloneOrders,
+    List<ActivityLog>? activityLog,
+    List<DowntimeEvent>? downtimes,
     bool? isLoading,
     String? searchQuery,
     ProjectCategory? selectedCategory,
@@ -295,6 +311,8 @@ class EngineeringState {
       voiceNotes: voiceNotes ?? this.voiceNotes,
       filaments: filaments ?? this.filaments,
       standaloneOrders: standaloneOrders ?? this.standaloneOrders,
+      activityLog: activityLog ?? this.activityLog,
+      downtimes: downtimes ?? this.downtimes,
       isLoading: isLoading ?? this.isLoading,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory:
@@ -331,8 +349,39 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       voiceNotes: data['voiceNotes'] as List<VoiceNote>,
       filaments: data['filaments'] as List<FilamentProfile>,
       standaloneOrders: data['standaloneOrders'] as List<StandaloneOrder>? ?? [],
+      activityLog: await _storage.loadActivityLog(),
+      downtimes: await _storage.loadDowntimes(),
       isLoading: false,
     );
+  }
+
+  /// Records a timestamped action for traceability (persisted separately).
+  Future<void> addActivityLog(ActivityLog log) async {
+    final full = log.withId();
+    state = state.copyWith(activityLog: [full, ...state.activityLog]);
+    await _storage.saveActivityLog(state.activityLog);
+  }
+
+  Future<void> _log(ActivityType type, String text,
+          {String? pid, String? ptitle}) =>
+      addActivityLog(ActivityLog(
+          type: type, text: text, timestamp: DateTime.now(), projectId: pid, projectTitle: ptitle));
+
+  Future<void> addDowntime(DowntimeEvent d) async {
+    state = state.copyWith(downtimes: [...state.downtimes, d.withId()]);
+    await _storage.saveDowntimes(state.downtimes);
+  }
+
+  Future<void> updateDowntime(DowntimeEvent d) async {
+    state = state.copyWith(
+        downtimes: state.downtimes.map((e) => e.id == d.id ? d : e).toList());
+    await _storage.saveDowntimes(state.downtimes);
+  }
+
+  Future<void> deleteDowntime(String id) async {
+    state = state.copyWith(
+        downtimes: state.downtimes.where((e) => e.id != id).toList());
+    await _storage.saveDowntimes(state.downtimes);
   }
 
   Future<void> _persist() async {
@@ -411,6 +460,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       currentProjects.addAll([...rebalancedActive, ...terminal]);
     }
 
+    await _log(ActivityType.projectAdded, 'Project: ${project.title}', pid: project.id, ptitle: project.title);
     state = state.copyWith(projects: currentProjects);
     await _persist();
   }
@@ -426,6 +476,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final isNowTerminal = modified.isCompletedOrCancelled;
 
     if (!wasTerminal && isNowTerminal) {
+      await _log(ActivityType.projectCompleted, 'Project closed: ${modified.title}', pid: modified.id, ptitle: modified.title);
       modified = modified.copyWith(
         completedAt: DateTime.now(),
         // Keep highest lifetime priority stored on object
@@ -528,6 +579,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final project = getProjectById(projectId);
     if (project == null) return;
 
+    await _log(ActivityType.taskAdded, 'Task: ${task.description}', pid: projectId, ptitle: project.title);
     final updatedTasks = [...project.tasks, task];
     final updatedProject = project.copyWith(tasks: updatedTasks);
     await updateProject(updatedProject);
@@ -545,6 +597,13 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   Future<void> toggleTaskCompleted(String projectId, String taskId) async {
     final project = getProjectById(projectId);
     if (project == null) return;
+
+    final task = project.tasks.where((t) => t.id == taskId).firstOrNull;
+    final nowDone = task != null && !task.isCompleted;
+    await _log(
+        nowDone ? ActivityType.taskCompleted : ActivityType.taskReopened,
+        '${nowDone ? 'Completed' : 'Reopened'} task: ${task?.description ?? ''}',
+        pid: projectId, ptitle: project.title);
 
     final updatedTasks = project.tasks.map((t) {
       if (t.id == taskId) {
@@ -623,6 +682,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final project = getProjectById(projectId);
     if (project == null) return;
 
+    await _log(ActivityType.orderAdded, 'Order: ${order.description}', pid: projectId, ptitle: project.title);
     final updatedOrders = [...project.orders, order];
     final updatedProject = project.copyWith(orders: updatedOrders);
     await updateProject(updatedProject);
@@ -640,6 +700,13 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   Future<void> toggleOrderDelivered(String projectId, String orderId) async {
     final project = getProjectById(projectId);
     if (project == null) return;
+
+    final order = project.orders.where((o) => o.id == orderId).firstOrNull;
+    final nowDelivered = order != null && !order.delivered;
+    await _log(
+        nowDelivered ? ActivityType.orderDelivered : ActivityType.orderUndelivered,
+        '${nowDelivered ? 'Delivered' : 'Reopened'} order: ${order?.description ?? ''}',
+        pid: projectId, ptitle: project.title);
 
     final updatedOrders = project.orders.map((o) {
       if (o.id == orderId) {
@@ -684,6 +751,8 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       return o;
     }).toList();
 
+    await _log(ActivityType.storesRequested, 'Stores request: ${order.description}', pid: projectId, ptitle: project.title);
+
     final log = ProjectLog(
       title: '📦 Store request: ${order.description}',
       content: 'Requested "${order.description}" for the storeroom.'
@@ -721,6 +790,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final project = getProjectById(projectId);
     if (project == null) return;
 
+    await _log(ActivityType.logAdded, '${log.title}', pid: projectId, ptitle: project.title);
     final updatedLogs = [log, ...project.logs];
     final updatedProject = project.copyWith(
       logs: updatedLogs,
@@ -750,6 +820,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
   // --- Voice Notes ---
   Future<void> addVoiceNote(VoiceNote note) async {
+    await _log(ActivityType.noteAdded, '${note.title}', pid: note.projectId);
     final updated = [note, ...state.voiceNotes];
     state = state.copyWith(voiceNotes: updated);
 
@@ -837,6 +908,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
   // --- Standalone Orders ---
   Future<void> addStandaloneOrder(StandaloneOrder order) async {
+    await _log(ActivityType.standaloneOrderAdded, 'Order: ${order.description}');
     final updated = [...state.standaloneOrders, order];
     state = state.copyWith(standaloneOrders: updated);
     await _persist();
@@ -852,6 +924,33 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
   Future<void> deleteStandaloneOrder(String id) async {
     final updated = state.standaloneOrders.where((o) => o.id != id).toList();
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  Future<void> setStandaloneOrderAddToStores(String id, bool value) async {
+    final updated = state.standaloneOrders
+        .map((o) => o.id == id ? o.copyWith(addToStores: value) : o)
+        .toList();
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  Future<void> markStandaloneOrderStoreRequested(String id) async {
+    final updated = state.standaloneOrders
+        .map((o) => o.id == id ? o.copyWith(storeRequested: true) : o)
+        .toList();
+    state = state.copyWith(standaloneOrders: updated);
+    await _persist();
+  }
+
+  Future<void> setStandaloneOrderStoreRequestNumber(String id, String num) async {
+    final updated = state.standaloneOrders
+        .map((o) =>
+            o.id == id
+                ? o.copyWith(storeRequestNumber: num.trim(), storeRequested: true)
+                : o)
+        .toList();
     state = state.copyWith(standaloneOrders: updated);
     await _persist();
   }

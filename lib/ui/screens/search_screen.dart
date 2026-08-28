@@ -76,9 +76,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  void _openTask(TaskSearchHit h) {
+    context.push('/projects/${h.project.id}');
+  }
+
   void _openFirstResult(SearchResults results) {
     if (results.projects.isNotEmpty) {
       _openProject(results.projects.first.project);
+    } else if (results.tasks.isNotEmpty) {
+      _openTask(results.tasks.first);
     } else if (results.orders.isNotEmpty) {
       _openOrder(results.orders.first);
     } else if (results.notes.isNotEmpty) {
@@ -175,6 +181,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             _SectionHeader('Projects (${results.projects.length})'),
                             ...results.projects.map(_buildProjectTile),
                           ],
+                          if (results.tasks.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            _SectionHeader('Tasks (${results.tasks.length})'),
+                            ...results.tasks.map(_buildTaskTile),
+                          ],
                           if (results.orders.isNotEmpty) ...[
                             const SizedBox(height: 10),
                             _SectionHeader('Orders (${results.orders.length})'),
@@ -231,6 +242,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               color: AppTheme.accentCoral,
               fontSize: 9,
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskTile(TaskSearchHit hit) {
+    return ExpressiveCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      onTap: () => _openTask(hit),
+      child: Row(
+        children: [
+          const Icon(Icons.checklist_rounded, color: AppTheme.accentAmber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    children: _highlightSpans(hit.task.description),
+                  ),
+                ),
+                Text(
+                  hit.project.title,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (hit.task.isCompleted)
+            const ExpressiveBadge(label: '✓ Done', color: AppTheme.accentEmerald, fontSize: 9)
+          else if (hit.task.pendingReason.isNotEmpty)
+            ExpressiveBadge(label: '⏳ ${hit.task.pendingReason}', color: AppTheme.accentCoral, fontSize: 9),
         ],
       ),
     );

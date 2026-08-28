@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
+import '../../models/activity_log.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/voice_memo_modal.dart';
 
@@ -36,6 +37,14 @@ class DashboardScreen extends ConsumerWidget {
             DateUtils.isSameDay(t.scheduledDate!, today)) {
           todayTaskCount++;
         }
+      }
+    }
+    final weekAgo = now.subtract(const Duration(days: 7));
+    int tasksAddedWeek = 0, tasksClosedWeek = 0;
+    for (final l in state.activityLog) {
+      if (l.timestamp.isAfter(weekAgo)) {
+        if (l.type == ActivityType.taskAdded) tasksAddedWeek++;
+        else if (l.type == ActivityType.taskCompleted) tasksClosedWeek++;
       }
     }
     // Open orders due within the next 14 days (including overdue), by ETA.
@@ -99,6 +108,12 @@ class DashboardScreen extends ConsumerWidget {
               taskCount: todayTaskCount,
               onTap: () => context.push('/calendar'),
             ),
+            const SizedBox(height: 12),
+            Row(children: [
+              _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.primaryCyan),
+              const SizedBox(width: 12),
+              _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.accentEmerald),
+            ]),
             const SizedBox(height: 20),
 
             // Top Priority
@@ -155,6 +170,37 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => context.push('/search'),
         tooltip: 'Search & Quick Add',
         child: const Icon(Icons.search),
+      ),
+    );
+  }
+}
+
+class _KpiCard extends StatelessWidget {
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color;
+  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$value',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+            Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          ]),
+        ]),
       ),
     );
   }

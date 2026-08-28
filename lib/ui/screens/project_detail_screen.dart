@@ -1305,10 +1305,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddOrderDialog(context),
-                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
-                label: const Text('Add Order'),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddOrderDialog(context),
+                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                    label: const Text('Add Order'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _showLinkUnlinkedOrderDialog(context, project),
+                    icon: const Icon(Icons.link_rounded, size: 14, color: AppTheme.accentEmerald),
+                    label: const Text('Link Unlinked',
+                        style: TextStyle(fontSize: 12, color: AppTheme.accentEmerald)),
+                    style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.zero),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1445,6 +1460,87 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 ),
         ),
       ],
+    );
+  }
+
+  /// Search standalone (unlinked) orders and link one to this project.
+  Future<void> _showLinkUnlinkedOrderDialog(BuildContext context, Project project) async {
+    final standalone = ref.read(projectProvider).standaloneOrders;
+    if (standalone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No unlinked orders available to link.')));
+      return;
+    }
+    final searchCtrl = TextEditingController();
+    String? selectedId;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
+        final q = searchCtrl.text.trim().toLowerCase();
+        final matches = q.isEmpty
+            ? standalone
+            : standalone
+                .where((o) => o.description.toLowerCase().contains(q) ||
+                    o.pr.toLowerCase().contains(q) ||
+                    o.po.toLowerCase().contains(q))
+                .toList();
+        return AlertDialog(
+          title: const Text('Link Unlinked Order'),
+          content: SizedBox(
+            width: 420,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: searchCtrl,
+                onChanged: (_) => setDialogState(() {}),
+                decoration: const InputDecoration(
+                    labelText: 'Search order',
+                    hintText: 'Type to filter...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    isDense: true),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: matches.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(12), child: Text('No matching unlinked orders', style: TextStyle(fontSize: 12, color: Colors.grey)))
+                    : ListView(
+                        shrinkWrap: true,
+                        children: matches.map((o) => Card(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          color: selectedId == o.id ? AppTheme.accentEmerald.withValues(alpha: 0.15) : null,
+                          child: ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.link_off_rounded, size: 20, color: Colors.orange),
+                            title: Text(o.description.isEmpty ? '(No description)' : o.description,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            subtitle: Text('PO ${o.po.isEmpty ? '—' : o.po} • PR ${o.pr.isEmpty ? '—' : o.pr}',
+                                style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                            onTap: () => setDialogState(() => selectedId = o.id),
+                          ),
+                        )).toList(),
+                      ),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: selectedId == null
+                  ? null
+                  : () async {
+                      await ref.read(projectProvider.notifier).linkOrderToProject(selectedId!, project.id);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.accentEmerald));
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald, foregroundColor: Colors.white),
+              child: const Text('Link'),
+            ),
+          ],
+        );
+      }),
     );
   }
 

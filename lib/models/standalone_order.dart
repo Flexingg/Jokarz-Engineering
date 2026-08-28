@@ -13,6 +13,9 @@ class StandaloneOrder {
   final String notes;
   final String? projectId;
   final DateTime createdAt;
+  final bool addToStores;
+  final bool storeRequested;
+  final String storeRequestNumber;
 
   StandaloneOrder({
     String? id,
@@ -25,6 +28,9 @@ class StandaloneOrder {
     this.notes = '',
     this.projectId,
     DateTime? createdAt,
+    this.addToStores = false,
+    this.storeRequested = false,
+    this.storeRequestNumber = '',
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -39,6 +45,9 @@ class StandaloneOrder {
     String? notes,
     String? projectId,
     bool clearProjectId = false,
+    bool? addToStores,
+    bool? storeRequested,
+    String? storeRequestNumber,
   }) {
     return StandaloneOrder(
       id: id,
@@ -51,6 +60,9 @@ class StandaloneOrder {
       notes: notes ?? this.notes,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
       createdAt: createdAt,
+      addToStores: addToStores ?? this.addToStores,
+      storeRequested: storeRequested ?? this.storeRequested,
+      storeRequestNumber: storeRequestNumber ?? this.storeRequestNumber,
     );
   }
 
@@ -66,6 +78,9 @@ class StandaloneOrder {
       'notes': notes,
       'projectId': projectId,
       'createdAt': createdAt.toIso8601String(),
+      'addToStores': addToStores,
+      'storeRequested': storeRequested,
+      'storeRequestNumber': storeRequestNumber,
     };
   }
 
@@ -83,6 +98,9 @@ class StandaloneOrder {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      addToStores: json['addToStores'] as bool? ?? false,
+      storeRequested: json['storeRequested'] as bool? ?? false,
+      storeRequestNumber: json['storeRequestNumber'] as String? ?? '',
     );
   }
 }

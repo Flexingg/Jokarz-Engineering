@@ -3,6 +3,7 @@ import 'package:jokarz_engineering/models/project.dart';
 import 'package:jokarz_engineering/models/order_item.dart';
 import 'package:jokarz_engineering/models/voice_note.dart';
 import 'package:jokarz_engineering/models/standalone_order.dart';
+import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/utils/text_utils.dart';
 
@@ -140,6 +141,19 @@ void main() {
       expect(s.availableSubAssembliesFor('Packer A').toSet(),
           {'Packer Guides'});
       expect(s.availableSubAssembliesFor('').length, 3);
+    });
+
+    test('search matches tasks inside projects', () {
+      final s = EngineeringState(projects: [
+        Project(id: 't1', title: 'Line 1 Filler', tasks: [
+          TaskItem(description: 'Replace starwheel bearing', pendingReason: ''),
+        ]),
+      ]);
+      final r = s.searchAll('bearing');
+      expect(r.tasks.length, 1);
+      expect(r.tasks.first.task.description, 'Replace starwheel bearing');
+      expect(r.tasks.first.project.id, 't1');
+      expect(s.searchAll('nomatch').tasks, isEmpty);
     });
   });
 }

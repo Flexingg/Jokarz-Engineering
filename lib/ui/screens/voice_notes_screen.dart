@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/voice_note.dart';
@@ -25,6 +27,13 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
 
   void _showNewTextNoteDialog(BuildContext context) {
     showNewFieldNoteDialog(context, ref);
+  }
+
+  Future<void> _pickPhotoNote(BuildContext context) async {
+    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (x == null) return;
+    if (!context.mounted) return;
+    context.push('/photo-note?path=${Uri.encodeComponent(x.path)}');
   }
 
   void _showEditNoteDialog(BuildContext context, VoiceNote note) {
@@ -222,6 +231,11 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.photo_camera_outlined, color: AppTheme.accentCoral),
+            tooltip: 'Photo Note',
+            onPressed: () => _pickPhotoNote(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
             tooltip: 'Dictate Voice Note',
             onPressed: () => VoiceMemoModal.show(context),
@@ -405,6 +419,20 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                               decodeUnicodeEscapes(entry.title),
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                             ),
+                            if (entry.voiceNote?.photoPath != null) ...[
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxHeight: 200),
+                                  child: Image.file(
+                                    File(entry.voiceNote!.photoPath!),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                  ),
+                                ),
+                              ),
+                            ],
                             if (entry.content.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               SelectableText(

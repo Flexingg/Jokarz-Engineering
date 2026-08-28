@@ -13,6 +13,7 @@ import '../ui/screens/tasks_calendar_screen.dart';
 import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
 import '../ui/screens/search_screen.dart';
+import '../ui/screens/photo_note_editor_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -148,6 +149,15 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const NoTransitionPage(
         child: SearchScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/photo-note',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => NoTransitionPage(
+        child: PhotoNoteEditorScreen(
+          imagePath: state.uri.queryParameters['path'] ?? '',
+        ),
       ),
     ),
   ],

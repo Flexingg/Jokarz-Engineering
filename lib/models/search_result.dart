@@ -1,10 +1,18 @@
 import 'project.dart';
 import 'order_item.dart';
+import 'task_item.dart';
 
 /// A project matched by universal search.
 class ProjectSearchHit {
   final Project project;
   const ProjectSearchHit(this.project);
+}
+
+/// A task inside a project matched by universal search.
+class TaskSearchHit {
+  final Project project;
+  final TaskItem task;
+  const TaskSearchHit(this.project, this.task);
 }
 
 /// An order (project-attached or standalone/unlinked) matched by search.
@@ -68,13 +76,16 @@ class SearchResults {
   final List<ProjectSearchHit> projects;
   final List<OrderSearchHit> orders;
   final List<NoteSearchHit> notes;
+  final List<TaskSearchHit> tasks;
 
   const SearchResults({
     this.projects = const [],
     this.orders = const [],
     this.notes = const [],
+    this.tasks = const [],
   });
 
-  int get totalCount => projects.length + orders.length + notes.length;
+  int get totalCount =>
+      projects.length + orders.length + notes.length + tasks.length;
   bool get isEmpty => totalCount == 0;
 }

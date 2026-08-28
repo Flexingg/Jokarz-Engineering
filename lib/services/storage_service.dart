@@ -6,8 +6,11 @@ import '../models/project.dart';
 import '../models/voice_note.dart';
 import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
+import '../models/activity_log.dart';
+import '../models/downtime_event.dart';
 
 class StorageService {
+  static const String _downtimesFile = 'jokarz_downtimes.json';
   static const String _dataFile = 'jokarz_engineering_data.json';
 
   Future<File> _getFile() async {
@@ -142,6 +145,67 @@ class StorageService {
       await file.writeAsString(jsonEncode(data), flush: true);
     } catch (e) {
       debugPrint('Error saving report settings: $e');
+    }
+  }
+
+  // --- Activity Log ---
+  static const String _activityFile = 'jokarz_activity_log.json';
+
+  Future<File> _getActivityFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_activityFile');
+  }
+
+  Future<File> _getDowntimesFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_downtimesFile');
+  }
+
+  Future<List<ActivityLog>> loadActivityLog() async {
+    try {
+      final file = await _getActivityFile();
+      if (!await file.exists()) return [];
+      final list = jsonDecode(await file.readAsString()) as List;
+      return list
+          .map((e) => ActivityLog.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveActivityLog(List<ActivityLog> logs) async {
+    try {
+      final file = await _getActivityFile();
+      await file.writeAsString(
+          jsonEncode(logs.map((l) => l.toJson()).toList()),
+          flush: true);
+    } catch (e) {
+      debugPrint('Error saving activity log: $e');
+    }
+  }
+
+  Future<List<DowntimeEvent>> loadDowntimes() async {
+    try {
+      final file = await _getDowntimesFile();
+      if (!await file.exists()) return [];
+      final list = jsonDecode(await file.readAsString()) as List;
+      return list
+          .map((e) => DowntimeEvent.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveDowntimes(List<DowntimeEvent> downtimes) async {
+    try {
+      final file = await _getDowntimesFile();
+      await file.writeAsString(
+          jsonEncode(downtimes.map((l) => l.toJson()).toList()),
+          flush: true);
+    } catch (e) {
+      debugPrint('Error saving downtimes: $e');
     }
   }
 

@@ -8,6 +8,7 @@ class VoiceNote {
   final int durationSeconds;
   final String? projectId;
   final DateTime? date; // calendar-attached date (if any)
+  final String? photoPath; // annotated photo for photo notes
 
   VoiceNote({
     String? id,
@@ -17,6 +18,7 @@ class VoiceNote {
     this.durationSeconds = 0,
     this.projectId,
     this.date,
+    this.photoPath,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         timestamp = timestamp ?? DateTime.now();
 
@@ -28,6 +30,8 @@ class VoiceNote {
     bool clearProjectId = false,
     DateTime? date,
     bool clearDate = false,
+    String? photoPath,
+    bool clearPhotoPath = false,
   }) {
     return VoiceNote(
       id: id,
@@ -37,6 +41,7 @@ class VoiceNote {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
       date: clearDate ? null : (date ?? this.date),
+      photoPath: clearPhotoPath ? null : (photoPath ?? this.photoPath),
     );
   }
 
@@ -49,6 +54,7 @@ class VoiceNote {
       'durationSeconds': durationSeconds,
       'projectId': projectId,
       'date': date?.toIso8601String(),
+      'photoPath': photoPath,
     };
   }
 
@@ -63,6 +69,7 @@ class VoiceNote {
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
       projectId: json['projectId'] as String?,
       date: json['date'] != null ? DateTime.tryParse(json['date'] as String) : null,
+      photoPath: json['photoPath'] as String?,
     );
   }
 }
