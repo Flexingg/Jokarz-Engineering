@@ -16,8 +16,9 @@ import '../widgets/voice_memo_modal.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
+  final String? initialTab;
 
-  const ProjectDetailScreen({super.key, required this.projectId});
+  const ProjectDetailScreen({super.key, required this.projectId, this.initialTab});
 
   @override
   ConsumerState<ProjectDetailScreen> createState() =>
@@ -32,7 +33,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab == 'orders' ? 1 : 0,
+    );
   }
 
   @override

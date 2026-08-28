@@ -8,6 +8,7 @@ import '../models/project_log.dart';
 import '../models/voice_note.dart';
 import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
+import '../models/search_result.dart';
 import '../services/storage_service.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -154,6 +155,98 @@ class EngineeringState {
     }
     final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
+  }
+
+  /// Universal live search across projects, orders (attached + standalone),
+  /// and notes (voice/written + project-attached). Tokenized: every non-empty
+  /// query token must match at least one field on the entity.
+  SearchResults searchAll(String query) {
+    final tokens = query
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.isNotEmpty)
+        .toList();
+    if (tokens.isEmpty) return const SearchResults();
+
+    bool matches(String field) {
+      if (field.isEmpty) return false;
+      final f = field.toLowerCase();
+      return tokens.every((t) => f.contains(t));
+    }
+
+    final projectHits = <ProjectSearchHit>[];
+    final orderHits = <OrderSearchHit>[];
+    final noteHits = <NoteSearchHit>[];
+
+    for (final p in projects) {
+      final projectMatch = matches(p.title) ||
+          matches(p.machine) ||
+          matches(p.subAssembly) ||
+          matches(p.phase) ||
+          matches(p.description) ||
+          p.tags.any((t) => matches(t));
+      if (projectMatch) projectHits.add(ProjectSearchHit(p));
+
+      for (final o in p.orders) {
+        if (matches(o.description) ||
+            matches(o.pr) ||
+            matches(o.po) ||
+            matches(p.title)) {
+          orderHits.add(OrderSearchHit.fromOrder(o, p));
+        }
+      }
+
+      if (p.notes.trim().isNotEmpty && matches(p.notes)) {
+        noteHits.add(NoteSearchHit(
+          title: p.title,
+          content: p.notes,
+          projectId: p.id,
+          projectTitle: p.title,
+          isProjectNote: true,
+        ));
+      }
+    }
+
+    for (final o in standaloneOrders) {
+      if (matches(o.description) || matches(o.pr) || matches(o.po)) {
+        orderHits.add(OrderSearchHit(
+          description: o.description,
+          pr: o.pr,
+          po: o.po,
+          price: o.price,
+          eta: o.eta,
+          delivered: o.delivered,
+          project: null,
+          projectTitle: 'Unlinked',
+        ));
+      }
+    }
+
+    for (final n in voiceNotes) {
+      if (matches(n.title) || matches(n.transcript)) {
+        noteHits.add(NoteSearchHit(
+          title: n.title,
+          content: n.transcript,
+          projectId: n.projectId,
+          projectTitle: n.projectId != null ? _titleOf(n.projectId!) : null,
+        ));
+      }
+    }
+
+    return SearchResults(
+      projects: projectHits,
+      orders: orderHits,
+      notes: noteHits,
+    );
+  }
+
+  String? _titleOf(String projectId) {
+    try {
+      return projects.firstWhere((p) => p.id == projectId).title;
+    } catch (_) {
+      return null;
+    }
   }
 
   EngineeringState copyWith({

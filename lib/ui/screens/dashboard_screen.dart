@@ -51,6 +51,11 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () => context.push('/calendar'),
           ),
           IconButton(
+            icon: const Icon(Icons.search_rounded, color: AppTheme.primaryCyan),
+            tooltip: 'Search & Quick Add',
+            onPressed: () => context.push('/search'),
+          ),
+          IconButton(
             icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
             tooltip: 'Record Field Memo',
             onPressed: () => VoiceMemoModal.show(context),
@@ -405,8 +410,9 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => VoiceMemoModal.show(context),
-        child: const Icon(Icons.mic_rounded),
+        onPressed: () => context.push('/search'),
+        tooltip: 'Search & Quick Add',
+        child: const Icon(Icons.search),
       ),
     );
   }

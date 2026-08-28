@@ -12,6 +12,7 @@ import '../ui/screens/settings_screen.dart';
 import '../ui/screens/tasks_calendar_screen.dart';
 import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
+import '../ui/screens/search_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,7 +65,8 @@ final appRouter = GoRouter(
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    return ProjectDetailScreen(projectId: id);
+                    final tab = state.uri.queryParameters['tab'];
+                    return ProjectDetailScreen(projectId: id, initialTab: tab);
                   },
                   routes: [
                     GoRoute(
@@ -140,6 +142,13 @@ final appRouter = GoRouter(
       path: '/report',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ReportScreen(),
+    ),
+    GoRoute(
+      path: '/search',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: SearchScreen(),
+      ),
     ),
   ],
 );

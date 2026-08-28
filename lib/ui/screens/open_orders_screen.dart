@@ -9,6 +9,7 @@ import '../../models/standalone_order.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
+import '../widgets/order_dialogs.dart';
 
 class OpenOrdersScreen extends ConsumerStatefulWidget {
   const OpenOrdersScreen({super.key});
@@ -694,67 +695,9 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   }
 
   void _showAddStandaloneOrderDialog(BuildContext context) {
-    final descCtrl = TextEditingController();
-    final prCtrl = TextEditingController();
-    final poCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    final notesCtrl = TextEditingController();
-    DateTime? eta;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
-        return AlertDialog(
-          title: const Text('Add Unlinked Order'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description *')),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR #'))),
-                const SizedBox(width: 10),
-                Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO #'))),
-              ]),
-              const SizedBox(height: 10),
-              TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ ')),
-              const SizedBox(height: 10),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(eta != null ? 'ETA: ${DateFormat('MMM d, y').format(eta!)}' : 'No ETA', style: const TextStyle(fontSize: 13)),
-                trailing: ElevatedButton(
-                  onPressed: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: DateTime.now().add(const Duration(days: 3)), firstDate: DateTime(2020), lastDate: DateTime(2035));
-                    if (picked != null) setDialogState(() => eta = picked);
-                  },
-                  child: const Text('Pick ETA'),
-                ),
-              ),
-              TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: 'Notes'), maxLines: 2),
-            ]),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final desc = descCtrl.text.trim();
-                if (desc.isEmpty) return;
-                ref.read(projectProvider.notifier).addStandaloneOrder(StandaloneOrder(
-                  description: desc,
-                  pr: prCtrl.text.trim(),
-                  po: poCtrl.text.trim(),
-                  price: double.tryParse(priceCtrl.text) ?? 0.0,
-                  eta: eta,
-                  notes: notesCtrl.text.trim(),
-                ));
-                Navigator.pop(ctx);
-                setState(() => _filterTab = 3);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      }),
-    );
+    showStandaloneOrderDialog(context, ref, onAdded: () {
+      if (mounted) setState(() => _filterTab = 3);
+    });
   }
 
   void _showEditStandaloneOrderDialog(BuildContext context, StandaloneOrder o) {

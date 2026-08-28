@@ -9,6 +9,7 @@ import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
+import '../widgets/note_dialogs.dart';
 
 class VoiceNotesScreen extends ConsumerStatefulWidget {
   const VoiceNotesScreen({super.key});
@@ -21,86 +22,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   String _search = '';
 
   void _showNewTextNoteDialog(BuildContext context) {
-    final titleCtrl = TextEditingController();
-    final contentCtrl = TextEditingController();
-    String? selectedProjId;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final projects = ref.read(projectProvider).projects;
-
-          return AlertDialog(
-            title: const Text('New Engineering Field Note'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Note Title *',
-                      hintText: 'e.g. Line 1 Bearing Clearance Observations',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
-                    value: selectedProjId,
-                    decoration: const InputDecoration(
-                      labelText: 'Attach to Project (Optional)',
-                      prefixIcon: Icon(Icons.precision_manufacturing_outlined),
-                    ),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('Global Workshop Note'),
-                      ),
-                      ...projects.map(
-                        (p) => DropdownMenuItem<String?>(
-                          value: p.id,
-                          child: Text(p.title, overflow: TextOverflow.ellipsis),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) => setDialogState(() => selectedProjId = val),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: contentCtrl,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      labelText: 'Engineering Notes & Observations',
-                      hintText: 'Type field notes, torque readings, clearance measurements, or parts needed...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (titleCtrl.text.trim().isEmpty) return;
-                  final newNote = VoiceNote(
-                    title: titleCtrl.text.trim(),
-                    transcript: contentCtrl.text.trim(),
-                    durationSeconds: 0,
-                    projectId: selectedProjId,
-                  );
-                  await ref.read(projectProvider.notifier).addVoiceNote(newNote);
-                  if (context.mounted) Navigator.pop(ctx);
-                },
-                child: const Text('Save Note'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    showNewFieldNoteDialog(context, ref);
   }
 
   void _showEditNoteDialog(BuildContext context, VoiceNote note) {
