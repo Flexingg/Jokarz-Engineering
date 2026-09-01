@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
+import '../../models/task_item.dart';
+import '../../models/project_log.dart';
 import '../../providers/project_provider.dart';
 
 class WhatNextScreen extends ConsumerStatefulWidget {
@@ -40,14 +42,144 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     return state.queuedProjects;
   }
 
-  Future<void> _markActioned(Project project) async {
-    await ref.read(projectProvider.notifier).markProjectActioned(project.id);
-    if (mounted) setState(() => _currentIndex = 0);
-  }
-
   Future<void> _snooze(Project project) async {
     await ref.read(projectProvider.notifier).snoozeProjectUntilTomorrow(project.id);
     if (mounted) setState(() => _currentIndex = 0);
+  }
+
+  /// Requires a real action instead of a passive "I worked on it": add a task,
+  /// complete a task, or add a note. Each advances the queue (any of these
+  /// stamps the project's lastActionAt).
+  Future<void> _takeAction(Project project) async {
+    final notifier = ref.read(projectProvider.notifier);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'What did you do on "${project.title}"?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.add_task_rounded, color: AppTheme.primaryCyan),
+              title: const Text('Add a Task'),
+              subtitle: const Text('Log a new task / step'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _addTask(project, notifier);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.accentEmerald),
+              title: const Text('Complete a Task'),
+              subtitle: const Text('Mark an open task done'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _completeTask(project, notifier);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.note_add_rounded, color: AppTheme.accentAmber),
+              title: const Text('Add a Note'),
+              subtitle: const Text('Record an observation or update'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _addNote(project, notifier);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) setState(() => _currentIndex = 0);
+  }
+
+  Future<void> _addTask(Project project, ProjectNotifier notifier) async {
+    final ctrl = TextEditingController();
+    final text = await _prompt('Add a Task', 'Task description', 'e.g. Replace coupling', ctrl);
+    if (text == null || text.trim().isEmpty) return;
+    await notifier.addTask(project.id, TaskItem(description: text.trim()));
+  }
+
+  Future<void> _completeTask(Project project, ProjectNotifier notifier) async {
+    final open = project.tasks.where((t) => !t.isCompleted).toList();
+    if (open.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No open tasks on this project.')),
+        );
+      }
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Which task did you complete?',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            for (final t in open)
+              ListTile(
+                leading: const Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.accentEmerald),
+                title: Text(t.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  notifier.toggleTaskCompleted(project.id, t.id);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addNote(Project project, ProjectNotifier notifier) async {
+    final ctrl = TextEditingController();
+    final text = await _prompt('Add a Note', 'Note', 'Record an observation', ctrl);
+    if (text == null || text.trim().isEmpty) return;
+    await notifier.addProjectLog(
+      project.id,
+      ProjectLog(
+        title: '📝 Field note',
+        content: text.trim(),
+        type: LogType.update,
+      ),
+    );
+  }
+
+  Future<String?> _prompt(String title, String label, String hint, TextEditingController ctrl) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLines: 3,
+          decoration: InputDecoration(labelText: label, hintText: hint),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _actionColor(int days) {
@@ -149,7 +281,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             onHorizontalDragEnd: (d) {
               setState(() => _isDragging = false);
               if (_dragOffset > 80) {
-                _markActioned(project);
+                _takeAction(project);
               } else if (_dragOffset < -80) {
                 _snooze(project);
               } else {
@@ -192,12 +324,12 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 color: AppTheme.primaryCyan,
               ),
               const SizedBox(width: 16),
-              // Actioned
+              // Take Action
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _markActioned(project),
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Worked on It'),
+                  onPressed: () => _takeAction(project),
+                  icon: const Icon(Icons.checklist_rounded),
+                  label: const Text('Take Action'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accentEmerald,
                     foregroundColor: Colors.white,
@@ -362,7 +494,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 // Swipe hint
                 Center(
                   child: Text(
-                    '← Skip     Worked on It →',
+                    '← Skip     Take Action →',
                     style: TextStyle(fontSize: 11, color: Colors.grey.withValues(alpha: 0.6)),
                   ),
                 ),

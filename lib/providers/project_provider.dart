@@ -963,7 +963,10 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
     await _log(ActivityType.taskAdded, 'Task: ${task.description}', pid: projectId, ptitle: project.title);
     final updatedTasks = [...project.tasks, task];
-    final updatedProject = project.copyWith(tasks: updatedTasks);
+    final updatedProject = project.copyWith(
+      tasks: updatedTasks,
+      lastActionAt: DateTime.now(),
+    );
     await updateProject(updatedProject);
   }
 

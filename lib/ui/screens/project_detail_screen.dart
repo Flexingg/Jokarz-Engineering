@@ -899,8 +899,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 ),
               ),
 
-              // Cost
-              if (project.cost > 0)
+              // Cost (written cost + attached orders)
+              if (project.totalProjectCost > 0)
                 Tooltip(
                   message: 'Tap to edit cost',
                   child: InkWell(
@@ -909,7 +909,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
-                        'Cost: ${currency.format(project.cost)} ✎',
+                        'Cost: ${currency.format(project.totalProjectCost)} ✎',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 13),
                       ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../models/voice_note.dart';
+import '../../models/task_item.dart';
 import '../../services/speech_service.dart';
 import '../../providers/project_provider.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class VoiceMemoModal extends ConsumerStatefulWidget {
   final String? preselectedProjectId;
@@ -30,6 +32,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
   final TextEditingController _transcriptController = TextEditingController();
   String? _selectedProjectId;
   bool _isRecording = false;
+  bool _splitIntoTasks = false;
   late AnimationController _animController;
   final int _recordSeconds = 0;
 
@@ -91,17 +94,38 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
       projectId: _selectedProjectId,
     );
 
-    await ref.read(projectProvider.notifier).addVoiceNote(note);
+    final notifier = ref.read(projectProvider.notifier);
+    await notifier.addVoiceNote(note);
+
+    // Optional: split the dictation into separate tasks on the selected project.
+    // Speak "slash" (or type "/") between items; each becomes its own task.
+    var tasksCreated = 0;
+    if (_splitIntoTasks && _selectedProjectId != null) {
+      final segments = transcript
+          .split(RegExp(r'/\s*|\bslash\b', caseSensitive: false))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      for (final seg in segments) {
+        await notifier.addTask(_selectedProjectId!, TaskItem(description: seg));
+        tasksCreated++;
+      }
+    }
 
     if (mounted) {
       Navigator.of(context).pop();
+      final project =
+          _selectedProjectId == null ? null : notifier.getProjectById(_selectedProjectId!);
+      final message = tasksCreated > 0
+          ? 'Added $tasksCreated task${tasksCreated == 1 ? '' : 's'} to "${project?.title ?? 'project'}" + note saved'
+          : (_splitIntoTasks
+              ? 'Note saved (select a project to split dictation into tasks)'
+              : (_selectedProjectId != null
+                  ? 'Voice Memo logged & attached to project!'
+                  : 'Voice Memo saved to Workshop Notes!'));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _selectedProjectId != null
-                ? 'Voice Memo logged & attached to project!'
-                : 'Voice Memo saved to Workshop Notes!',
-          ),
+          content: Text(message),
           backgroundColor: AppTheme.accentEmerald,
         ),
       );
@@ -193,31 +217,24 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
             ),
             const SizedBox(height: 12),
 
-            // Project Selector
-            DropdownButtonFormField<String?>(
-              value: _selectedProjectId,
-              decoration: const InputDecoration(
+            // Project Selector (searchable)
+            Builder(builder: (context) {
+              final projectTitles = {
+                for (final p in state.projects) p.id: p.title,
+              };
+              return SearchableDropdownFormField<String>(
+                value: _selectedProjectId,
+                items: state.projects.map((p) => p.id).toList(),
+                labelOf: (id) => projectTitles[id] ?? 'Project',
+                onChanged: (val) {
+                  setState(() {
+                    _selectedProjectId = val;
+                  });
+                },
                 labelText: 'Attach to Engineering Project (Optional)',
-                prefixIcon: Icon(Icons.folder_outlined),
-              ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('General'),
-                ),
-                ...state.projects.map(
-                  (p) => DropdownMenuItem<String?>(
-                    value: p.id,
-                    child: Text(p.title, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: (val) {
-                setState(() {
-                  _selectedProjectId = val;
-                });
-              },
-            ),
+                prefixIcon: const Icon(Icons.folder_outlined),
+              );
+            }),
             const SizedBox(height: 16),
 
             // Live Transcript Box
@@ -232,7 +249,23 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                 alignLabelWithHint: true,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+
+            // Split dictation into tasks
+            CheckboxListTile(
+              value: _splitIntoTasks,
+              onChanged: (v) => setState(() => _splitIntoTasks = v ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: AppTheme.accentEmerald,
+              title: const Text('Split dictation into tasks',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              subtitle: const Text(
+                  'Speak "slash" between items to make each a separate task '
+                  '(requires a selected project).',
+                  style: TextStyle(fontSize: 11)),
+            ),
+            const SizedBox(height: 12),
 
             // Recording Pulsing Button & Action Buttons
             Row(

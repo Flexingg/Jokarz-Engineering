@@ -224,7 +224,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
             Icon(Icons.edit_note_rounded, color: AppTheme.primaryCyan, size: 28),
             SizedBox(width: 8),
             Text(
-              'Field Notes & Notepad',
+              'Notes',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ],

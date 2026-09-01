@@ -27,7 +27,11 @@ class _MachinesScreenState extends ConsumerState<MachinesScreen> {
     var assets = state.machineAssets;
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
-      assets = assets.where((m) => m.name.toLowerCase().contains(q)).toList();
+      assets = assets
+          .where((m) =>
+              m.name.toLowerCase().contains(q) ||
+              m.subAssemblies.any((s) => s.toLowerCase().contains(q)))
+          .toList();
     }
 
     return Scaffold(
@@ -36,7 +40,7 @@ class _MachinesScreenState extends ConsumerState<MachinesScreen> {
           children: [
             Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
             SizedBox(width: 8),
-            Text('Plant Machines & Lines', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Machines', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),

@@ -267,9 +267,9 @@ class _ProjectCard extends ConsumerWidget {
                 fontSize: 10,
               ),
               const Spacer(),
-              if (project.cost > 0)
+              if (project.totalProjectCost > 0)
                 Text(
-                  currency.format(project.cost),
+                  currency.format(project.totalProjectCost),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,

@@ -346,7 +346,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           children: [
             const Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber),
             const SizedBox(width: 8),
-            const Text('Quick-Capture Inbox', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Inbox', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             if (state.unprocessedInboxCount > 0)
               Container(

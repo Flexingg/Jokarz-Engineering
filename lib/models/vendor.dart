@@ -8,6 +8,7 @@ class Vendor {
   final String email;
   final String phone;
   final String website;
+  final String type; // vendor type / classification (dropdown, add-new from existing)
   final String accountNumber;
   final String notes;
   final DateTime createdAt;
@@ -19,6 +20,7 @@ class Vendor {
     this.email = '',
     this.phone = '',
     this.website = '',
+    this.type = '',
     this.accountNumber = '',
     this.notes = '',
     DateTime? createdAt,
@@ -31,6 +33,7 @@ class Vendor {
     String? email,
     String? phone,
     String? website,
+    String? type,
     String? accountNumber,
     String? notes,
   }) {
@@ -41,6 +44,7 @@ class Vendor {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       website: website ?? this.website,
+      type: type ?? this.type,
       accountNumber: accountNumber ?? this.accountNumber,
       notes: notes ?? this.notes,
       createdAt: createdAt,
@@ -55,6 +59,7 @@ class Vendor {
       'email': email,
       'phone': phone,
       'website': website,
+      'type': type,
       'accountNumber': accountNumber,
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
@@ -69,6 +74,7 @@ class Vendor {
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       website: json['website'] as String? ?? '',
+      type: json['type'] as String? ?? '',
       accountNumber: json['accountNumber'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
       createdAt: json['createdAt'] != null

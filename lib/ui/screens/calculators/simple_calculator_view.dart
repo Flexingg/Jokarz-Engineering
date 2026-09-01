@@ -19,7 +19,6 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
   String? _pendingOperator;
   bool _shouldResetDisplay = false;
   double _memory = 0;
-  bool _showFractionMode = false;
   String _fractionDisplay = '';
 
   void _onDigit(String digit) {
@@ -77,15 +76,6 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           _display = '-$_display';
         }
       }
-      _updateFraction();
-    });
-  }
-
-  void _onPercent() {
-    setState(() {
-      final val = double.tryParse(_display) ?? 0;
-      _display = _formatResult(val / 100);
-      _shouldResetDisplay = true;
       _updateFraction();
     });
   }
@@ -148,6 +138,17 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     });
   }
 
+  /// Unit-conversion button: multiplies the current display by [factor].
+  /// `mm` divides by 25.4 (mm→in); `in` multiplies by 25.4 (in→mm).
+  void _convertDisplay(double factor) {
+    setState(() {
+      final val = double.tryParse(_display) ?? 0;
+      _display = _formatResult(val * factor);
+      _shouldResetDisplay = true;
+      _updateFraction();
+    });
+  }
+
   void _executeCalculation() {
     if (_pendingOperator == null) return;
     final secondOperand = double.tryParse(_display) ?? 0;
@@ -182,13 +183,6 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     _pendingOperator = null;
     _shouldResetDisplay = true;
     _updateFraction();
-  }
-
-  void _toggleFractionMode() {
-    setState(() {
-      _showFractionMode = !_showFractionMode;
-      _updateFraction();
-    });
   }
 
   void _updateFraction() {
@@ -279,16 +273,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                             ),
                             child: const Text('M', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
                           ),
-                        if (_showFractionMode)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.accentAmber.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text('FRAC MODE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentAmber)),
-                          ),
-                      ],
+                    ],
                     ),
                     Text(
                       _expression,
@@ -350,15 +335,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // Memory & Fraction Mode Row
+          // Unit Conversion & Memory Row
           Row(
             children: [
-              _buildBtn('MC', () => setState(() => _memory = 0), isSmall: true),
+              _buildBtn('mm', () => _convertDisplay(1 / 25.4), isSmall: true, tooltip: 'mm → in (÷25.4)'),
               const SizedBox(width: 8),
-              _buildBtn('MR', () => setState(() {
-                _display = _formatResult(_memory);
-                _updateFraction();
-              }), isSmall: true),
+              _buildBtn('in', () => _convertDisplay(25.4), isSmall: true, tooltip: 'in → mm (×25.4)'),
               const SizedBox(width: 8),
               _buildBtn('M+', () => setState(() => _memory += double.tryParse(_display) ?? 0), isSmall: true),
               const SizedBox(width: 8),
@@ -370,11 +352,9 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           // Keypad Rows
           Column(
             children: [
-              // Row 1: Frac toggle, Clear, Backspace, Divide
+              // Row 1: Clear, Backspace, Divide
               Row(
                 children: [
-                  _buildBtn('Frac (a b/c)', _toggleFractionMode, isAmber: _showFractionMode, isOperator: !_showFractionMode),
-                  const SizedBox(width: 8),
                   _buildBtn('CE / C', _onClear, isCoral: true),
                   const SizedBox(width: 8),
                   _buildBtn('⌫', _onBackspace, isOperator: true),
@@ -426,7 +406,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
               ),
               const SizedBox(height: 8),
 
-              // Row 5: 1, 2, 3, %
+              // Row 5: 1, 2, 3
               Row(
                 children: [
                   _buildBtn('1', () => _onDigit('1')),
@@ -434,8 +414,6 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   _buildBtn('2', () => _onDigit('2')),
                   const SizedBox(width: 8),
                   _buildBtn('3', () => _onDigit('3')),
-                  const SizedBox(width: 8),
-                  _buildBtn('%', _onPercent, isOperator: true),
                 ],
               ),
               const SizedBox(height: 8),
@@ -468,6 +446,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     bool isCoral = false,
     bool isAmber = false,
     bool isSmall = false,
+    String? tooltip,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -495,33 +474,36 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       fg = isDark ? Colors.white : Colors.black87;
     }
 
-    return Expanded(
-      child: SizedBox(
-        height: isSmall ? 36 : 52,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: bg,
-            foregroundColor: fg,
-            elevation: 0,
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-              side: BorderSide(
-                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-                width: 0.8,
-              ),
+    final button = SizedBox(
+      height: isSmall ? 36 : 52,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: fg,
+          elevation: 0,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            side: BorderSide(
+              color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+              width: 0.8,
             ),
           ),
-          onPressed: onTap,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: isSmall ? 11 : 16,
-              fontWeight: (isOperator || isEmerald || isCyan || isAmber) ? FontWeight.bold : FontWeight.w600,
-            ),
+        ),
+        onPressed: onTap,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: isSmall ? 11 : 16,
+            fontWeight: (isOperator || isEmerald || isCyan || isAmber) ? FontWeight.bold : FontWeight.w600,
           ),
         ),
       ),
     );
+
+    return Expanded(
+      child: tooltip == null ? button : Tooltip(message: tooltip, child: button),
+    );
   }
+
 }

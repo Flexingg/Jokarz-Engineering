@@ -134,7 +134,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             Icon(Icons.calendar_month_rounded, color: AppTheme.primaryCyan),
             SizedBox(width: 8),
             Text(
-              'Maintenance Schedule & Tasks',
+              'Calendar',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ],

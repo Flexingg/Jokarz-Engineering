@@ -142,7 +142,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       _buildDesktopNavItem(
                         context,
                         icon: Icons.edit_note_rounded,
-                        label: 'Field Notes',
+                        label: 'Notes',
                         collapsed: _collapsed,
                         isSelected: widget.navigationShell.currentIndex == 4,
                         onTap: () => _onTapNav(4),

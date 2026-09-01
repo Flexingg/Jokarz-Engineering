@@ -86,17 +86,6 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
 
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Saved to Quick-Capture Inbox'),
-          backgroundColor: AppTheme.accentEmerald,
-          action: SnackBarAction(
-            label: 'View Inbox',
-            textColor: Colors.white,
-            onPressed: () => context.push('/inbox'),
-          ),
-        ),
-      );
     }
   }
 
@@ -150,7 +139,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                     Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber, size: 22),
                     SizedBox(width: 8),
                     Text(
-                      'Quick-Capture Brain Dump',
+                      'Quick Note',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],

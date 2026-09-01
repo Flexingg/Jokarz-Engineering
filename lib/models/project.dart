@@ -109,6 +109,10 @@ class Project {
   double get totalOrdersCost =>
       orders.fold(0.0, (prev, o) => prev + o.price);
 
+  /// Total project cost = the manually-entered [cost] plus the value of all
+  /// attached orders (PO spend). This is the figure shown to the engineer.
+  double get totalProjectCost => cost + totalOrdersCost;
+
   int get undeliveredOrdersCount =>
       orders.where((o) => !o.delivered).length;
 

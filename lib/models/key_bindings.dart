@@ -24,7 +24,7 @@ const Map<String, String> keyBindingsLabels = {
   'tabProjects': 'Go to Projects',
   'tabOrders': 'Go to Open Orders',
   'tabWorkbench': 'Go to Workbench',
-  'tabNotes': 'Go to Field Notes',
+  'tabNotes': 'Go to Notes',
   'tabSettings': 'Go to Settings',
 };
 

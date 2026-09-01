@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/standalone_order.dart';
 import '../../providers/project_provider.dart';
+import 'searchable_dropdown.dart';
 
 /// Shared "Add Unlinked Order" dialog, used by the Open Orders screen and the
 /// universal search quick-add. [prefillDescription] is populated from search
@@ -44,20 +45,13 @@ Future<void> showStandaloneOrderDialog(
                 ),
                 const SizedBox(height: 10),
                 if (vendors.isNotEmpty) ...[
-                  DropdownButtonFormField<String>(
+                  SearchableDropdownFormField<String>(
                     value: selectedVendorId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Vendor / Supplier',
-                      prefixIcon: Icon(Icons.storefront_rounded, size: 18),
-                    ),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('None / Other')),
-                      ...vendors.map((v) => DropdownMenuItem(
-                            value: v.id,
-                            child: Text(v.name),
-                          )),
-                    ],
+                    labelText: 'Vendor / Supplier',
+                    prefixIcon: const Icon(Icons.storefront_rounded, size: 18),
+                    items: vendors.map((v) => v.id).toList(),
+                    labelOf: (id) => vendors.firstWhere((v) => v.id == id,
+                        orElse: () => vendors.isNotEmpty ? vendors.first : throw StateError('')).name,
                     onChanged: (val) {
                       setDialogState(() {
                         selectedVendorId = val;

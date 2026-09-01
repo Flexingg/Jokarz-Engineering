@@ -25,6 +25,7 @@ class _UnitConverterViewState extends State<UnitConverterView> {
   ConversionCategory _category = ConversionCategory.length;
   double _inputValue = 1.0;
   String _selectedFromUnit = 'mm';
+  late final TextEditingController _valueCtrl;
 
   final Map<ConversionCategory, Map<String, double>> _unitsToSI = {
     ConversionCategory.length: {
@@ -68,6 +69,13 @@ class _UnitConverterViewState extends State<UnitConverterView> {
   void initState() {
     super.initState();
     _selectedFromUnit = _unitsToSI[_category]!.keys.first;
+    _valueCtrl = TextEditingController(text: _inputValue.toString());
+  }
+
+  @override
+  void dispose() {
+    _valueCtrl.dispose();
+    super.dispose();
   }
 
   void _onCategoryChanged(ConversionCategory cat) {
@@ -157,10 +165,11 @@ class _UnitConverterViewState extends State<UnitConverterView> {
                   child: TextField(
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(labelText: 'Magnitude / Value'),
-                    controller: TextEditingController(text: _inputValue.toString())
-                      ..selection = TextSelection.collapsed(offset: _inputValue.toString().length),
+                    controller: _valueCtrl,
                     onChanged: (v) {
                       setState(() {
+                        // Blank input is allowed and treated as zero; the field
+                        // is not forced back to a number.
                         _inputValue = double.tryParse(v) ?? 0.0;
                       });
                     },

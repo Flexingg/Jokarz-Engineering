@@ -96,7 +96,7 @@ ReportData buildReportData(EngineeringState state, ReportConfig cfg, DateTime to
               ? next.description +
                   (next.pendingReason.isNotEmpty ? ' [${next.pendingReason}]' : '')
               : '—',
-          cost: p.cost,
+          cost: p.totalProjectCost,
           lastAction: last,
         );
       }).toList();
@@ -120,7 +120,7 @@ ReportData buildReportData(EngineeringState state, ReportConfig cfg, DateTime to
   final projects = projectRows(top.take(cfg.topProjectsLimit));
 
   final topByCost = projectRows(
-      ([...state.projects]..sort((a, b) => b.cost.compareTo(a.cost)))
+      ([...state.projects]..sort((a, b) => b.totalProjectCost.compareTo(a.totalProjectCost)))
           .take(5));
 
   // Orders due within lookback window (open orders + standalone)

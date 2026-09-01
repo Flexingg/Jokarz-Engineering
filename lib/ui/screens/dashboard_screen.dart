@@ -74,7 +74,7 @@ class DashboardScreen extends ConsumerWidget {
               label: Text('${state.unprocessedInboxCount}'),
               child: const Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber),
             ),
-            tooltip: 'Quick-Capture Inbox (${state.unprocessedInboxCount} pending)',
+            tooltip: 'Inbox (${state.unprocessedInboxCount} pending)',
             onPressed: () => context.push('/inbox'),
           ),
           IconButton(
@@ -134,7 +134,7 @@ class DashboardScreen extends ConsumerWidget {
                       label: Text('${state.unprocessedInboxCount}'),
                       child: const Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.accentAmber),
                     ),
-                    label: const Text('Triage Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    label: const Text('Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),

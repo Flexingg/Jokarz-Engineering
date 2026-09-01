@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/voice_note.dart';
 import '../../providers/project_provider.dart';
+import 'searchable_dropdown.dart';
 
 /// Shared "New Engineering Field Note" dialog, used by the Field Notes screen
 /// and the universal search quick-add. [prefillTitle] / [prefillContent] are
@@ -36,24 +37,13 @@ Future<void> showNewFieldNoteDialog(
                   ),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String?>(
+                SearchableDropdownFormField<String>(
                   value: selectedProjId,
-                  decoration: const InputDecoration(
-                    labelText: 'Attach to Project (Optional)',
-                    prefixIcon: Icon(Icons.precision_manufacturing_outlined),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('General'),
-                    ),
-                    ...projects.map(
-                      (p) => DropdownMenuItem<String?>(
-                        value: p.id,
-                        child: Text(p.title, overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  ],
+                  labelText: 'Attach to Project (Optional)',
+                  prefixIcon: const Icon(Icons.precision_manufacturing_outlined),
+                  items: projects.map((p) => p.id).toList(),
+                  labelOf: (id) => projects.firstWhere((p) => p.id == id,
+                      orElse: () => projects.isNotEmpty ? projects.first : throw StateError('')).title,
                   onChanged: (val) => setDialogState(() => selectedProjId = val),
                 ),
                 const SizedBox(height: 12),
