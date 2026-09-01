@@ -55,7 +55,7 @@ class _WeldingSymbolsViewState extends State<WeldingSymbolsView> {
                         height: 44,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryCyan.withValues(alpha: 0.12),
+                          color: AppTheme.of(context).primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                         ),
                         child: Text(e.icon, style: const TextStyle(fontSize: 24)),
@@ -74,8 +74,8 @@ class _WeldingSymbolsViewState extends State<WeldingSymbolsView> {
                                   fontSize: 12.5,
                                   height: 1.4,
                                   color: isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary,
+                                      ? AppTheme.of(context).textSecondary
+                                      : AppTheme.of(context).textSecondary,
                                 )),
                           ],
                         ),

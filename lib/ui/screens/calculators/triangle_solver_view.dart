@@ -202,7 +202,7 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
           ExpressiveCard(
             child: Row(
               children: [
-                const Icon(Icons.change_history_rounded, color: AppTheme.primaryCyan, size: 28),
+                Icon(Icons.change_history_rounded, color: AppTheme.of(context).primary, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -216,7 +216,7 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
                         'Enter any 3 parameters (SSS, SAS, ASA, AAS). Solves all angles, side lengths, area, and perimeter.',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -255,7 +255,7 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('SIDES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primaryCyan)),
+                      Text('SIDES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.of(context).primary)),
                       const SizedBox(height: 8),
                       _buildNumField(_aCtrl, 'Side a', 'e.g. 3'),
                       const SizedBox(height: 8),
@@ -274,7 +274,7 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('ANGLES (Degrees °)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.accentAmber)),
+                      Text('ANGLES (Degrees °)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.of(context).amber)),
                       const SizedBox(height: 8),
                       _buildNumField(_angleACtrl, 'Angle A (°)', 'e.g. 36.87'),
                       const SizedBox(height: 8),
@@ -326,18 +326,18 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.accentCoral.withValues(alpha: 0.15),
+                color: AppTheme.of(context).coral.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                border: Border.all(color: AppTheme.accentCoral),
+                border: Border.all(color: AppTheme.of(context).coral),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: AppTheme.accentCoral, size: 20),
+                  Icon(Icons.warning_amber_rounded, color: AppTheme.of(context).coral, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMsg!,
-                      style: const TextStyle(color: AppTheme.accentCoral, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppTheme.of(context).coral, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -348,18 +348,18 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
           if (_sideA != null && _angleA != null) ...[
             ExpressiveCard(
               isGlowing: true,
-              glowColor: AppTheme.accentEmerald,
+              glowColor: AppTheme.of(context).emerald,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'CALCULATED GEOMETRY',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).emerald),
                       ),
-                      ExpressiveBadge(label: 'Solved', color: AppTheme.accentEmerald, fontSize: 10),
+                      ExpressiveBadge(label: 'Solved', color: AppTheme.of(context).emerald, fontSize: 10),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -381,9 +381,9 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Angle A: ${_angleA!.toStringAsFixed(2)}°', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentAmber)),
-                            Text('Angle B: ${_angleB!.toStringAsFixed(2)}°', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentAmber)),
-                            Text('Angle C: ${_angleC!.toStringAsFixed(2)}°', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentAmber)),
+                            Text('Angle A: ${_angleA!.toStringAsFixed(2)}°', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.of(context).amber)),
+                            Text('Angle B: ${_angleB!.toStringAsFixed(2)}°', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.of(context).amber)),
+                            Text('Angle C: ${_angleC!.toStringAsFixed(2)}°', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.of(context).amber)),
                           ],
                         ),
                       ),
@@ -405,7 +405,7 @@ class _TriangleSolverViewState extends State<TriangleSolverView> {
                     height: 180,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                      color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: CustomPaint(
@@ -464,12 +464,12 @@ class _TrianglePainter extends CustomPainter {
     if (a <= 0 || b <= 0 || c <= 0) return;
 
     final paintStroke = Paint()
-      ..color = AppTheme.primaryCyan
+      ..color = AppTheme.of().primary
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
 
     final paintFill = Paint()
-      ..color = AppTheme.primaryCyan.withValues(alpha: 0.12)
+      ..color = AppTheme.of().primary.withValues(alpha: 0.12)
       ..style = PaintingStyle.fill;
 
     // Node A at (0, 0), Node B at (c, 0), Node C at (b * cosA, b * sinA)
@@ -507,7 +507,7 @@ class _TrianglePainter extends CustomPainter {
     canvas.drawPath(path, paintStroke);
 
     // Draw vertex dots
-    final dotPaint = Paint()..color = AppTheme.accentAmber;
+    final dotPaint = Paint()..color = AppTheme.of().amber;
     canvas.drawCircle(pA, 4, dotPaint);
     canvas.drawCircle(pB, 4, dotPaint);
     canvas.drawCircle(pC, 4, dotPaint);
@@ -524,9 +524,9 @@ class _TrianglePainter extends CustomPainter {
       textPainter.paint(canvas, Offset(pos.dx - textPainter.width / 2, pos.dy - textPainter.height / 2));
     }
 
-    drawLabel('A (${angleA.toStringAsFixed(1)}°)', Offset(pA.dx - 12, pA.dy + 12), AppTheme.accentAmber);
-    drawLabel('B (${angleB.toStringAsFixed(1)}°)', Offset(pB.dx + 12, pB.dy + 12), AppTheme.accentAmber);
-    drawLabel('C (${angleC.toStringAsFixed(1)}°)', Offset(pC.dx, pC.dy - 12), AppTheme.accentAmber);
+    drawLabel('A (${angleA.toStringAsFixed(1)}°)', Offset(pA.dx - 12, pA.dy + 12), AppTheme.of().amber);
+    drawLabel('B (${angleB.toStringAsFixed(1)}°)', Offset(pB.dx + 12, pB.dy + 12), AppTheme.of().amber);
+    drawLabel('C (${angleC.toStringAsFixed(1)}°)', Offset(pC.dx, pC.dy - 12), AppTheme.of().amber);
 
     drawLabel('c = ${c.toStringAsFixed(2)}', Offset((pA.dx + pB.dx) / 2, pA.dy + 12), isDark ? Colors.white70 : Colors.black87);
     drawLabel('a = ${a.toStringAsFixed(2)}', Offset((pB.dx + pC.dx) / 2 + 12, (pB.dy + pC.dy) / 2), isDark ? Colors.white70 : Colors.black87);

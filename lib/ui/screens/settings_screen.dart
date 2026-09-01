@@ -19,8 +19,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final themeNotifier = ref.read(themeModeProvider.notifier);
+    final themeFamily = ref.watch(themeProvider);
+    final themeNotifier = ref.read(themeProvider.notifier);
     final state = ref.watch(projectProvider);
     final user = ref.watch(authStateProvider).value;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -53,12 +53,12 @@ class SettingsScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryCyan.withValues(alpha: 0.12),
+                            color: AppTheme.of(context).primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.cloud_sync_rounded,
-                            color: AppTheme.primaryCyan,
+                            color: AppTheme.of(context).primary,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -78,8 +78,8 @@ class SettingsScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : AppTheme.lightTextSecondary,
+                                    ? AppTheme.of(context).textSecondary
+                                    : AppTheme.of(context).textSecondary,
                               ),
                             ),
                           ],
@@ -107,7 +107,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: user != null
-                          ? AppTheme.primaryCyan
+                          ? AppTheme.of(context).primary
                           : Colors.white,
                       foregroundColor: user != null
                           ? Colors.black87
@@ -131,42 +131,44 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           ExpressiveCard(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      themeMode == ThemeMode.dark
-                          ? Icons.dark_mode_rounded
-                          : Icons.light_mode_rounded,
-                      color: AppTheme.primaryCyan,
-                    ),
+                    Icon(Icons.palette_outlined,
+                        color: AppTheme.of(context).primary),
                     const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Theme Mode',
+                          'App Theme',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          themeMode == ThemeMode.dark
-                              ? 'Material Expressive Dark (Obsidian)'
-                              : 'Material Expressive Light (Clean Steel)',
+                          themeFamily.label,
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                Switch(
-                  value: themeMode == ThemeMode.dark,
-                  activeColor: AppTheme.primaryCyan,
-                  onChanged: (_) => themeNotifier.toggleTheme(),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<AppThemeFamily>(
+                  initialValue: themeFamily,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Theme'),
+                  items: [
+                    for (final f in AppThemeFamily.values)
+                      DropdownMenuItem(value: f, child: Text(f.label)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) themeNotifier.setTheme(v);
+                  },
                 ),
               ],
             ),
@@ -215,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.data_object_rounded, color: AppTheme.primaryCyan),
+                  leading: Icon(Icons.data_object_rounded, color: AppTheme.of(context).primary),
                   title: const Text('Export Complete Engineering JSON Database'),
                   subtitle: Text(
                     '${state.projects.length} projects, ${state.voiceNotes.length} voice notes',
@@ -254,7 +256,7 @@ class SettingsScreen extends ConsumerWidget {
                 const Divider(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.file_upload_outlined, color: AppTheme.accentEmerald),
+                  leading: Icon(Icons.file_upload_outlined, color: AppTheme.of(context).emerald),
                   title: const Text('Import Engineering JSON Database'),
                   subtitle: const Text(
                     'Populate or restore projects, tasks, orders, and notes from JSON.',
@@ -318,7 +320,7 @@ class SettingsScreen extends ConsumerWidget {
                                           ? 'Database successfully imported!'
                                           : 'Invalid JSON format. Check Guide for schema.',
                                     ),
-                                    backgroundColor: success ? AppTheme.accentEmerald : AppTheme.accentCoral,
+                                    backgroundColor: success ? AppTheme.of(context).emerald : AppTheme.of(context).coral,
                                   ),
                                 );
                               }
@@ -333,8 +335,8 @@ class SettingsScreen extends ConsumerWidget {
                 const Divider(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.delete_sweep_rounded, color: AppTheme.accentCoral),
-                  title: const Text('Reset All Data to Blank Slate', style: TextStyle(color: AppTheme.accentCoral, fontWeight: FontWeight.bold)),
+                  leading: Icon(Icons.delete_sweep_rounded, color: AppTheme.of(context).coral),
+                  title: Text('Reset All Data to Blank Slate', style: TextStyle(color: AppTheme.of(context).coral, fontWeight: FontWeight.bold)),
                   subtitle: const Text(
                     'Permanently clears all projects, tasks, orders, and field notes.',
                     style: TextStyle(fontSize: 11),
@@ -352,7 +354,7 @@ class SettingsScreen extends ConsumerWidget {
                             child: const Text('Cancel'),
                           ),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCoral),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).coral),
                             onPressed: () async {
                               await ref.read(projectProvider.notifier).clearAllData();
                               if (context.mounted) {
@@ -394,7 +396,7 @@ class SettingsScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -409,8 +411,8 @@ class SettingsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryCyan, AppTheme.primaryBlue],
+                    gradient: LinearGradient(
+                      colors: [AppTheme.of(context).primary, AppTheme.of(context).primaryBlue],
                     ),
                     borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
@@ -434,13 +436,13 @@ class SettingsScreen extends ConsumerWidget {
                   'Randall Engineering Suite • v1.0.3 Release',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const ExpressiveBadge(
+                ExpressiveBadge(
                   label: 'v1.0.3',
-                  color: AppTheme.accentEmerald,
+                  color: AppTheme.of(context).emerald,
                 ),
                 const SizedBox(height: 16),
               ],
@@ -503,9 +505,9 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.menu_book_rounded, color: AppTheme.primaryCyan),
+            Icon(Icons.menu_book_rounded, color: AppTheme.of(context).primary),
             SizedBox(width: 8),
             Text('JSON Database Schema Guide'),
           ],
@@ -517,9 +519,9 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   '📋 Schema Key Reference:',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
                 ),
                 const SizedBox(height: 6),
                 const Text('• projects: Array of projects.\n  - title (Required String): Name of project.\n  - category (Optional): "maintenance", "kaizen", or "capital".\n  - phase (Optional): "Idea", "Pending", "Installation", "Validation", "Complete", "Cancelled", or custom string.\n  - machine & subAssembly (Optional Strings): Plant equipment.\n  - priority (Optional Int): 1 to X unique rank.\n  - cost (Optional Double): Budget or PO total.\n  - tasks (Optional Array): Objects with description, scheduledDate (ISO string), pendingReason, isCompleted (bool).\n  - orders (Optional Array): Objects with pr, po, description, price (double), eta (ISO string), delivered (bool).\n• voiceNotes: Array of written/voice field notes with title, transcript, timestamp, projectId.', style: TextStyle(fontSize: 11)),

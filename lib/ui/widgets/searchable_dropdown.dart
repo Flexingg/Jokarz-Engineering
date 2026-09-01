@@ -71,7 +71,7 @@ class SearchableDropdownFormField<T> extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   color: text == null
-                      ? (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)
+                      ? (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)
                       : (isDark ? Colors.white : Colors.black87),
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -159,7 +159,7 @@ class _SearchableSheetState<T> extends State<_SearchableSheet<T>> {
                                   fontWeight:
                                       isCurrent ? FontWeight.bold : FontWeight.normal)),
                           trailing:
-                              isCurrent ? const Icon(Icons.check, color: AppTheme.accentEmerald) : null,
+                              isCurrent ? Icon(Icons.check, color: AppTheme.of(context).emerald) : null,
                           onTap: () => Navigator.of(context).pop(item),
                         );
                       },
@@ -173,7 +173,7 @@ class _SearchableSheetState<T> extends State<_SearchableSheet<T>> {
                     onPressed: () => Navigator.of(context).pop(_clearAction),
                     child: Text('Clear',
                         style: TextStyle(
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
                   ),
                 ),
               ),

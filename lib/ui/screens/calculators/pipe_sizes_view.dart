@@ -26,7 +26,7 @@ class _PipeSizesViewState extends State<PipeSizesView> {
         style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary));
+            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary));
     Widget value(String s) => Text(s,
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900));
 
@@ -35,7 +35,7 @@ class _PipeSizesViewState extends State<PipeSizesView> {
       children: [
         // Interactive calculator
         Text('Pipe Dimension Calculator',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
@@ -58,7 +58,7 @@ class _PipeSizesViewState extends State<PipeSizesView> {
         ]),
         const SizedBox(height: 16),
         Card(
-          color: AppTheme.primaryCyan.withValues(alpha: 0.08),
+          color: AppTheme.of(context).primary.withValues(alpha: 0.08),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -94,7 +94,7 @@ class _PipeSizesViewState extends State<PipeSizesView> {
         ),
         const SizedBox(height: 20),
         Text('Reference: NPS → OD & wall thickness',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
         const SizedBox(height: 8),
         // Reference table
         SingleChildScrollView(

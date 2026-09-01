@@ -166,7 +166,6 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                       contactPerson: contactCtrl.text.trim(),
                       email: emailCtrl.text.trim(),
                       phone: phoneCtrl.text.trim(),
-                      website: '',
                       type: type,
                       accountNumber: accountCtrl.text.trim(),
                       notes: notesCtrl.text.trim(),
@@ -225,9 +224,9 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.storefront_rounded, color: AppTheme.primaryCyan),
+            Icon(Icons.storefront_rounded, color: AppTheme.of(context).primary),
             SizedBox(width: 8),
             Text('Vendor & Supplier Directory', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
@@ -276,7 +275,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -299,10 +298,10 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                 Expanded(
                                   child: Text(
                                     v.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: AppTheme.primaryCyan,
+                                      color: AppTheme.of(context).primary,
                                     ),
                                   ),
                                 ),
@@ -342,26 +341,20 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                   ExpressiveBadge(
                                     label: 'Acct: ${v.accountNumber}',
                                     icon: Icons.badge_rounded,
-                                    color: AppTheme.accentEmerald,
+                                    color: AppTheme.of(context).emerald,
                                     fontSize: 10,
                                   ),
                                 if (v.phone.isNotEmpty)
                                   ActionChip(
-                                    avatar: const Icon(Icons.phone_rounded, size: 12, color: AppTheme.accentEmerald),
+                                    avatar: Icon(Icons.phone_rounded, size: 12, color: AppTheme.of(context).emerald),
                                     label: Text(v.phone, style: const TextStyle(fontSize: 11)),
                                     onPressed: () => _launchUrlHelper('tel:${v.phone}'),
                                   ),
                                 if (v.email.isNotEmpty)
                                   ActionChip(
-                                    avatar: const Icon(Icons.email_rounded, size: 12, color: AppTheme.primaryCyan),
+                                    avatar: Icon(Icons.email_rounded, size: 12, color: AppTheme.of(context).primary),
                                     label: Text(v.email, style: const TextStyle(fontSize: 11)),
                                     onPressed: () => _launchUrlHelper('mailto:${v.email}'),
-                                  ),
-                                if (v.website.isNotEmpty)
-                                  ActionChip(
-                                    avatar: const Icon(Icons.language_rounded, size: 12, color: AppTheme.accentAmber),
-                                    label: const Text('Website', style: TextStyle(fontSize: 11)),
-                                    onPressed: () => _launchUrlHelper(v.website),
                                   ),
                               ],
                             ),
@@ -384,7 +377,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
         onPressed: () => _showAddEditVendorDialog(context),
         icon: const Icon(Icons.add_business_rounded),
         label: const Text('Add Vendor'),
-        backgroundColor: AppTheme.primaryCyan,
+        backgroundColor: AppTheme.of(context).primary,
         foregroundColor: Colors.black87,
       ),
     );

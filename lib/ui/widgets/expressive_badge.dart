@@ -4,7 +4,7 @@ import '../../theme/app_theme.dart';
 class ExpressiveBadge extends StatelessWidget {
   final String label;
   final IconData? icon;
-  final Color color;
+  final Color? color;
   final Color? textColor;
   final bool isOutlined;
   final double fontSize;
@@ -13,7 +13,7 @@ class ExpressiveBadge extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.color = AppTheme.primaryCyan,
+    this.color,
     this.textColor,
     this.isOutlined = false,
     this.fontSize = 11.0,
@@ -21,13 +21,14 @@ class ExpressiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? AppTheme.of(context).primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isOutlined ? color.withValues(alpha: 0.08) : color.withValues(alpha: 0.18),
+        color: isOutlined ? c.withValues(alpha: 0.08) : c.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(
-          color: color.withValues(alpha: isOutlined ? 0.8 : 0.4),
+          color: c.withValues(alpha: isOutlined ? 0.8 : 0.4),
           width: 1,
         ),
       ),
@@ -35,13 +36,13 @@ class ExpressiveBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: fontSize + 2, color: color),
+            Icon(icon, size: fontSize + 2, color: c),
             const SizedBox(width: 4),
           ],
           Text(
             label,
             style: TextStyle(
-              color: textColor ?? color,
+              color: textColor ?? c,
               fontSize: fontSize,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,

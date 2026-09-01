@@ -42,9 +42,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
               : 'No date';
 
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.add_task_rounded, color: AppTheme.primaryCyan),
+                Icon(Icons.add_task_rounded, color: AppTheme.of(context).primary),
                 SizedBox(width: 8),
                 Text('Convert to Project Task'),
               ],
@@ -57,7 +57,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                      color: AppTheme.of(context).primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Text(
@@ -91,7 +91,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   const SizedBox(height: 14),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.accentAmber),
+                    leading: Icon(Icons.calendar_today_rounded, color: AppTheme.of(context).amber),
                     title: Text(dateText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     subtitle: const Text('Scheduled Execution Date', style: TextStyle(fontSize: 11)),
                     trailing: ElevatedButton(
@@ -122,15 +122,15 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                       .triageToTask(item.id, selectedProjectId, scheduledDate: scheduledDate);
                   if (ctx.mounted) Navigator.pop(ctx);
                   messenger.showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Task added to project & inbox item cleared!'),
-                      backgroundColor: AppTheme.accentEmerald,
+                      backgroundColor: AppTheme.of(context).emerald,
                     ),
                   );
                 },
 
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentEmerald,
+                  backgroundColor: AppTheme.of(context).emerald,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Convert to Task'),
@@ -154,9 +154,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.local_shipping_outlined, color: AppTheme.accentAmber),
+                Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).amber),
                 SizedBox(width: 8),
                 Text('Convert to Standalone Order'),
               ],
@@ -236,14 +236,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   await ref.read(projectProvider.notifier).triageToOrder(item.id, order);
                   if (ctx.mounted) Navigator.pop(ctx);
                   messenger.showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Converted to Standalone Order!'),
-                      backgroundColor: AppTheme.accentEmerald,
+                      backgroundColor: AppTheme.of(context).emerald,
                     ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentAmber,
+                  backgroundColor: AppTheme.of(context).amber,
                   foregroundColor: Colors.black87,
                 ),
                 child: const Text('Create Order'),
@@ -264,9 +264,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.report_problem_rounded, color: AppTheme.accentCoral),
+                Icon(Icons.report_problem_rounded, color: AppTheme.of(context).coral),
                 SizedBox(width: 8),
                 Text('Log Line Downtime'),
               ],
@@ -311,15 +311,15 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   await ref.read(projectProvider.notifier).triageToDowntime(item.id, downtime);
                   if (ctx.mounted) Navigator.pop(ctx);
                   messenger.showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Downtime event logged!'),
-                      backgroundColor: AppTheme.accentCoral,
+                      backgroundColor: AppTheme.of(context).coral,
                     ),
                   );
                 },
 
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentCoral,
+                  backgroundColor: AppTheme.of(context).coral,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Log Downtime'),
@@ -344,7 +344,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber),
+            Icon(Icons.flash_on_rounded, color: AppTheme.of(context).amber),
             const SizedBox(width: 8),
             const Text('Inbox', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
@@ -352,7 +352,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentAmber,
+                  color: AppTheme.of(context).amber,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -370,7 +370,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           IconButton(
             icon: Icon(
               _showProcessed ? Icons.visibility_rounded : Icons.visibility_outlined,
-              color: _showProcessed ? AppTheme.primaryCyan : Colors.grey,
+              color: _showProcessed ? AppTheme.of(context).primary : Colors.grey,
             ),
             tooltip: _showProcessed ? 'Showing All (Including Processed)' : 'Showing Pending Only',
             onPressed: () => setState(() => _showProcessed = !_showProcessed),
@@ -399,7 +399,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -429,7 +429,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                     await ref.read(projectProvider.notifier).triageToNote(item.id, note);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Saved as Field Note!'), backgroundColor: AppTheme.primaryCyan),
+                        SnackBar(content: Text('Saved as Field Note!'), backgroundColor: AppTheme.of(context).primary),
                       );
                     }
                   },
@@ -442,7 +442,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         onPressed: () => InboxQuickCaptureModal.show(context),
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
-        backgroundColor: AppTheme.accentAmber,
+        backgroundColor: AppTheme.of(context).amber,
         foregroundColor: Colors.black87,
       ),
     );
@@ -490,7 +490,7 @@ class _InboxItemCard extends StatelessWidget {
                   Icon(
                     item.isProcessed ? Icons.check_circle_rounded : Icons.pending_rounded,
                     size: 14,
-                    color: item.isProcessed ? AppTheme.accentEmerald : AppTheme.accentAmber,
+                    color: item.isProcessed ? AppTheme.of(context).emerald : AppTheme.of(context).amber,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -531,22 +531,22 @@ class _InboxItemCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 ActionChip(
-                  avatar: const Icon(Icons.add_task_rounded, size: 14, color: AppTheme.primaryCyan),
+                  avatar: Icon(Icons.add_task_rounded, size: 14, color: AppTheme.of(context).primary),
                   label: const Text('Task', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageTask,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.rocket_launch_rounded, size: 14, color: AppTheme.accentEmerald),
+                  avatar: Icon(Icons.rocket_launch_rounded, size: 14, color: AppTheme.of(context).emerald),
                   label: const Text('Project', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageProject,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.local_shipping_outlined, size: 14, color: AppTheme.accentAmber),
+                  avatar: Icon(Icons.local_shipping_outlined, size: 14, color: AppTheme.of(context).amber),
                   label: const Text('Order', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageOrder,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.report_problem_rounded, size: 14, color: AppTheme.accentCoral),
+                  avatar: Icon(Icons.report_problem_rounded, size: 14, color: AppTheme.of(context).coral),
                   label: const Text('Downtime', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageDowntime,
                 ),

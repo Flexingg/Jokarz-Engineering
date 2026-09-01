@@ -27,7 +27,7 @@ class _KeyBindRecorderState extends ConsumerState<KeyBindRecorder> {
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         _recording ? Icons.graphic_eq_rounded : Icons.keyboard_command_key_rounded,
-        color: _recording ? AppTheme.accentCoral : AppTheme.primaryCyan,
+        color: _recording ? AppTheme.of(context).coral : AppTheme.of(context).primary,
         size: 20,
       ),
       title: Text(
@@ -39,10 +39,10 @@ class _KeyBindRecorderState extends ConsumerState<KeyBindRecorder> {
         style: TextStyle(
           fontSize: 11,
           color: _recording
-              ? AppTheme.accentCoral
+              ? AppTheme.of(context).coral
               : (Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary),
+                  ? AppTheme.of(context).textSecondary
+                  : AppTheme.of(context).textSecondary),
           fontFamily: 'monospace',
         ),
       ),
@@ -61,13 +61,13 @@ class _KeyBindRecorderState extends ConsumerState<KeyBindRecorder> {
                 }
                 return KeyEventResult.ignored;
               },
-              child: const SizedBox(
+              child: SizedBox(
                 width: 90,
                 height: 30,
                 child: Center(
                   child: Text(
                     'Listening…',
-                    style: TextStyle(fontSize: 12, color: AppTheme.accentCoral),
+                    style: TextStyle(fontSize: 12, color: AppTheme.of(context).coral),
                   ),
                 ),
               ),

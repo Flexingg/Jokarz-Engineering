@@ -73,7 +73,6 @@ void main() {
         contactPerson: 'Sarah Connor',
         email: 'orders@mcmaster.com',
         phone: '1-800-555-0199',
-        website: 'https://mcmaster.com',
         accountNumber: 'ACC-9876',
         notes: 'Next-day delivery available',
       );

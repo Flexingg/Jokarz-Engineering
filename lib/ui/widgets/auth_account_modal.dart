@@ -36,19 +36,19 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
     final isDark = theme.brightness == Brightness.dark;
 
     return AlertDialog(
-      backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+      backgroundColor: isDark ? AppTheme.of(context).surface : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryCyan.withValues(alpha: 0.15),
+              color: AppTheme.of(context).primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.cloud_sync_rounded,
-              color: AppTheme.primaryCyan,
+              color: AppTheme.of(context).primary,
               size: 24,
             ),
           ),
@@ -73,18 +73,18 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   padding: const EdgeInsets.all(10),
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentCoral.withValues(alpha: 0.12),
+                    color: AppTheme.of(context).coral.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppTheme.accentCoral.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.of(context).coral.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: AppTheme.accentCoral, size: 18),
+                      Icon(Icons.error_outline, color: AppTheme.of(context).coral, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: AppTheme.accentCoral, fontSize: 12),
+                          style: TextStyle(color: AppTheme.of(context).coral, fontSize: 12),
                         ),
                       ),
                     ],
@@ -97,10 +97,10 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? AppTheme.darkSurfaceCard : Colors.grey.shade100,
+                    color: isDark ? AppTheme.of(context).surfaceCard : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppTheme.accentEmerald.withValues(alpha: 0.3),
+                      color: AppTheme.of(context).emerald.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -111,9 +111,9 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                           backgroundImage: NetworkImage(user.photoURL!),
                         )
                       else
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 26,
-                          backgroundColor: AppTheme.primaryCyan,
+                          backgroundColor: AppTheme.of(context).primary,
                           child: Icon(Icons.person, color: Colors.white, size: 28),
                         ),
                       const SizedBox(width: 14),
@@ -133,7 +133,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                               user.email ?? '',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade700,
+                                color: isDark ? AppTheme.of(context).textSecondary : Colors.grey.shade700,
                               ),
                             ),
                           ],
@@ -149,18 +149,18 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: (syncState.status == SyncStatus.synced
-                            ? AppTheme.accentEmerald
+                            ? AppTheme.of(context).emerald
                             : syncState.status == SyncStatus.error
-                                ? AppTheme.accentCoral
-                                : AppTheme.accentAmber)
+                                ? AppTheme.of(context).coral
+                                : AppTheme.of(context).amber)
                         .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: (syncState.status == SyncStatus.synced
-                              ? AppTheme.accentEmerald
+                              ? AppTheme.of(context).emerald
                               : syncState.status == SyncStatus.error
-                                  ? AppTheme.accentCoral
-                                  : AppTheme.accentAmber)
+                                  ? AppTheme.of(context).coral
+                                  : AppTheme.of(context).amber)
                           .withValues(alpha: 0.35),
                     ),
                   ),
@@ -173,10 +173,10 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 ? Icons.error_rounded
                                 : Icons.sync_rounded,
                         color: syncState.status == SyncStatus.synced
-                            ? AppTheme.accentEmerald
+                            ? AppTheme.of(context).emerald
                             : syncState.status == SyncStatus.error
-                                ? AppTheme.accentCoral
-                                : AppTheme.accentAmber,
+                                ? AppTheme.of(context).coral
+                                : AppTheme.of(context).amber,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -194,7 +194,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: syncState.status == SyncStatus.error
-                                    ? AppTheme.accentCoral
+                                    ? AppTheme.of(context).coral
                                     : null,
                               ),
                             ),
@@ -204,9 +204,9 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   syncState.errorMessage!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
-                                    color: AppTheme.accentCoral,
+                                    color: AppTheme.of(context).coral,
                                   ),
                                 ),
                               ),
@@ -215,7 +215,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                 'Last synced: ${DateFormat('h:mm:ss a').format(syncState.lastSyncedAt!)}',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                                 ),
                               ),
                           ],
@@ -299,7 +299,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
                   label: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentCoral,
+                    backgroundColor: AppTheme.of(context).coral,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -321,7 +321,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
-                    color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade700,
+                    color: isDark ? AppTheme.of(context).textSecondary : Colors.grey.shade700,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -391,19 +391,19 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                      color: AppTheme.of(context).primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
                             SizedBox(
                               width: 14,
                               height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryCyan),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.of(context).primary),
                             ),
                             SizedBox(width: 10),
                             Expanded(
@@ -420,7 +420,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryCyan,
+                                  backgroundColor: AppTheme.of(context).primary,
                                   foregroundColor: Colors.black87,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 ),

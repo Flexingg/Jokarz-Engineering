@@ -30,16 +30,14 @@ class JokarzEngineeringApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final themeFamily = ref.watch(themeProvider);
     // Eagerly initialize cloud sync listener when app starts
     ref.watch(syncStatusProvider);
 
     return MaterialApp.router(
       title: 'Jokarz Engineering',
       debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.themeFor(themeFamily),
       routerConfig: appRouter,
       builder: (context, child) =>
           AppShortcuts(child: child ?? const SizedBox.shrink()),

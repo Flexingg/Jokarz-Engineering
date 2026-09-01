@@ -10,7 +10,7 @@ class ExpressiveCard extends StatelessWidget {
   final double borderRadius;
   final VoidCallback? onTap;
   final bool isGlowing;
-  final Color glowColor;
+  final Color? glowColor;
 
   const ExpressiveCard({
     super.key,
@@ -22,18 +22,17 @@ class ExpressiveCard extends StatelessWidget {
     this.borderRadius = AppTheme.radiusMd,
     this.onTap,
     this.isGlowing = false,
-    this.glowColor = AppTheme.primaryCyan,
+    this.glowColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+    final colors = AppTheme.of(context);
     final bg = backgroundColor ??
-        (isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurface);
-    final border = borderColor ??
-        (isDark ? AppTheme.darkBorder : AppTheme.lightBorder.withValues(alpha: 0.7));
+        (colors.surfaceCard);
+    final border =
+        borderColor ?? colors.border.withValues(alpha: 0.7);
+    final glow = glowColor ?? colors.primary;
 
     Widget content = Container(
       margin: margin,
@@ -41,13 +40,13 @@ class ExpressiveCard extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: isGlowing ? glowColor : border,
+          color: isGlowing ? glow : border,
           width: isGlowing ? 1.5 : 1.0,
         ),
         boxShadow: isGlowing
             ? [
                 BoxShadow(
-                  color: glowColor.withValues(alpha: 0.25),
+                  color: glow.withValues(alpha: 0.25),
                   blurRadius: 16,
                   spreadRadius: 1,
                 )
@@ -66,8 +65,8 @@ class ExpressiveCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(borderRadius),
           onTap: onTap,
-          splashColor: glowColor.withValues(alpha: 0.1),
-          highlightColor: glowColor.withValues(alpha: 0.05),
+          splashColor: glow.withValues(alpha: 0.1),
+          highlightColor: glow.withValues(alpha: 0.05),
           child: content,
         ),
       );

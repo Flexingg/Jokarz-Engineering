@@ -103,7 +103,7 @@ class WorkbenchScreen extends ConsumerWidget {
                       for (final k in working)
                         ListTile(
                           key: ValueKey(k),
-                          leading: Icon(workbenchTools[k]!.icon, color: AppTheme.primaryCyan),
+                          leading: Icon(workbenchTools[k]!.icon, color: AppTheme.of(context).primary),
                           title: Text(workbenchTools[k]!.label),
                           trailing: const Icon(Icons.drag_handle_rounded, color: Colors.grey),
                         ),
@@ -116,7 +116,7 @@ class WorkbenchScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.accentEmerald,
+                          backgroundColor: AppTheme.of(context).emerald,
                           foregroundColor: Colors.black87),
                       onPressed: () {
                         ref.read(toolOrderProvider.notifier).state = working;
@@ -143,9 +143,9 @@ class WorkbenchScreen extends ConsumerWidget {
       length: order.length,
       child: Scaffold(
         appBar: AppBar(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.handyman_rounded, color: AppTheme.primaryCyan),
+              Icon(Icons.handyman_rounded, color: AppTheme.of(context).primary),
               SizedBox(width: 8),
               Text(
                 'Tools',
@@ -156,14 +156,14 @@ class WorkbenchScreen extends ConsumerWidget {
           actions: [
             IconButton(
               tooltip: 'Arrange Tools',
-              icon: const Icon(Icons.reorder_rounded, color: AppTheme.primaryCyan),
+              icon: Icon(Icons.reorder_rounded, color: AppTheme.of(context).primary),
               onPressed: () => _openReorderSheet(context, ref, order),
             ),
           ],
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            indicatorColor: AppTheme.primaryCyan,
+            indicatorColor: AppTheme.of(context).primary,
             tabs: [
               for (final k in order)
                 Tab(icon: Icon(workbenchTools[k]!.icon), text: workbenchTools[k]!.label),

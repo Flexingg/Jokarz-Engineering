@@ -210,11 +210,11 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                   });
                 }
               },
-              icon: const Icon(Icons.dashboard_customize_rounded, size: 16, color: AppTheme.accentEmerald),
-              label: const Text('Template', style: TextStyle(color: AppTheme.accentEmerald, fontWeight: FontWeight.bold)),
+              icon: Icon(Icons.dashboard_customize_rounded, size: 16, color: AppTheme.of(context).emerald),
+              label: Text('Template', style: TextStyle(color: AppTheme.of(context).emerald, fontWeight: FontWeight.bold)),
             ),
           IconButton(
-            icon: const Icon(Icons.check, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.check, color: AppTheme.of(context).primary),
             onPressed: _saveProject,
             tooltip: 'Save Project',
           ),
@@ -427,10 +427,10 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                   ...splitMachines(_machineController.text).map((m) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                          color: AppTheme.of(context).primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                           border: Border.all(
-                              color: AppTheme.primaryCyan.withValues(alpha: 0.4),
+                              color: AppTheme.of(context).primary.withValues(alpha: 0.4),
                               width: 0.6),
                         ),
                         child: Text(m,

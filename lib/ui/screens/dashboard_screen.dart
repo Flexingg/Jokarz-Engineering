@@ -72,23 +72,23 @@ class DashboardScreen extends ConsumerWidget {
             icon: Badge(
               isLabelVisible: state.unprocessedInboxCount > 0,
               label: Text('${state.unprocessedInboxCount}'),
-              child: const Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber),
+              child: Icon(Icons.flash_on_rounded, color: AppTheme.of(context).amber),
             ),
             tooltip: 'Inbox (${state.unprocessedInboxCount} pending)',
             onPressed: () => context.push('/inbox'),
           ),
           IconButton(
-            icon: const Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Plant Machines Hub',
             onPressed: () => context.push('/machines'),
           ),
           IconButton(
-            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
+            icon: Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Maintenance Task Calendar',
             onPressed: () => context.push('/calendar'),
           ),
           IconButton(
-            icon: const Icon(Icons.account_circle_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.account_circle_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Settings & Account',
             onPressed: () => context.go('/settings'),
           ),
@@ -99,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => InboxQuickCaptureModal.show(context),
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
-        backgroundColor: AppTheme.accentAmber,
+        backgroundColor: AppTheme.of(context).amber,
         foregroundColor: Colors.black87,
       ),
       body: RefreshIndicator(
@@ -132,7 +132,7 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Badge(
                       isLabelVisible: state.unprocessedInboxCount > 0,
                       label: Text('${state.unprocessedInboxCount}'),
-                      child: const Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.accentAmber),
+                      child: Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.of(context).amber),
                     ),
                     label: const Text('Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
@@ -144,7 +144,7 @@ class DashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/machines'),
-                    icon: const Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.primaryCyan),
+                    icon: Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).primary),
                     label: const Text('Machines', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -155,7 +155,7 @@ class DashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/vendors'),
-                    icon: const Icon(Icons.storefront_rounded, size: 16, color: AppTheme.accentEmerald),
+                    icon: Icon(Icons.storefront_rounded, size: 16, color: AppTheme.of(context).emerald),
                     label: const Text('Vendors', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -173,9 +173,9 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Row(children: [
-              _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.primaryCyan),
+              _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
               const SizedBox(width: 12),
-              _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.accentEmerald),
+              _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
             ]),
             const SizedBox(height: 20),
 
@@ -289,17 +289,17 @@ class _TodayTile extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isDark
-                  ? [AppTheme.primaryBlue.withValues(alpha: 0.28), AppTheme.darkSurface]
-                  : [AppTheme.primaryBlue.withValues(alpha: 0.08), AppTheme.lightSurface],
+                  ? [AppTheme.of(context).primaryBlue.withValues(alpha: 0.28), AppTheme.of(context).surface]
+                  : [AppTheme.of(context).primaryBlue.withValues(alpha: 0.08), AppTheme.of(context).surface],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+            border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.calendar_month_rounded, color: AppTheme.primaryCyan),
+              Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -318,7 +318,7 @@ class _TodayTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppTheme.primaryCyan),
+              Icon(Icons.chevron_right_rounded, color: AppTheme.of(context).primary),
             ],
           ),
         ),
@@ -361,18 +361,18 @@ class _CompactSummary extends StatelessWidget {
         gradient: LinearGradient(
           colors: isDark
               ? [
-                  AppTheme.primaryBlue.withValues(alpha: 0.25),
-                  AppTheme.darkSurface,
+                  AppTheme.of(context).primaryBlue.withValues(alpha: 0.25),
+                  AppTheme.of(context).surface,
                 ]
               : [
-                  AppTheme.primaryBlue.withValues(alpha: 0.08),
-                  AppTheme.lightSurface,
+                  AppTheme.of(context).primaryBlue.withValues(alpha: 0.08),
+                  AppTheme.of(context).surface,
                 ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.3)),
+        border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,10 +398,10 @@ class _CompactSummary extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 child: Text(
                   '${currency.format(openPoValue)} open PO',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.accentAmber,
+                    color: AppTheme.of(context).amber,
                   ),
                 ),
               ),
@@ -411,7 +411,7 @@ class _CompactSummary extends StatelessWidget {
           // Line 2: #1 priority project
           Row(
             children: [
-              const Icon(Icons.flag_rounded, size: 14, color: AppTheme.accentCoral),
+              Icon(Icons.flag_rounded, size: 14, color: AppTheme.of(context).coral),
               const SizedBox(width: 6),
               Expanded(
                 child: InkWell(
@@ -421,7 +421,7 @@ class _CompactSummary extends StatelessWidget {
                     topProject != null ? '#1: ${topProject!.title}' : 'No active projects',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -494,7 +494,7 @@ class _EmptyHint extends StatelessWidget {
               message,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
               ),
             ),
           ),
@@ -514,8 +514,8 @@ class _ProjectRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final priorityColor = p.priority == 1
-        ? AppTheme.accentCoral
-        : (p.priority <= 3 ? AppTheme.accentAmber : AppTheme.primaryCyan);
+        ? AppTheme.of(context).coral
+        : (p.priority <= 3 ? AppTheme.of(context).amber : AppTheme.of(context).primary);
     final nextTask = p.nextPendingTask;
 
     return InkWell(
@@ -559,7 +559,7 @@ class _ProjectRow extends StatelessWidget {
                       'Next: ${nextTask.description}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     )
@@ -590,7 +590,7 @@ class _QueueRow extends StatelessWidget {
     final days = p.daysSinceLastAction;
     final col = days >= 7
         ? Colors.red.shade400
-        : (days >= 3 ? AppTheme.accentAmber : Colors.grey);
+        : (days >= 3 ? AppTheme.of(context).amber : Colors.grey);
 
     return InkWell(
       onTap: onTap,
@@ -691,16 +691,16 @@ class _EtaBadge extends StatelessWidget {
     Color col;
     if (days < 0) {
       label = '⚠ ${days.abs()}d overdue';
-      col = AppTheme.accentCoral;
+      col = AppTheme.of(context).coral;
     } else if (days == 0) {
       label = 'Arriving Today';
-      col = AppTheme.accentEmerald;
+      col = AppTheme.of(context).emerald;
     } else if (days == 1) {
       label = 'Arriving Tomorrow';
-      col = AppTheme.primaryCyan;
+      col = AppTheme.of(context).primary;
     } else {
       label = 'in $days days';
-      col = AppTheme.primaryCyan;
+      col = AppTheme.of(context).primary;
     }
 
     return Container(

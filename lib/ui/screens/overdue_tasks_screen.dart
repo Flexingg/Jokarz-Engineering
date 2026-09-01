@@ -31,9 +31,9 @@ class OverdueTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.event_busy_rounded, color: AppTheme.accentCoral),
+            Icon(Icons.event_busy_rounded, color: AppTheme.of(context).coral),
             SizedBox(width: 8),
             Text('Overdue Tasks', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
@@ -44,8 +44,8 @@ class OverdueTasksScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.task_alt_rounded,
-                      size: 48, color: AppTheme.accentEmerald),
+                  Icon(Icons.task_alt_rounded,
+                      size: 48, color: AppTheme.of(context).emerald),
                   const SizedBox(height: 8),
                   const Text('Nothing overdue 🎉',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -54,8 +54,8 @@ class OverdueTasksScreen extends ConsumerWidget {
                       style: TextStyle(
                           fontSize: 12,
                           color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary)),
+                              ? AppTheme.of(context).textSecondary
+                              : AppTheme.of(context).textSecondary)),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () => context.pop(),
@@ -89,15 +89,15 @@ class OverdueTasksScreen extends ConsumerWidget {
                                 context.push('/projects/${project.id}'),
                             child: Row(
                               children: [
-                                const Icon(Icons.precision_manufacturing_outlined,
-                                    size: 14, color: AppTheme.primaryCyan),
+                                Icon(Icons.precision_manufacturing_outlined,
+                                    size: 14, color: AppTheme.of(context).primary),
                                 const SizedBox(width: 6),
                                 Text(
                                   project.title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primaryCyan,
+                                    color: AppTheme.of(context).primary,
                                     decoration: TextDecoration.underline,
                                   ),
                                 ),
@@ -107,7 +107,7 @@ class OverdueTasksScreen extends ConsumerWidget {
                           if (project.machine.isNotEmpty)
                             ExpressiveBadge(
                               label: project.machine,
-                              color: AppTheme.accentAmber,
+                              color: AppTheme.of(context).amber,
                               fontSize: 10,
                             ),
                         ],
@@ -124,14 +124,14 @@ class OverdueTasksScreen extends ConsumerWidget {
                           ExpressiveBadge(
                             label:
                                 '${DateFormat('MMM d').format(task.scheduledDate!)} · $overdueDays day${overdueDays == 1 ? '' : 's'} overdue',
-                            color: AppTheme.accentCoral,
+                            color: AppTheme.of(context).coral,
                             fontSize: 10,
                           ),
                           if (task.pendingReason.isNotEmpty) ...[
                             const SizedBox(width: 6),
                             ExpressiveBadge(
                               label: '⏳ ${task.pendingReason}',
-                              color: AppTheme.accentCoral,
+                              color: AppTheme.of(context).coral,
                               fontSize: 10,
                             ),
                           ],
@@ -145,7 +145,7 @@ class OverdueTasksScreen extends ConsumerWidget {
                                   SnackBar(
                                     content: Text(
                                         'Due date moved to today: ${task.description}'),
-                                    backgroundColor: AppTheme.accentEmerald,
+                                    backgroundColor: AppTheme.of(context).emerald,
                                   ),
                                 );
                               }
@@ -155,8 +155,8 @@ class OverdueTasksScreen extends ConsumerWidget {
                                 style: TextStyle(fontSize: 12)),
                             style: TextButton.styleFrom(
                               backgroundColor:
-                                  AppTheme.accentEmerald.withValues(alpha: 0.15),
-                              foregroundColor: AppTheme.accentEmerald,
+                                  AppTheme.of(context).emerald.withValues(alpha: 0.15),
+                              foregroundColor: AppTheme.of(context).emerald,
                             ),
                           ),
                         ],

@@ -20,9 +20,9 @@ class TemplateDialogs {
     return showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.content_copy_rounded, color: AppTheme.primaryCyan),
+            Icon(Icons.content_copy_rounded, color: AppTheme.of(context).primary),
             SizedBox(width: 8),
             Text('Save as Template'),
           ],
@@ -69,15 +69,15 @@ class TemplateDialogs {
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     content: Text('Template saved successfully!'),
-                    backgroundColor: AppTheme.accentEmerald,
+                    backgroundColor: AppTheme.of(context).emerald,
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryCyan,
+              backgroundColor: AppTheme.of(context).primary,
               foregroundColor: Colors.black87,
             ),
             child: const Text('Save Template'),
@@ -95,9 +95,9 @@ class TemplateDialogs {
     return showDialog<ProjectTemplate>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.dashboard_customize_rounded, color: AppTheme.accentEmerald),
+            Icon(Icons.dashboard_customize_rounded, color: AppTheme.of(context).emerald),
             SizedBox(width: 8),
             Text('Project & PM Templates'),
           ],
@@ -123,15 +123,15 @@ class TemplateDialogs {
                             ),
                           ),
                           if (t.isSystemTemplate)
-                            const ExpressiveBadge(
+                            ExpressiveBadge(
                               label: 'STANDARD',
-                              color: AppTheme.primaryCyan,
+                              color: AppTheme.of(context).primary,
                               fontSize: 9,
                             )
                           else
-                            const ExpressiveBadge(
+                            ExpressiveBadge(
                               label: 'CUSTOM',
-                              color: AppTheme.accentAmber,
+                              color: AppTheme.of(context).amber,
                               fontSize: 9,
                             ),
                         ],
@@ -153,10 +153,10 @@ class TemplateDialogs {
                               ExpressiveBadge(
                                 label: t.category.label,
                                 color: t.category == ProjectCategory.maintenance
-                                    ? AppTheme.primaryCyan
+                                    ? AppTheme.of(context).primary
                                     : (t.category == ProjectCategory.kaizen
-                                        ? AppTheme.accentEmerald
-                                        : AppTheme.accentAmber),
+                                        ? AppTheme.of(context).emerald
+                                        : AppTheme.of(context).amber),
                                 fontSize: 10,
                               ),
 

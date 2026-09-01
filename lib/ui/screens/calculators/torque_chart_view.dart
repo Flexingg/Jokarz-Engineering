@@ -87,7 +87,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+            color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
             borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Row(
@@ -95,15 +95,15 @@ class _TorqueChartViewState extends State<TorqueChartView> {
             children: [
               Text(
                 _standard == FastenerStandard.metric ? 'Class 8.8' : 'Grade 2',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
               ),
               Text(
                 _standard == FastenerStandard.metric ? 'Class 10.9 (High-Strength)' : 'Grade 5 (Automotive)',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentAmber),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).amber),
               ),
               Text(
                 _standard == FastenerStandard.metric ? 'Class 12.9 (Alloy Steel)' : 'Grade 8 (High Tensile)',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).emerald),
               ),
             ],
           ),
@@ -147,12 +147,12 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                           children: [
                             ExpressiveBadge(
                               label: '🔧 Hex Bolt: ${bolt.hexHeadWrenchSize}',
-                              color: AppTheme.accentEmerald,
+                              color: AppTheme.of(context).emerald,
                               fontSize: 10,
                             ),
                             ExpressiveBadge(
                               label: '🔩 Socket: ${bolt.hexKeySize}',
-                              color: AppTheme.primaryCyan,
+                              color: AppTheme.of(context).primary,
                               fontSize: 10,
                             ),
                           ],
@@ -171,7 +171,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                             dryVal: lowDry,
                             lubVal: lowLub,
                             unit: unitLabel,
-                            color: AppTheme.primaryCyan,
+                            color: AppTheme.of(context).primary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -183,7 +183,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                             dryVal: midDry,
                             lubVal: midLub,
                             unit: unitLabel,
-                            color: AppTheme.accentAmber,
+                            color: AppTheme.of(context).amber,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -195,7 +195,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                             dryVal: highDry,
                             lubVal: highLub,
                             unit: unitLabel,
-                            color: AppTheme.accentEmerald,
+                            color: AppTheme.of(context).emerald,
                           ),
                         ),
                       ],

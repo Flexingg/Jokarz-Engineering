@@ -122,9 +122,9 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.sticky_note_2_outlined, color: AppTheme.accentAmber),
+            Icon(Icons.sticky_note_2_outlined, color: AppTheme.of(context).amber),
             SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -140,7 +140,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
           children: [
             Text(
               project.title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -219,9 +219,9 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.edit_note_rounded, color: AppTheme.primaryCyan, size: 28),
+            Icon(Icons.edit_note_rounded, color: AppTheme.of(context).primary, size: 28),
             SizedBox(width: 8),
             Text(
               'Notes',
@@ -231,17 +231,17 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.photo_camera_outlined, color: AppTheme.accentCoral),
+            icon: Icon(Icons.photo_camera_outlined, color: AppTheme.of(context).coral),
             tooltip: 'Photo Note',
             onPressed: () => _pickPhotoNote(context),
           ),
           IconButton(
-            icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
+            icon: Icon(Icons.mic_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Dictate Voice Note',
             onPressed: () => VoiceMemoModal.show(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.add, color: AppTheme.of(context).primary),
             tooltip: 'New Written Note',
             onPressed: () => _showNewTextNoteDialog(context),
           ),
@@ -291,7 +291,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                           'Type a field observation or tap the mic for hands-free speech dictation.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -306,7 +306,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                             const SizedBox(width: 12),
                             OutlinedButton.icon(
                               onPressed: () => VoiceMemoModal.show(context),
-                              icon: const Icon(Icons.mic, color: AppTheme.accentAmber),
+                              icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
                               label: const Text('Voice Dictate'),
                             ),
                           ],
@@ -332,9 +332,9 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                             Row(
                               children: [
                                 if (isProjectNote)
-                                  const ExpressiveBadge(
+                                  ExpressiveBadge(
                                     label: '📌 Project Note',
-                                    color: AppTheme.accentAmber,
+                                    color: AppTheme.of(context).amber,
                                     fontSize: 10,
                                   )
                                 else
@@ -343,8 +343,8 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         ? '🎙️ Voice (${entry.voiceNote!.durationSeconds}s)'
                                         : '📝 Written Note',
                                     color: entry.voiceNote!.durationSeconds > 0
-                                        ? AppTheme.accentAmber
-                                        : AppTheme.primaryCyan,
+                                        ? AppTheme.of(context).amber
+                                        : AppTheme.of(context).primary,
                                     fontSize: 10,
                                   ),
                                 if (entry.projectId != null) ...[
@@ -362,18 +362,18 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                   DateFormat('MMM d, y • h:mm a').format(entry.timestamp),
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                                   ),
                                 ),
                                 if (isProjectNote)
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.accentAmber),
+                                    icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).amber),
                                     tooltip: 'Edit Project Notes',
                                     onPressed: () => _showEditProjectNotesDialog(context, entry.project!),
                                   )
                                 else ...[
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
+                                    icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).primary),
                                     tooltip: 'Edit Note',
                                     onPressed: () => _showEditNoteDialog(context, entry.voiceNote!),
                                   ),
@@ -396,7 +396,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                             ),
                                             ElevatedButton(
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppTheme.accentCoral,
+                                                backgroundColor: AppTheme.of(context).coral,
                                               ),
                                               onPressed: () => Navigator.pop(ctx, true),
                                               child: const Text('Delete'),
@@ -440,7 +440,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
-                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                                 ),
                               ),
                             ],

@@ -39,7 +39,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         actions: [
           IconButton(
             tooltip: 'Customize Report',
-            icon: const Icon(Icons.tune_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.tune_rounded, color: AppTheme.of(context).primary),
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -48,7 +48,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           ),
           IconButton(
             tooltip: 'Save as Template',
-            icon: const Icon(Icons.bookmark_add_outlined, color: AppTheme.accentAmber),
+            icon: Icon(Icons.bookmark_add_outlined, color: AppTheme.of(context).amber),
             onPressed: () => _saveAsTemplate(cfg),
           ),
           PopupMenuButton<String>(
@@ -104,7 +104,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 if (_selectedTemplate != null)
                   IconButton(
                     tooltip: 'Delete Template',
-                    icon: const Icon(Icons.delete_outline, color: AppTheme.accentCoral),
+                    icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
                     onPressed: () {
                       final n = _selectedTemplate!;
                       ref.read(reportSettingsProvider.notifier).deleteTemplate(n);
@@ -313,7 +313,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Template "$name" saved'),
-        backgroundColor: AppTheme.accentEmerald,
+        backgroundColor: AppTheme.of(context).emerald,
       ));
     }
   }
@@ -393,7 +393,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Report saved to $locationLabel: ${f.path.split('/').last}'),
-          backgroundColor: AppTheme.accentEmerald,
+          backgroundColor: AppTheme.of(context).emerald,
         ));
       }
     } catch (e) {

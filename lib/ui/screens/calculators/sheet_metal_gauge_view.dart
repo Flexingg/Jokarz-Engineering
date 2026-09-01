@@ -43,7 +43,7 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                  color: AppTheme.of(context).primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Text(
@@ -61,7 +61,7 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
                   2: FlexColumnWidth(1.4),
                 },
                 border: TableBorder.all(
-                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                  color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
                   width: 0.5,
                 ),
                 children: [
@@ -84,7 +84,7 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
   TableRow _header(String a, String b, String c) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return TableRow(
-      decoration: BoxDecoration(color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant),
+      decoration: BoxDecoration(color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant),
       children: [
         _cell(a, bold: true, header: true),
         _cell(b, bold: true, header: true),
@@ -102,7 +102,7 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-          color: header ? AppTheme.primaryCyan : (isDark ? Colors.white : Colors.black87),
+          color: header ? AppTheme.of(context).primary : (isDark ? Colors.white : Colors.black87),
         ),
       ),
     );

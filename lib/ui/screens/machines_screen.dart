@@ -36,9 +36,9 @@ class _MachinesScreenState extends ConsumerState<MachinesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
+            Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary),
             SizedBox(width: 8),
             Text('Machines', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
@@ -85,7 +85,7 @@ class _MachinesScreenState extends ConsumerState<MachinesScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -129,17 +129,17 @@ class _MachineAssetCard extends StatelessWidget {
 
     switch (asset.status) {
       case MachineStatus.breakdown:
-        statusColor = AppTheme.accentCoral;
+        statusColor = AppTheme.of(context).coral;
         statusLabel = 'BREAKDOWN / DOWN';
         statusIcon = Icons.warning_rounded;
         break;
       case MachineStatus.inMaintenance:
-        statusColor = AppTheme.accentAmber;
+        statusColor = AppTheme.of(context).amber;
         statusLabel = 'IN MAINTENANCE';
         statusIcon = Icons.build_rounded;
         break;
       case MachineStatus.operational:
-        statusColor = AppTheme.accentEmerald;
+        statusColor = AppTheme.of(context).emerald;
         statusLabel = 'OPERATIONAL';
         statusIcon = Icons.check_circle_rounded;
         break;
@@ -158,7 +158,7 @@ class _MachineAssetCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan, size: 20),
+                    Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -188,21 +188,21 @@ class _MachineAssetCard extends StatelessWidget {
               ExpressiveBadge(
                 label: '${asset.activeProjects.length} Active Projects',
                 icon: Icons.engineering_rounded,
-                color: AppTheme.primaryCyan,
+                color: AppTheme.of(context).primary,
                 fontSize: 11,
               ),
               if (asset.openOrders.isNotEmpty)
                 ExpressiveBadge(
                   label: '${asset.openOrders.length} Orders (${currency.format(asset.totalOpenOrderSpend)})',
                   icon: Icons.local_shipping_outlined,
-                  color: AppTheme.accentAmber,
+                  color: AppTheme.of(context).amber,
                   fontSize: 11,
                 ),
               if (asset.downtimes.isNotEmpty)
                 ExpressiveBadge(
                   label: '${asset.totalDowntimeEvents} Downtimes',
                   icon: Icons.timer_outlined,
-                  color: AppTheme.accentCoral,
+                  color: AppTheme.of(context).coral,
                   fontSize: 11,
                 ),
 

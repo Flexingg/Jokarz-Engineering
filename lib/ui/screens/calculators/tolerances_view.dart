@@ -6,11 +6,11 @@ import '../../widgets/expressive_badge.dart';
 class TolerancesView extends StatelessWidget {
   const TolerancesView({super.key});
 
-  static const List<Map<String, dynamic>> _fits = [
+  static List<Map<String, dynamic>> _fits = [
     {
       'name': 'Loose Running Fit (H11 / c11)',
       'type': 'Clearance',
-      'color': AppTheme.accentEmerald,
+      'color': AppTheme.of().emerald,
       'app': 'Wide commercial tolerances, thermal expansion clearance, linkages exposed to dirt/grit.',
       'hole': 'H11 (+0.100 to 0.000 mm)',
       'shaft': 'c11 (-0.110 to -0.210 mm)',
@@ -18,7 +18,7 @@ class TolerancesView extends StatelessWidget {
     {
       'name': 'Free Running Fit (H9 / d9)',
       'type': 'Clearance',
-      'color': AppTheme.accentEmerald,
+      'color': AppTheme.of().emerald,
       'app': 'Bearings with high rotational speed, heavy lubricant film, pulleys, 3D printed loose shafts.',
       'hole': 'H9 (+0.052 to 0.000 mm)',
       'shaft': 'd9 (-0.065 to -0.117 mm)',
@@ -26,7 +26,7 @@ class TolerancesView extends StatelessWidget {
     {
       'name': 'Close Sliding Fit (H7 / g6)',
       'type': 'Clearance',
-      'color': AppTheme.accentEmerald,
+      'color': AppTheme.of().emerald,
       'app': 'Sliding spigots, precision guide pins, tool fixtures requiring smooth hand motion without play.',
       'hole': 'H7 (+0.015 to 0.000 mm)',
       'shaft': 'g6 (-0.005 to -0.014 mm)',
@@ -34,7 +34,7 @@ class TolerancesView extends StatelessWidget {
     {
       'name': 'Locating Transition Fit (H7 / k6)',
       'type': 'Transition',
-      'color': AppTheme.accentAmber,
+      'color': AppTheme.of().amber,
       'app': 'Accurate location with light mallet tap, gears/pulleys keyed to shafts with zero backlash.',
       'hole': 'H7 (+0.015 to 0.000 mm)',
       'shaft': 'k6 (+0.011 to +0.002 mm)',
@@ -42,7 +42,7 @@ class TolerancesView extends StatelessWidget {
     {
       'name': 'Light Press / Drive Fit (H7 / p6)',
       'type': 'Interference',
-      'color': AppTheme.accentCoral,
+      'color': AppTheme.of().coral,
       'app': 'Permanent press fit, ball bearing outer/inner races, brass bushings into aluminum bores.',
       'hole': 'H7 (+0.015 to 0.000 mm)',
       'shaft': 'p6 (+0.035 to +0.026 mm)',
@@ -50,7 +50,7 @@ class TolerancesView extends StatelessWidget {
     {
       'name': 'Heavy Shrink Fit (H7 / u6)',
       'type': 'Interference',
-      'color': AppTheme.accentCoral,
+      'color': AppTheme.of().coral,
       'app': 'Assembled with thermal shrink (freezing shaft or torching hub), maximum torque transmission.',
       'hole': 'H7 (+0.015 to 0.000 mm)',
       'shaft': 'u6 (+0.060 to +0.045 mm)',
@@ -73,7 +73,7 @@ class TolerancesView extends StatelessWidget {
           'Standard engineering limits & fits for precision machining, 3D print clearances, and bearing bores.',
           style: TextStyle(
             fontSize: 12,
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
           ),
         ),
         const SizedBox(height: 16),
@@ -105,7 +105,7 @@ class TolerancesView extends StatelessWidget {
                   fit['app'] as String,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                   ),
                 ),
                 const Divider(height: 16),

@@ -231,8 +231,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
           ExpressiveCard(
             child: Row(
               children: [
-                const Icon(Icons.local_fire_department_rounded,
-                    color: AppTheme.accentCoral, size: 28),
+                Icon(Icons.local_fire_department_rounded,
+                    color: AppTheme.of(context).coral, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -248,8 +248,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                         style: TextStyle(
                           fontSize: 11,
                           color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
+                              ? AppTheme.of(context).textSecondary
+                              : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -381,20 +381,20 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
           ExpressiveCard(
             isGlowing: true,
             glowColor: _hotInstallationClearance > 0
-                ? AppTheme.accentEmerald
-                : AppTheme.accentCoral,
+                ? AppTheme.of(context).emerald
+                : AppTheme.of(context).coral,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'FIT & THERMAL CLEARANCE ANALYSIS',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryCyan,
+                        color: AppTheme.of(context).primary,
                       ),
                     ),
                     ExpressiveBadge(
@@ -402,8 +402,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                           ? 'Slip Fit (+${_hotInstallationClearance.toStringAsFixed(_isMetric ? 3 : 4)} $dimUnit)'
                           : 'Insufficient Heat (Binding!)',
                       color: _hotInstallationClearance > 0
-                          ? AppTheme.accentEmerald
-                          : AppTheme.accentCoral,
+                          ? AppTheme.of(context).emerald
+                          : AppTheme.of(context).coral,
                       fontSize: 10,
                     ),
                   ],
@@ -418,10 +418,10 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                       children: [
                         Text(
                           '${_interference.toStringAsFixed(_isMetric ? 3 : 4)} $dimUnit',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.accentAmber,
+                            color: AppTheme.of(context).amber,
                           ),
                         ),
                         const Text('Cold Interference Fit',
@@ -432,10 +432,10 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                       children: [
                         Text(
                           '+${_thermalExpansion.toStringAsFixed(_isMetric ? 3 : 4)} $dimUnit',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryCyan,
+                            color: AppTheme.of(context).primary,
                           ),
                         ),
                         const Text('Thermal Expansion ΔD',
@@ -450,8 +450,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: _hotInstallationClearance > 0
-                                ? AppTheme.accentEmerald
-                                : AppTheme.accentCoral,
+                                ? AppTheme.of(context).emerald
+                                : AppTheme.of(context).coral,
                           ),
                         ),
                         const Text('Hot Install Slip Clearance',
@@ -476,8 +476,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? AppTheme.darkSurfaceVariant
-                        : AppTheme.lightSurfaceVariant,
+                        ? AppTheme.of(context).surfaceVariant
+                        : AppTheme.of(context).surfaceVariant,
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     border: Border.all(
                       color: _currentTint.swatchColor.withValues(alpha: 0.8),
@@ -524,8 +524,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : AppTheme.lightTextSecondary,
+                                    ? AppTheme.of(context).textSecondary
+                                    : AppTheme.of(context).textSecondary,
                               ),
                             ),
                           ],

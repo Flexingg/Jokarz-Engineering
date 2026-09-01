@@ -220,10 +220,10 @@ class _UnitConverterViewState extends State<UnitConverterView> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkSurfaceHighlight : AppTheme.lightSurfaceHighlight,
+                      color: isDark ? AppTheme.of(context).surfaceHighlight : AppTheme.of(context).surfaceHighlight,
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       border: Border.all(
-                        color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                        color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
                       ),
                     ),
                     child: Column(
@@ -234,10 +234,10 @@ class _UnitConverterViewState extends State<UnitConverterView> {
                         const SizedBox(height: 2),
                         Text(
                           e.value,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryCyan,
+                            color: AppTheme.of(context).primary,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),

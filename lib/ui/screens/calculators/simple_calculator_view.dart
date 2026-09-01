@@ -253,7 +253,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           // Calculator LCD Display Card
           ExpressiveCard(
             isGlowing: true,
-            glowColor: AppTheme.primaryCyan,
+            glowColor: AppTheme.of(context).primary,
             padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -268,10 +268,10 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             margin: const EdgeInsets.only(right: 6),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentEmerald.withValues(alpha: 0.2),
+                              color: AppTheme.of(context).emerald.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('M', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+                            child: Text('M', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.of(context).emerald)),
                           ),
                     ],
                     ),
@@ -279,7 +279,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                       _expression,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -291,7 +291,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryCyan),
+                      icon: Icon(Icons.copy_rounded, size: 18, color: AppTheme.of(context).primary),
                       tooltip: 'Copy Result',
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _display));
@@ -311,17 +311,17 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                               fontSize: 32,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.1,
-                              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                              color: isDark ? Colors.white : AppTheme.of(context).textPrimary,
                             ),
                           ),
                           if (_fractionDisplay.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               'Fraction (Inch): $_fractionDisplay',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.accentAmber,
+                                color: AppTheme.of(context).amber,
                               ),
                             ),
                           ],
@@ -455,22 +455,22 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
     Color fg;
 
     if (isEmerald) {
-      bg = AppTheme.accentEmerald;
+      bg = AppTheme.of(context).emerald;
       fg = Colors.black87;
     } else if (isAmber) {
-      bg = AppTheme.accentAmber;
+      bg = AppTheme.of(context).amber;
       fg = Colors.black87;
     } else if (isCoral) {
-      bg = AppTheme.accentCoral.withValues(alpha: 0.2);
-      fg = AppTheme.accentCoral;
+      bg = AppTheme.of(context).coral.withValues(alpha: 0.2);
+      fg = AppTheme.of(context).coral;
     } else if (isCyan) {
-      bg = AppTheme.primaryCyan.withValues(alpha: 0.25);
-      fg = isDark ? AppTheme.primaryCyan : AppTheme.primaryBlue;
+      bg = AppTheme.of(context).primary.withValues(alpha: 0.25);
+      fg = isDark ? AppTheme.of(context).primary : AppTheme.of(context).primaryBlue;
     } else if (isOperator) {
-      bg = isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant;
+      bg = isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant;
       fg = isDark ? Colors.white : Colors.black87;
     } else {
-      bg = isDark ? AppTheme.darkSurface : AppTheme.lightSurface;
+      bg = isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface;
       fg = isDark ? Colors.white : Colors.black87;
     }
 
@@ -485,7 +485,7 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             side: BorderSide(
-              color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+              color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
               width: 0.8,
             ),
           ),

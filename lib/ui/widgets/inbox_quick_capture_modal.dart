@@ -100,10 +100,10 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+          color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border.all(
-            color: AppTheme.primaryCyan.withValues(alpha: 0.3),
+            color: AppTheme.of(context).primary.withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
@@ -134,9 +134,9 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber, size: 22),
+                    Icon(Icons.flash_on_rounded, color: AppTheme.of(context).amber, size: 22),
                     SizedBox(width: 8),
                     Text(
                       'Quick Note',
@@ -152,7 +152,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   icon: const Icon(Icons.inbox_rounded, size: 16),
                   label: const Text('Inbox'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primaryCyan,
+                    foregroundColor: AppTheme.of(context).primary,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                 ),
@@ -169,11 +169,11 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
               decoration: InputDecoration(
                 hintText: 'e.g. Line 2 filler bearing vibrating, order spare 6205RS or check with Mike tomorrow...',
                 hintStyle: TextStyle(
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                   fontSize: 13,
                 ),
                 filled: true,
-                fillColor: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                fillColor: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   borderSide: BorderSide.none,
@@ -190,7 +190,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   onPressed: _toggleListening,
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none_rounded,
-                    color: _isListening ? Colors.redAccent : AppTheme.primaryCyan,
+                    color: _isListening ? Colors.redAccent : AppTheme.of(context).primary,
                   ),
                   tooltip: _isListening ? 'Stop Recording' : 'Voice Dictate',
                 ),
@@ -211,7 +211,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   icon: const Icon(Icons.send_rounded, size: 16),
                   label: const Text('Save to Inbox'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentEmerald,
+                    backgroundColor: AppTheme.of(context).emerald,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),

@@ -112,8 +112,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Column(children: [
-                const Icon(Icons.sensors_off_rounded,
-                    size: 48, color: AppTheme.accentCoral),
+                Icon(Icons.sensors_off_rounded,
+                    size: 48, color: AppTheme.of(context).coral),
                 const SizedBox(height: 12),
                 const Text('Accelerometer not available on this device',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
@@ -125,8 +125,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
                   style: TextStyle(
                       fontSize: 12,
                       color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary),
+                          ? AppTheme.of(context).textSecondary
+                          : AppTheme.of(context).textSecondary),
                 ),
               ]),
             )
@@ -136,8 +136,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
                 color: _isLevel
-                    ? AppTheme.accentEmerald.withValues(alpha: 0.18)
-                    : AppTheme.accentAmber.withValues(alpha: 0.18),
+                    ? AppTheme.of(context).emerald.withValues(alpha: 0.18)
+                    : AppTheme.of(context).amber.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(
@@ -147,8 +147,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
                     _isLevel ? Icons.check_circle_rounded : Icons.info_outline,
                     size: 18,
                     color: _isLevel
-                        ? AppTheme.accentEmerald
-                        : AppTheme.accentAmber,
+                        ? AppTheme.of(context).emerald
+                        : AppTheme.of(context).amber,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -159,8 +159,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: _isLevel
-                            ? AppTheme.accentEmerald
-                            : AppTheme.accentAmber),
+                            ? AppTheme.of(context).emerald
+                            : AppTheme.of(context).amber),
                   ),
                 ],
               ),
@@ -199,8 +199,8 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
               style: TextStyle(
                   fontSize: 11,
                   color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary),
+                      ? AppTheme.of(context).textSecondary
+                      : AppTheme.of(context).textSecondary),
             ),
           ],
         ],
@@ -211,10 +211,10 @@ class _BubbleLevelViewState extends State<BubbleLevelView> {
   Widget _readout(String label, String value) {
     return Column(children: [
       Text(label,
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryCyan)),
+              color: AppTheme.of(context).primary)),
       const SizedBox(height: 4),
       Text(value,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
@@ -242,7 +242,7 @@ class _BubbleLevelPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - 10;
     final bubbleRadius = 26.0;
-    final accent = isLevel ? AppTheme.accentEmerald : AppTheme.accentCoral;
+    final accent = isLevel ? AppTheme.of().emerald : AppTheme.of().coral;
     final outline = isDark ? Colors.white38 : Colors.black38;
 
     // Vial face

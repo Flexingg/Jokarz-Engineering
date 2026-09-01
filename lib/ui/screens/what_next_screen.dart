@@ -69,7 +69,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.add_task_rounded, color: AppTheme.primaryCyan),
+              leading: Icon(Icons.add_task_rounded, color: AppTheme.of(context).primary),
               title: const Text('Add a Task'),
               subtitle: const Text('Log a new task / step'),
               onTap: () async {
@@ -78,7 +78,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.accentEmerald),
+              leading: Icon(Icons.check_circle_outline_rounded, color: AppTheme.of(context).emerald),
               title: const Text('Complete a Task'),
               subtitle: const Text('Mark an open task done'),
               onTap: () async {
@@ -87,7 +87,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.note_add_rounded, color: AppTheme.accentAmber),
+              leading: Icon(Icons.note_add_rounded, color: AppTheme.of(context).amber),
               title: const Text('Add a Note'),
               subtitle: const Text('Record an observation or update'),
               onTap: () async {
@@ -133,7 +133,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             ),
             for (final t in open)
               ListTile(
-                leading: const Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.accentEmerald),
+                leading: Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.of(context).emerald),
                 title: Text(t.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -183,8 +183,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   }
 
   Color _actionColor(int days) {
-    if (days == 0) return AppTheme.accentEmerald;
-    if (days <= 3) return AppTheme.accentAmber;
+    if (days == 0) return AppTheme.of(context).emerald;
+    if (days <= 3) return AppTheme.of(context).amber;
     return Colors.red.shade400;
   }
 
@@ -268,7 +268,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
         LinearProgressIndicator(
           value: (_currentIndex + 1) / total,
           backgroundColor: Colors.grey.withValues(alpha: 0.2),
-          color: AppTheme.primaryCyan,
+          color: AppTheme.of(context).primary,
           minHeight: 3,
         ),
         const SizedBox(height: 16),
@@ -321,7 +321,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 onPressed: () => context.push('/projects/'),
                 icon: const Icon(Icons.open_in_new_rounded),
                 tooltip: 'Open project',
-                color: AppTheme.primaryCyan,
+                color: AppTheme.of(context).primary,
               ),
               const SizedBox(width: 16),
               // Take Action
@@ -331,7 +331,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   icon: const Icon(Icons.checklist_rounded),
                   label: const Text('Take Action'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentEmerald,
+                    backgroundColor: AppTheme.of(context).emerald,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -353,7 +353,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Card(
         elevation: 8,
-        shadowColor: AppTheme.primaryCyan.withValues(alpha: 0.3),
+        shadowColor: AppTheme.of(context).primary.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
@@ -369,13 +369,13 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryCyan.withValues(alpha: 0.15),
+                        color: AppTheme.of(context).primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '#${project.priority} — $actionLabel',
-                        style: const TextStyle(
-                          color: AppTheme.primaryCyan,
+                        style: TextStyle(
+                          color: AppTheme.of(context).primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -470,12 +470,12 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.task_alt_rounded, size: 16, color: AppTheme.primaryCyan),
+                      Icon(Icons.task_alt_rounded, size: 16, color: AppTheme.of(context).primary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Next: ',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.primaryCyan),
+                          style: TextStyle(fontSize: 13, color: AppTheme.of(context).primary),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -509,11 +509,11 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   Color _categoryColor(ProjectCategory cat) {
     switch (cat) {
       case ProjectCategory.maintenance:
-        return AppTheme.primaryCyan;
+        return AppTheme.of(context).primary;
       case ProjectCategory.kaizen:
-        return AppTheme.accentEmerald;
+        return AppTheme.of(context).emerald;
       case ProjectCategory.capital:
-        return AppTheme.accentAmber;
+        return AppTheme.of(context).amber;
     }
   }
 }

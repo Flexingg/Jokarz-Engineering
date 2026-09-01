@@ -141,21 +141,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   _QuickAddButton(
                     icon: Icons.add_box_outlined,
                     label: 'Project',
-                    color: AppTheme.primaryCyan,
+                    color: AppTheme.of(context).primary,
                     onTap: _addProject,
                   ),
                   const SizedBox(width: 8),
                   _QuickAddButton(
                     icon: Icons.note_add_outlined,
                     label: 'Note',
-                    color: AppTheme.accentAmber,
+                    color: AppTheme.of(context).amber,
                     onTap: _addNote,
                   ),
                   const SizedBox(width: 8),
                   _QuickAddButton(
                     icon: Icons.add_shopping_cart_outlined,
                     label: 'Order',
-                    color: AppTheme.accentEmerald,
+                    color: AppTheme.of(context).emerald,
                     onTap: _addOrder,
                   ),
                 ],
@@ -212,7 +212,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       onTap: () => _openProject(p),
       child: Row(
         children: [
-          const Icon(Icons.engineering_outlined, color: AppTheme.primaryCyan),
+          Icon(Icons.engineering_outlined, color: AppTheme.of(context).primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -239,7 +239,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           else
             ExpressiveBadge(
               label: '#${p.priority}',
-              color: AppTheme.accentCoral,
+              color: AppTheme.of(context).coral,
               fontSize: 9,
             ),
         ],
@@ -253,7 +253,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       onTap: () => _openTask(hit),
       child: Row(
         children: [
-          const Icon(Icons.checklist_rounded, color: AppTheme.accentAmber),
+          Icon(Icons.checklist_rounded, color: AppTheme.of(context).amber),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -275,9 +275,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           const SizedBox(width: 8),
           if (hit.task.isCompleted)
-            const ExpressiveBadge(label: '✓ Done', color: AppTheme.accentEmerald, fontSize: 9)
+            ExpressiveBadge(label: '✓ Done', color: AppTheme.of(context).emerald, fontSize: 9)
           else if (hit.task.pendingReason.isNotEmpty)
-            ExpressiveBadge(label: '⏳ ${hit.task.pendingReason}', color: AppTheme.accentCoral, fontSize: 9),
+            ExpressiveBadge(label: '⏳ ${hit.task.pendingReason}', color: AppTheme.of(context).coral, fontSize: 9),
         ],
       ),
     );
@@ -289,7 +289,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       onTap: () => _openOrder(h),
       child: Row(
         children: [
-          const Icon(Icons.local_shipping_outlined, color: AppTheme.accentAmber),
+          Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).amber),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -333,7 +333,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             children: [
               Icon(
                 h.isProjectNote ? Icons.sticky_note_2_outlined : Icons.edit_note_rounded,
-                color: h.isProjectNote ? AppTheme.accentAmber : AppTheme.primaryCyan,
+                color: h.isProjectNote ? AppTheme.of(context).amber : AppTheme.of(context).primary,
                 size: 16,
               ),
               const SizedBox(width: 6),
@@ -347,7 +347,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               if (h.projectTitle != null)
                 ExpressiveBadge(
                   label: h.projectTitle!,
-                  color: AppTheme.primaryBlue,
+                  color: AppTheme.of(context).primaryBlue,
                   isOutlined: true,
                   fontSize: 9,
                 ),
@@ -360,7 +360,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   height: 1.3,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                 ),
                 children: _highlightSpans(h.content),
               ),
@@ -402,7 +402,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (matchStart > i) spans.add(TextSpan(text: text.substring(i, matchStart)));
       spans.add(TextSpan(
         text: text.substring(matchStart, matchStart + matchLen),
-        style: const TextStyle(color: AppTheme.primaryCyan, fontWeight: FontWeight.w900),
+        style: TextStyle(color: AppTheme.of(context).primary, fontWeight: FontWeight.w900),
       ));
       i = matchStart + matchLen;
     }
@@ -465,10 +465,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w900,
-          color: AppTheme.primaryCyan,
+          color: AppTheme.of(context).primary,
           letterSpacing: 0.5,
         ),
       ),
@@ -542,21 +542,21 @@ class _NoResults extends StatelessWidget {
                 _QuickAddButton(
                   icon: Icons.add_box_outlined,
                   label: 'Project',
-                  color: AppTheme.primaryCyan,
+                  color: AppTheme.of(context).primary,
                   onTap: onProject,
                 ),
                 const SizedBox(width: 8),
                 _QuickAddButton(
                   icon: Icons.note_add_outlined,
                   label: 'Note',
-                  color: AppTheme.accentAmber,
+                  color: AppTheme.of(context).amber,
                   onTap: onNote,
                 ),
                 const SizedBox(width: 8),
                 _QuickAddButton(
                   icon: Icons.add_shopping_cart_outlined,
                   label: 'Order',
-                  color: AppTheme.accentEmerald,
+                  color: AppTheme.of(context).emerald,
                   onTap: onOrder,
                 ),
               ],

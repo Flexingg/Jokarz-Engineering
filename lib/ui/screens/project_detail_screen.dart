@@ -58,9 +58,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             .addProjectPhoto(widget.projectId, photo.path);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Photo attached to project!'),
-              backgroundColor: AppTheme.accentEmerald,
+              backgroundColor: AppTheme.of(context).emerald,
             ),
           );
         }
@@ -112,7 +112,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   const SizedBox(height: 12),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.primaryCyan),
+                    leading: Icon(Icons.calendar_today_rounded, color: AppTheme.of(context).primary),
                     title: Text(
                       dateText,
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
@@ -257,7 +257,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   const SizedBox(height: 10),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.local_shipping_outlined, color: AppTheme.primaryCyan),
+                    leading: Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).primary),
                     title: Text(
                       etaText,
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
@@ -418,9 +418,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.sticky_note_2_outlined, color: AppTheme.accentAmber),
+            Icon(Icons.sticky_note_2_outlined, color: AppTheme.of(context).amber),
             SizedBox(width: 8),
             Text('Project Notes'),
           ],
@@ -721,7 +721,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.mic, color: AppTheme.accentAmber),
+            icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
             tooltip: 'Dictate Field Log for Project',
             onPressed: () => VoiceMemoModal.show(
               context,
@@ -729,18 +729,18 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.content_copy_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.content_copy_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Save as Reusable Template',
             onPressed: () => TemplateDialogs.showSaveAsTemplateDialog(context, ref, project),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.edit_outlined, color: AppTheme.of(context).primary),
             tooltip: 'Edit Project Details',
             onPressed: () => context.push('/projects/${project.id}/edit'),
           ),
 
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppTheme.accentCoral),
+            icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
             tooltip: 'Delete Project',
             onPressed: () async {
               final confirm = await showDialog<bool>(
@@ -751,7 +751,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCoral),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).coral),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Delete'),
                     ),
@@ -772,7 +772,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.primaryCyan,
+          indicatorColor: AppTheme.of(context).primary,
           tabs: [
             Tab(
               icon: const Icon(Icons.checklist_rounded),
@@ -823,21 +823,21 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     bool isTerminal,
   ) {
     final priorityColor = project.priority == 1
-        ? AppTheme.accentCoral
-        : (project.priority <= 3 ? AppTheme.accentAmber : AppTheme.primaryCyan);
+        ? AppTheme.of(context).coral
+        : (project.priority <= 3 ? AppTheme.of(context).amber : AppTheme.of(context).primary);
     final phaseColor = project.phase.toLowerCase() == 'complete'
-        ? AppTheme.accentEmerald
+        ? AppTheme.of(context).emerald
         : (project.phase.toLowerCase() == 'cancelled'
-            ? AppTheme.accentCoral
-            : AppTheme.accentAmber);
+            ? AppTheme.of(context).coral
+            : AppTheme.of(context).amber);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+        color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+            color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
           ),
         ),
       ),
@@ -858,7 +858,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   child: ExpressiveBadge(
                     label: '${project.category.label} ✎',
-                    color: AppTheme.primaryCyan,
+                    color: AppTheme.of(context).primary,
                     fontSize: 11,
                   ),
                 ),
@@ -978,11 +978,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.check_circle_outline, size: 14, color: AppTheme.accentEmerald),
+                Icon(Icons.check_circle_outline, size: 14, color: AppTheme.of(context).emerald),
                 const SizedBox(width: 4),
                 Text(
                   'Completed at: ${dateFormat.format(project.completedAt!)}',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.accentEmerald, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).emerald, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -997,7 +997,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
               ),
             ),
           ],
@@ -1016,10 +1016,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   children: project.tags.map((tag) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                      color: AppTheme.of(context).primaryBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                       border: Border.all(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.4),
+                        color: AppTheme.of(context).primaryBlue.withValues(alpha: 0.4),
                         width: 0.6,
                       ),
                     ),
@@ -1037,15 +1037,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.sticky_note_2_outlined, size: 14, color: AppTheme.accentAmber),
+              Icon(Icons.sticky_note_2_outlined, size: 14, color: AppTheme.of(context).amber),
               const SizedBox(width: 6),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Project Notes',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.accentAmber,
+                    color: AppTheme.of(context).amber,
                   ),
                 ),
               ),
@@ -1060,7 +1060,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: AppTheme.accentAmber,
+                  foregroundColor: AppTheme.of(context).amber,
                 ),
               ),
             ],
@@ -1071,10 +1071,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppTheme.accentAmber.withValues(alpha: 0.1),
+                color: AppTheme.of(context).amber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 border: Border.all(
-                  color: AppTheme.accentAmber.withValues(alpha: 0.3),
+                  color: AppTheme.of(context).amber.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -1098,10 +1098,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppTheme.accentAmber.withValues(alpha: 0.15),
+      color: AppTheme.of(context).amber.withValues(alpha: 0.15),
       child: Row(
         children: [
-          const Icon(Icons.pending_actions_rounded, size: 18, color: AppTheme.accentAmber),
+          Icon(Icons.pending_actions_rounded, size: 18, color: AppTheme.of(context).amber),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(
@@ -1111,9 +1111,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   color: isDark ? Colors.white : Colors.black87,
                 ),
                 children: [
-                  const TextSpan(
+                  TextSpan(
                     text: 'NEXT PENDING: ',
-                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.accentAmber),
+                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.of(context).amber),
                   ),
                   TextSpan(
                     text: task.description,
@@ -1122,7 +1122,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   if (task.pendingReason.isNotEmpty)
                     TextSpan(
                       text: ' (${task.pendingReason})',
-                      style: const TextStyle(fontStyle: FontStyle.italic, color: AppTheme.accentAmber),
+                      style: TextStyle(fontStyle: FontStyle.italic, color: AppTheme.of(context).amber),
                     ),
                 ],
               ),
@@ -1216,7 +1216,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                               const SizedBox(width: 20),
                             Checkbox(
                               value: task.isCompleted,
-                              activeColor: AppTheme.accentEmerald,
+                              activeColor: AppTheme.of(context).emerald,
                               onChanged: (_) {
                                 ref
                                     .read(projectProvider.notifier)
@@ -1247,14 +1247,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                                         ExpressiveBadge(
                                           label: task.pendingReason,
                                           icon: Icons.hourglass_empty_rounded,
-                                          color: AppTheme.accentAmber,
+                                          color: AppTheme.of(context).amber,
                                           fontSize: 10,
                                         ),
                                       if (dateText != null)
                                         ExpressiveBadge(
                                           label: 'Scheduled: $dateText',
                                           icon: Icons.calendar_today_rounded,
-                                          color: AppTheme.primaryCyan,
+                                          color: AppTheme.of(context).primary,
                                           fontSize: 10,
                                         ),
                                     ],
@@ -1307,7 +1307,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     '${project.undeliveredOrdersCount} Undelivered',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -1322,9 +1322,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   ),
                   TextButton.icon(
                     onPressed: () => _showLinkUnlinkedOrderDialog(context, project),
-                    icon: const Icon(Icons.link_rounded, size: 14, color: AppTheme.accentEmerald),
-                    label: const Text('Link Unlinked',
-                        style: TextStyle(fontSize: 12, color: AppTheme.accentEmerald)),
+                    icon: Icon(Icons.link_rounded, size: 14, color: AppTheme.of(context).emerald),
+                    label: Text('Link Unlinked',
+                        style: TextStyle(fontSize: 12, color: AppTheme.of(context).emerald)),
                     style: TextButton.styleFrom(
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1375,7 +1375,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                             children: [
                               Checkbox(
                                 value: order.delivered,
-                                activeColor: AppTheme.accentEmerald,
+                                activeColor: AppTheme.of(context).emerald,
                                 onChanged: (_) {
                                   ref
                                       .read(projectProvider.notifier)
@@ -1392,14 +1392,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                                         if (order.po.isNotEmpty)
                                           ExpressiveBadge(
                                             label: 'PO: ${order.po}',
-                                            color: AppTheme.primaryCyan,
+                                            color: AppTheme.of(context).primary,
                                             fontSize: 10,
                                           ),
                                         if (order.pr.isNotEmpty) ...[
                                           const SizedBox(width: 4),
                                           ExpressiveBadge(
                                             label: 'PR: ${order.pr}',
-                                            color: AppTheme.primaryBlue,
+                                            color: AppTheme.of(context).primaryBlue,
                                             isOutlined: true,
                                             fontSize: 10,
                                           ),
@@ -1440,8 +1440,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: order.delivered
-                                          ? AppTheme.accentEmerald
-                                          : AppTheme.accentAmber,
+                                          ? AppTheme.of(context).emerald
+                                          : AppTheme.of(context).amber,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1514,7 +1514,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                         shrinkWrap: true,
                         children: matches.map((o) => Card(
                           margin: const EdgeInsets.only(bottom: 6),
-                          color: selectedId == o.id ? AppTheme.accentEmerald.withValues(alpha: 0.15) : null,
+                          color: selectedId == o.id ? AppTheme.of(context).emerald.withValues(alpha: 0.15) : null,
                           child: ListTile(
                             dense: true,
                             leading: const Icon(Icons.link_off_rounded, size: 20, color: Colors.orange),
@@ -1539,10 +1539,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.accentEmerald));
+                            SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.of(context).emerald));
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: Colors.white),
               child: const Text('Link'),
             ),
           ],
@@ -1561,8 +1561,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   ) {
     final notifier = ref.read(projectProvider.notifier);
     final storesColor = order.addToStores
-        ? AppTheme.accentEmerald
-        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary);
+        ? AppTheme.of(context).emerald
+        : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1588,7 +1588,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               ),
               Switch(
                 value: order.addToStores,
-                activeColor: AppTheme.accentEmerald,
+                activeColor: AppTheme.of(context).emerald,
                 onChanged: (v) =>
                     notifier.setOrderAddToStores(project.id, order.id, v),
               ),
@@ -1602,15 +1602,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               padding: const EdgeInsets.only(left: 2),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded,
-                      size: 14, color: AppTheme.accentAmber),
+                  Icon(Icons.info_outline_rounded,
+                      size: 14, color: AppTheme.of(context).amber),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Add a PO number, then request from storeroom.',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppTheme.accentAmber,
+                        color: AppTheme.of(context).amber,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -1649,8 +1649,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 icon: const Icon(Icons.warehouse_rounded, size: 16),
                 label: const Text('Request for Stores'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.accentEmerald,
-                  side: const BorderSide(color: AppTheme.accentEmerald),
+                  foregroundColor: AppTheme.of(context).emerald,
+                  side: BorderSide(color: AppTheme.of(context).emerald),
                 ),
               ),
             )
@@ -1663,8 +1663,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
+                          ? AppTheme.of(context).textSecondary
+                          : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ),
@@ -1681,7 +1681,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ExpressiveBadge(
               label: 'Stores #${order.storeRequestNumber} ✓ Requested',
               icon: Icons.warehouse_rounded,
-              color: AppTheme.accentEmerald,
+              color: AppTheme.of(context).emerald,
               fontSize: 10,
             ),
         ],
@@ -1781,7 +1781,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
-                        color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                        color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -1843,10 +1843,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                         ExpressiveBadge(
                           label: log.type.label,
                           color: log.type == LogType.voice
-                              ? AppTheme.accentAmber
+                              ? AppTheme.of(context).amber
                               : (log.type == LogType.milestone
-                                  ? AppTheme.accentEmerald
-                                  : AppTheme.primaryCyan),
+                                  ? AppTheme.of(context).emerald
+                                  : AppTheme.of(context).primary),
                           fontSize: 10,
                         ),
                         const Spacer(),
@@ -1854,7 +1854,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                           DateFormat('MMM d, y • h:mm a').format(log.timestamp),
                           style: TextStyle(
                             fontSize: 10,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                         IconButton(
@@ -1879,7 +1879,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.4,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],

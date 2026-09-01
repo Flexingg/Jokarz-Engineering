@@ -126,7 +126,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                   const SizedBox(height: 12),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.primaryCyan),
+                    leading: Icon(Icons.calendar_today_rounded, color: AppTheme.of(context).primary),
                     title: Text(etaText, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     subtitle: const Text('Estimated Delivery (ETA)', style: TextStyle(fontSize: 11)),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -147,7 +147,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     title: const Text('Marked as Delivered', style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: const Text('Part has arrived at plant/crib', style: TextStyle(fontSize: 11)),
                     value: delivered,
-                    activeColor: AppTheme.accentEmerald,
+                    activeColor: AppTheme.of(context).emerald,
                     onChanged: (val) { if (val != null) setDialogState(() => delivered = val); },
                   ),
                 ],
@@ -241,35 +241,35 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(children: [
-          Icon(Icons.local_shipping_outlined, color: AppTheme.primaryCyan),
+        title: Row(children: [
+          Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).primary),
           SizedBox(width: 8),
           Text('Purchase Orders & Parts', style: TextStyle(fontWeight: FontWeight.bold)),
         ]),
         actions: [
           IconButton(
-            icon: const Icon(Icons.storefront_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.storefront_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Vendor Directory',
             onPressed: () => context.push('/vendors'),
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline_rounded, color: AppTheme.accentAmber),
+            icon: Icon(Icons.help_outline_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Order Workflow Guide',
             onPressed: () => showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Row(children: [
-                  Icon(Icons.info_outline_rounded, color: AppTheme.primaryCyan),
+                title: Row(children: [
+                  Icon(Icons.info_outline_rounded, color: AppTheme.of(context).primary),
                   SizedBox(width: 8),
                   Text('PO vs PR & Delivery Info'),
                 ]),
-                content: const SingleChildScrollView(
+                content: SingleChildScrollView(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Text('📦 PR vs PO Tracking', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+                    Text('📦 PR vs PO Tracking', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
                     SizedBox(height: 4),
                     Text('• PR (Purchase Requisition): Internal plant requisition number prior to approval.\n• PO (Purchase Order): Official vendor purchasing order number.\n• Pending: orders that have neither a PO nor a PR yet.\n• Delivered: Check the box to mark parts as arrived at the plant crib/bench.', style: TextStyle(fontSize: 12)),
                     SizedBox(height: 10),
-                    Text('⏳ ETA Countdown', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentAmber)),
+                    Text('⏳ ETA Countdown', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.of(context).amber)),
                     SizedBox(height: 4),
                     Text('Orders with an assigned ETA date will show relative delivery status ("Arriving Today", "Overdue", or "In X days") sorted chronologically.', style: TextStyle(fontSize: 12)),
                   ]),
@@ -321,7 +321,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -329,7 +329,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                 Text(currency.format(totalDisplayValue),
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900,
-                        color: _filterTab == 0 ? AppTheme.primaryCyan : AppTheme.accentEmerald)),
+                        color: _filterTab == 0 ? AppTheme.of(context).primary : AppTheme.of(context).emerald)),
               ]),
             ),
 
@@ -344,7 +344,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                         ? 'Tap + Unlinked Order to add a purchase order not yet tied to a project.'
                         : 'No orders match this filter.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                        style: TextStyle(fontSize: 12, color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
                   ]))
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -358,7 +358,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         onPressed: () => _showAddStandaloneOrderDialog(context),
         icon: const Icon(Icons.add_shopping_cart_rounded),
         label: const Text('Unlinked Order'),
-        backgroundColor: AppTheme.accentAmber,
+        backgroundColor: AppTheme.of(context).amber,
         foregroundColor: Colors.black87,
       ),
     );
@@ -369,7 +369,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
     return ExpressiveCard(
       margin: const EdgeInsets.only(bottom: 12),
       isGlowing: !e.delivered && e.eta != null && e.eta!.isBefore(DateTime.now()),
-      glowColor: AppTheme.accentCoral,
+      glowColor: AppTheme.of(context).coral,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Top row: project context (or Unlinked) + edit/delete
         Row(children: [
@@ -377,9 +377,9 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
             InkWell(
               onTap: () => context.push('/projects/${e.project!.id}'),
               child: Row(children: [
-                const Icon(Icons.precision_manufacturing_outlined, size: 14, color: AppTheme.primaryCyan),
+                Icon(Icons.precision_manufacturing_outlined, size: 14, color: AppTheme.of(context).primary),
                 const SizedBox(width: 6),
-                Text(e.projectTitle, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan, decoration: TextDecoration.underline)),
+                Text(e.projectTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary, decoration: TextDecoration.underline)),
               ]),
             )
           else ...[
@@ -389,18 +389,18 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           ],
           if (e.machine.isNotEmpty) ...[
             const SizedBox(width: 8),
-            ExpressiveBadge(label: e.machine, color: AppTheme.accentAmber, fontSize: 10),
+            ExpressiveBadge(label: e.machine, color: AppTheme.of(context).amber, fontSize: 10),
           ],
           const Spacer(),
           if (isStandalone)
             IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
+              icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).primary),
               tooltip: 'Edit Order',
               onPressed: () => _showEditStandaloneOrderDialog(context, e.standalone!),
             )
           else
             IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryCyan),
+              icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).primary),
               tooltip: 'Edit Order',
               onPressed: () => _showEditOrderDialog(context, e),
             ),
@@ -410,7 +410,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Checkbox(
             value: e.delivered,
-            activeColor: AppTheme.accentEmerald,
+            activeColor: AppTheme.of(context).emerald,
             onChanged: (_) {
               if (isStandalone) {
                 notifier.updateStandaloneOrder(e.standalone!.copyWith(delivered: !e.delivered));
@@ -426,26 +426,26 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     decoration: e.delivered ? TextDecoration.lineThrough : null)),
             const SizedBox(height: 4),
             Wrap(spacing: 6, runSpacing: 4, children: [
-              if (e.po.isNotEmpty) ExpressiveBadge(label: 'PO: ${e.po}', color: AppTheme.primaryCyan, fontSize: 10),
-              if (e.pr.isNotEmpty) ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.accentAmber, fontSize: 10),
+              if (e.po.isNotEmpty) ExpressiveBadge(label: 'PO: ${e.po}', color: AppTheme.of(context).primary, fontSize: 10),
+              if (e.pr.isNotEmpty) ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.of(context).amber, fontSize: 10),
               if (e.vendorName.isNotEmpty)
                 ExpressiveBadge(label: e.vendorName, color: Colors.purpleAccent, icon: Icons.storefront_rounded, fontSize: 10),
               if (e.vendorQuoteNumber.isNotEmpty)
                 ExpressiveBadge(label: 'Quote #${e.vendorQuoteNumber}', color: Colors.blueGrey, fontSize: 10),
               if (e.addToStores)
                 e.storeRequestNumber.isNotEmpty
-                    ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.accentEmerald, fontSize: 10)
+                    ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.of(context).emerald, fontSize: 10)
                     : e.storeRequested
-                        ? const ExpressiveBadge(label: 'Stores: Requested', color: AppTheme.accentAmber, fontSize: 10)
+                        ? ExpressiveBadge(label: 'Stores: Requested', color: AppTheme.of(context).amber, fontSize: 10)
                         : e.po.isNotEmpty
-                            ? const ExpressiveBadge(label: 'Stores: Pending', color: AppTheme.accentAmber, fontSize: 10)
+                            ? ExpressiveBadge(label: 'Stores: Pending', color: AppTheme.of(context).amber, fontSize: 10)
                             : const ExpressiveBadge(label: 'Add to Stores', color: Colors.grey, fontSize: 10),
             ]),
             if (e.trackingUrl.isNotEmpty) ...[
               const SizedBox(height: 4),
               ActionChip(
-                avatar: const Icon(Icons.track_changes_rounded, size: 12, color: AppTheme.primaryCyan),
-                label: const Text('Track Shipment', style: TextStyle(fontSize: 10, color: AppTheme.primaryCyan)),
+                avatar: Icon(Icons.track_changes_rounded, size: 12, color: AppTheme.of(context).primary),
+                label: Text('Track Shipment', style: TextStyle(fontSize: 10, color: AppTheme.of(context).primary)),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 visualDensity: VisualDensity.compact,
@@ -469,8 +469,8 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         const SizedBox(height: 8),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           if (e.eta != null) _buildEtaBadge(e.eta!)
-          else Text('No ETA specified', style: TextStyle(fontSize: 11, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-          if (e.delivered) const ExpressiveBadge(label: '✓ Delivered', color: AppTheme.accentEmerald, fontSize: 10),
+          else Text('No ETA specified', style: TextStyle(fontSize: 11, color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
+          if (e.delivered) ExpressiveBadge(label: '✓ Delivered', color: AppTheme.of(context).emerald, fontSize: 10),
         ]),
 
         // Stores workflow
@@ -484,8 +484,8 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
             icon: const Icon(Icons.link_rounded, size: 16),
             label: const Text('Attach to Project', style: TextStyle(fontSize: 12)),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.accentEmerald,
-              side: const BorderSide(color: AppTheme.accentEmerald),
+              foregroundColor: AppTheme.of(context).emerald,
+              side: BorderSide(color: AppTheme.of(context).emerald),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: Size.zero,
             ),
@@ -499,12 +499,12 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Divider(height: 16),
       Row(children: [
-        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.accentEmerald : Colors.grey),
+        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.of(context).emerald : Colors.grey),
         const SizedBox(width: 8),
         const Expanded(child: Text('Add to Stores', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
         Switch(
           value: e.addToStores,
-          activeColor: AppTheme.accentEmerald,
+          activeColor: AppTheme.of(context).emerald,
           onChanged: (v) {
             if (e.isStandalone) {
               notifier.setStandaloneOrderAddToStores(e.standalone!.id, v);
@@ -518,10 +518,10 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         const SizedBox(height: 6),
         if (e.po.isEmpty)
           Padding(padding: const EdgeInsets.only(left: 2), child: Row(children: [
-            const Icon(Icons.info_outline_rounded, size: 14, color: AppTheme.accentAmber),
+            Icon(Icons.info_outline_rounded, size: 14, color: AppTheme.of(context).amber),
             const SizedBox(width: 6),
-            const Expanded(child: Text('Add a PO number, then request from storeroom.',
-                style: TextStyle(fontSize: 11, color: AppTheme.accentAmber, fontStyle: FontStyle.italic))),
+            Expanded(child: Text('Add a PO number, then request from storeroom.',
+                style: TextStyle(fontSize: 11, color: AppTheme.of(context).amber, fontStyle: FontStyle.italic))),
           ]))
         else if (!e.storeRequested)
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
@@ -544,7 +544,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
             },
             icon: const Icon(Icons.warehouse_rounded, size: 16),
             label: const Text('Request for Stores'),
-            style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accentEmerald, side: const BorderSide(color: AppTheme.accentEmerald)),
+            style: OutlinedButton.styleFrom(foregroundColor: AppTheme.of(context).emerald, side: BorderSide(color: AppTheme.of(context).emerald)),
           ))
         else if (e.storeRequestNumber.isEmpty)
           Row(children: [
@@ -556,7 +556,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
             ),
           ])
         else
-          ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓ Requested', icon: Icons.warehouse_rounded, color: AppTheme.accentEmerald, fontSize: 10),
+          ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓ Requested', icon: Icons.warehouse_rounded, color: AppTheme.of(context).emerald, fontSize: 10),
       ],
     ]);
   }
@@ -684,10 +684,10 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                         shrinkWrap: true,
                         children: matches.map((p) => Card(
                           margin: const EdgeInsets.only(bottom: 6),
-                          color: selectedId == p.id ? AppTheme.accentEmerald.withValues(alpha: 0.15) : null,
+                          color: selectedId == p.id ? AppTheme.of(context).emerald.withValues(alpha: 0.15) : null,
                           child: ListTile(
                             dense: true,
-                            leading: const Icon(Icons.engineering_rounded, size: 20, color: AppTheme.primaryCyan),
+                            leading: Icon(Icons.engineering_rounded, size: 20, color: AppTheme.of(context).primary),
                             title: Text('#${p.priority} ${p.title}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                             subtitle: p.machine.isNotEmpty ? Text(p.machine, style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis) : null,
                             onTap: () => setDialogState(() => selectedId = p.id),
@@ -707,11 +707,11 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.accentEmerald));
+                            SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.of(context).emerald));
                         setState(() => _filterTab = 0);
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: Colors.white),
               child: const Text('Attach'),
             ),
           ],
@@ -730,16 +730,16 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
     Color col;
     if (days < 0) {
       label = '⚠️ Overdue (${days.abs()}d ago)';
-      col = AppTheme.accentCoral;
+      col = AppTheme.of(context).coral;
     } else if (days == 0) {
       label = '🚚 Arriving Today';
-      col = AppTheme.accentEmerald;
+      col = AppTheme.of(context).emerald;
     } else if (days == 1) {
       label = '📦 Arriving Tomorrow';
-      col = AppTheme.primaryCyan;
+      col = AppTheme.of(context).primary;
     } else {
       label = 'ETA in $days days (${DateFormat("MMM d").format(eta)})';
-      col = AppTheme.primaryCyan;
+      col = AppTheme.of(context).primary;
     }
     return ExpressiveBadge(label: label, color: col, fontSize: 11);
   }

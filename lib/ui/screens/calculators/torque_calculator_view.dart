@@ -142,7 +142,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
           ExpressiveCard(
             child: Row(
               children: [
-                const Icon(Icons.fitness_center_rounded, color: AppTheme.accentEmerald, size: 28),
+                Icon(Icons.fitness_center_rounded, color: AppTheme.of(context).emerald, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -156,7 +156,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
                         'Calculates required torque T = K·D·F, tensile stress area, and clamping pre-load.',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -302,7 +302,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Clamp Pre-load % of Proof Load:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              Text('${_clampPercent.toInt()}% (Recommended 75%)', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+              Text('${_clampPercent.toInt()}% (Recommended 75%)', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
             ],
           ),
           Slider(
@@ -311,7 +311,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
             max: 90.0,
             divisions: 8,
             label: '${_clampPercent.toInt()}%',
-            activeColor: AppTheme.primaryCyan,
+            activeColor: AppTheme.of(context).primary,
             onChanged: (val) {
               setState(() {
                 _clampPercent = val;
@@ -324,18 +324,18 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
           // Calculated Results Card
           ExpressiveCard(
             isGlowing: true,
-            glowColor: AppTheme.primaryCyan,
+            glowColor: AppTheme.of(context).primary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'RECOMMENDED TIGHTENING TORQUE',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
                     ),
-                    ExpressiveBadge(label: 'Target Spec', color: AppTheme.accentEmerald, fontSize: 10),
+                    ExpressiveBadge(label: 'Target Spec', color: AppTheme.of(context).emerald, fontSize: 10),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -348,22 +348,22 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
                       children: [
                         Text(
                           _torqueFtLbs.toStringAsFixed(1),
-                          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.primaryCyan),
+                          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.of(context).primary),
                         ),
                         const Text('ft-lbs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ],
                     ),
-                    Container(height: 40, width: 1, color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                    Container(height: 40, width: 1, color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border),
                     Column(
                       children: [
                         Text(
                           _torqueNm.toStringAsFixed(1),
-                          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.accentAmber),
+                          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.of(context).amber),
                         ),
                         const Text('N·m', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ],
                     ),
-                    Container(height: 40, width: 1, color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                    Container(height: 40, width: 1, color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border),
                     Column(
                       children: [
                         Text(
@@ -387,7 +387,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
                     ),
                     Text(
                       'Clamp Preload: ${_clampForce.toStringAsFixed(1)} ${_isMetric ? "kN" : "lbf"}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentEmerald),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.of(context).emerald),
                     ),
                   ],
                 ),

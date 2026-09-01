@@ -102,7 +102,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                             const SizedBox(width: 8),
                             ExpressiveBadge(
                               label: bolt.pitchOrTpi,
-                              color: AppTheme.primaryCyan,
+                              color: AppTheme.of(context).primary,
                               fontSize: 10,
                             ),
                           ],
@@ -113,12 +113,12 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                           children: [
                             ExpressiveBadge(
                               label: '🔧 Hex Bolt: ${bolt.hexHeadWrenchSize}',
-                              color: AppTheme.accentEmerald,
+                              color: AppTheme.of(context).emerald,
                               fontSize: 10,
                             ),
                             ExpressiveBadge(
                               label: '🔩 Socket: ${bolt.hexKeySize}',
-                              color: AppTheme.accentAmber,
+                              color: AppTheme.of(context).amber,
                               fontSize: 10,
                             ),
                           ],
@@ -135,19 +135,19 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentEmerald.withValues(alpha: 0.1),
+                              color: AppTheme.of(context).emerald.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              border: Border.all(color: AppTheme.accentEmerald.withValues(alpha: 0.3)),
+                              border: Border.all(color: AppTheme.of(context).emerald.withValues(alpha: 0.3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'TAP DRILL (75% THREAD)',
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentEmerald,
+                                    color: AppTheme.of(context).emerald,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -181,7 +181,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                              color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             ),
                             child: Column(
@@ -209,7 +209,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+                              color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             ),
                             child: Column(

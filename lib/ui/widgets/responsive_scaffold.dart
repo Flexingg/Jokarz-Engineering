@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
-import '../../providers/theme_provider.dart';
 import 'voice_memo_modal.dart';
 
 class ResponsiveScaffold extends ConsumerStatefulWidget {
@@ -28,7 +27,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final themeMode = ref.watch(themeModeProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -46,10 +44,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   curve: Curves.easeInOut,
                   width: railWidth,
                   decoration: BoxDecoration(
-                    color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+                    color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
                     border: Border(
                       right: BorderSide(
-                        color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                        color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
                         width: 1,
                       ),
                     ),
@@ -64,12 +62,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                           child: Container(
                             padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryCyan.withValues(alpha: 0.15),
+                              color: AppTheme.of(context).primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.precision_manufacturing_rounded,
-                              color: AppTheme.primaryCyan,
+                              color: AppTheme.of(context).primary,
                               size: 18,
                             ),
                           ),
@@ -82,23 +80,23 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               Container(
                                 padding: const EdgeInsets.all(7),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryCyan.withValues(alpha: 0.15),
+                                  color: AppTheme.of(context).primary.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.precision_manufacturing_rounded,
-                                  color: AppTheme.primaryCyan,
+                                  color: AppTheme.of(context).primary,
                                   size: 18,
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Text(
+                              Text(
                                 'WORKSPACE',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.2,
-                                  color: AppTheme.primaryCyan,
+                                  color: AppTheme.of(context).primary,
                                 ),
                               ),
                             ],
@@ -163,70 +161,33 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                         IconButton(
                           tooltip: 'Dictate Note',
                           onPressed: () => VoiceMemoModal.show(context),
-                          icon: const Icon(Icons.mic, color: AppTheme.accentAmber),
+                          icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
                         )
                       else
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: OutlinedButton.icon(
                             onPressed: () => VoiceMemoModal.show(context),
-                            icon: const Icon(Icons.mic, color: AppTheme.accentAmber, size: 18),
+                            icon: Icon(Icons.mic, color: AppTheme.of(context).amber, size: 18),
                             label: const Text(
                               'Dictate Note',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppTheme.accentAmber),
-                              minimumSize: const Size.fromHeight(40),
+                              side: BorderSide(color: AppTheme.of(context).amber),
+                              minimumSize: Size.fromHeight(40),
                             ),
                           ),
                         ),
 
-                      // Theme Mode Switch Tile
-                      if (_collapsed)
-                        IconButton(
-                          tooltip: isDark ? 'Switch to Light' : 'Switch to Dark',
-                          onPressed: () =>
-                              ref.read(themeModeProvider.notifier).toggleTheme(),
-                          icon: Icon(
-                            themeMode == ThemeMode.dark
-                                ? Icons.dark_mode_rounded
-                                : Icons.light_mode_rounded,
-                            size: 18,
-                            color: AppTheme.primaryCyan,
-                          ),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  isDark ? 'Obsidian Theme' : 'Clean Steel',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? AppTheme.darkTextSecondary
-                                        : AppTheme.lightTextSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  themeMode == ThemeMode.dark
-                                      ? Icons.dark_mode_rounded
-                                      : Icons.light_mode_rounded,
-                                  size: 18,
-                                  color: AppTheme.primaryCyan,
-                                ),
-                                onPressed: () =>
-                                    ref.read(themeModeProvider.notifier).toggleTheme(),
-                              ),
-                            ],
-                          ),
+                        // Theme — managed in Settings
+                        _buildDesktopNavItem(
+                          context,
+                          icon: Icons.palette_outlined,
+                          label: 'Theme',
+                          collapsed: _collapsed,
+                          isSelected: false,
+                          onTap: () => context.push('/settings'),
                         ),
 
                       const Divider(height: 1),
@@ -237,11 +198,11 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                           onPressed: () => setState(() => _collapsed = !_collapsed),
                           icon: Icon(
                             _collapsed ? Icons.menu_rounded : Icons.menu_open_rounded,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -259,35 +220,35 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           bottomNavigationBar: NavigationBar(
             selectedIndex: widget.navigationShell.currentIndex,
             onDestinationSelected: _onTapNav,
-            destinations: const [
+            destinations: [
               NavigationDestination(
                 icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.dashboard_rounded, color: AppTheme.of(context).primary),
                 label: 'Dashboard',
               ),
               NavigationDestination(
                 icon: Icon(Icons.assignment_outlined),
-                selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.of(context).primary),
                 label: 'Projects',
               ),
               NavigationDestination(
                 icon: Icon(Icons.local_shipping_outlined),
-                selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.of(context).primary),
                 label: 'Orders',
               ),
               NavigationDestination(
                 icon: Icon(Icons.handyman_outlined),
-                selectedIcon: Icon(Icons.handyman_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.handyman_rounded, color: AppTheme.of(context).primary),
                 label: 'Tools',
               ),
               NavigationDestination(
                 icon: Icon(Icons.note_alt_outlined),
-                selectedIcon: Icon(Icons.edit_note_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.edit_note_rounded, color: AppTheme.of(context).primary),
                 label: 'Notes',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.primaryCyan),
+                selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.of(context).primary),
                 label: 'Settings',
               ),
             ],
@@ -312,7 +273,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       child: Material(
         color: isSelected
-            ? AppTheme.primaryCyan.withValues(alpha: 0.15)
+            ? AppTheme.of(context).primary.withValues(alpha: 0.15)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: InkWell(
@@ -327,7 +288,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 border: isSelected
-                    ? Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.4))
+                    ? Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.4))
                     : null,
               ),
               child: collapsed
@@ -336,8 +297,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                         icon,
                         size: 20,
                         color: isSelected
-                            ? AppTheme.primaryCyan
-                            : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                            ? AppTheme.of(context).primary
+                            : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
                       ),
                     )
                   : Row(
@@ -346,8 +307,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                           icon,
                           size: 20,
                           color: isSelected
-                              ? AppTheme.primaryCyan
-                              : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                              ? AppTheme.of(context).primary
+                              : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -357,8 +318,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               fontSize: 13,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               color: isSelected
-                                  ? (isDark ? Colors.white : AppTheme.primaryBlue)
-                                  : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                                  ? (isDark ? Colors.white : AppTheme.of(context).primaryBlue)
+                                  : (isDark ? AppTheme.of(context).textPrimary : AppTheme.of(context).textPrimary),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),

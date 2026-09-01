@@ -129,9 +129,9 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.calendar_month_rounded, color: AppTheme.primaryCyan),
+            Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).primary),
             SizedBox(width: 8),
             Text(
               'Calendar',
@@ -153,9 +153,9 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                 icon: Badge(
                   isLabelVisible: overdueCount > 0,
                   label: Text('$overdueCount'),
-                  backgroundColor: AppTheme.accentCoral,
-                  child: const Icon(Icons.event_busy_rounded,
-                      color: AppTheme.accentCoral),
+                  backgroundColor: AppTheme.of(context).coral,
+                  child: Icon(Icons.event_busy_rounded,
+                      color: AppTheme.of(context).coral),
                 ),
               ),
             );
@@ -190,16 +190,16 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                   children: [
                     Text(
                       DateFormat('EEE, MMM d').format(_selectedDate),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
-                        color: AppTheme.primaryCyan,
+                        color: AppTheme.of(context).primary,
                       ),
                     ),
                     const SizedBox(width: 8),
                     ExpressiveBadge(
                       label: '${dayTasks.length} Scheduled',
-                      color: AppTheme.primaryCyan,
+                      color: AppTheme.of(context).primary,
                       fontSize: 10,
                     ),
                   ],
@@ -231,25 +231,25 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.sticky_note_2_outlined,
-                            size: 16, color: AppTheme.accentAmber),
+                        Icon(Icons.sticky_note_2_outlined,
+                            size: 16, color: AppTheme.of(context).amber),
                         const SizedBox(width: 6),
-                        const Expanded(
+                        Expanded(
                           child: Text('Day Note',
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.accentAmber)),
+                                  color: AppTheme.of(context).amber)),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined,
-                              size: 16, color: AppTheme.primaryCyan),
+                          icon: Icon(Icons.edit_outlined,
+                              size: 16, color: AppTheme.of(context).primary),
                           tooltip: 'Edit Note',
                           onPressed: () => _showDateNoteDialog(_selectedDate),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              size: 16, color: AppTheme.accentCoral),
+                          icon: Icon(Icons.delete_outline,
+                              size: 16, color: AppTheme.of(context).coral),
                           tooltip: 'Delete Note',
                           onPressed: () => _deleteDateNote(_selectedDate),
                         ),
@@ -276,11 +276,11 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: () => _showDateNoteDialog(_selectedDate),
-                  icon: const Icon(Icons.note_add_outlined,
-                      size: 16, color: AppTheme.accentAmber),
-                  label: const Text('Add note for this day',
+                  icon: Icon(Icons.note_add_outlined,
+                      size: 16, color: AppTheme.of(context).amber),
+                  label: Text('Add note for this day',
                       style: TextStyle(
-                          fontSize: 12, color: AppTheme.accentAmber)),
+                          fontSize: 12, color: AppTheme.of(context).amber)),
                 ),
               ),
             ),
@@ -310,8 +310,8 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
+                          ? AppTheme.of(context).textSecondary
+                          : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -337,18 +337,18 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                               context.push('/projects/${project.id}'),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.precision_manufacturing_outlined,
                                 size: 14,
-                                color: AppTheme.primaryCyan,
+                                color: AppTheme.of(context).primary,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 project.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryCyan,
+                                  color: AppTheme.of(context).primary,
                                   decoration: TextDecoration.underline,
                                 ),
                               ),
@@ -358,7 +358,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                         if (project.machine.isNotEmpty)
                           ExpressiveBadge(
                             label: project.machine,
-                            color: AppTheme.accentAmber,
+                            color: AppTheme.of(context).amber,
                             fontSize: 10,
                           ),
                       ],
@@ -370,7 +370,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                       children: [
                         Checkbox(
                           value: task.isCompleted,
-                          activeColor: AppTheme.accentEmerald,
+                          activeColor: AppTheme.of(context).emerald,
                           onChanged: (_) {
                             notifier.toggleTask(project.id, task.id);
                           },
@@ -394,7 +394,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                                 const SizedBox(height: 4),
                                 ExpressiveBadge(
                                   label: '⏳ ${task.pendingReason}',
-                                  color: AppTheme.accentCoral,
+                                  color: AppTheme.of(context).coral,
                                   fontSize: 10,
                                 ),
                               ],
@@ -414,7 +414,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text('History — ${DateFormat('MMM d').format(_selectedDate)}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryCyan)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.of(context).primary)),
             ),
             const SizedBox(height: 6),
             ...history.map((h) => Padding(
@@ -433,7 +433,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(children: [
-              const Expanded(child: Text('Machine Downtime', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.accentCoral))),
+              Expanded(child: Text('Machine Downtime', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.of(context).coral))),
               TextButton.icon(
                 onPressed: () => _showDowntimeDialog(_selectedDate),
                 icon: const Icon(Icons.add, size: 16),
@@ -456,16 +456,16 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppTheme.accentCoral.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: AppTheme.of(context).coral.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
                   child: Row(children: [
-                    const Icon(Icons.build_circle_outlined, size: 16, color: AppTheme.accentCoral),
+                    Icon(Icons.build_circle_outlined, size: 16, color: AppTheme.of(context).coral),
                     const SizedBox(width: 8),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${d.title}  •  ${d.machine}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       if (d.timeRange.isNotEmpty) Text(d.timeRange, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     ])),
                     IconButton(icon: const Icon(Icons.edit_outlined, size: 16), onPressed: () => _showDowntimeDialog(_selectedDate, existing: d), tooltip: 'Edit'),
-                    IconButton(icon: const Icon(Icons.delete_outline, size: 16, color: AppTheme.accentCoral), onPressed: () => ref.read(projectProvider.notifier).deleteDowntime(d.id), tooltip: 'Delete'),
+                    IconButton(icon: Icon(Icons.delete_outline, size: 16, color: AppTheme.of(context).coral), onPressed: () => ref.read(projectProvider.notifier).deleteDowntime(d.id), tooltip: 'Delete'),
                   ]),
                 ),
               ),
@@ -608,7 +608,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
           const SizedBox(height: 4),
           Text('Actions like adding/completing tasks, orders, and notes will show here.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+              style: TextStyle(fontSize: 12, color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
         ]),
       );
     }
@@ -628,7 +628,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               const SizedBox(height: 2),
               Text(l.text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3)),
               if (l.projectTitle != null)
-                Text('• ${l.projectTitle}', style: const TextStyle(fontSize: 11, color: AppTheme.primaryCyan)),
+                Text('• ${l.projectTitle}', style: TextStyle(fontSize: 11, color: AppTheme.of(context).primary)),
             ])),
           ]),
         );
@@ -686,19 +686,19 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppTheme.primaryCyan.withValues(alpha: 0.25)
+                  ? AppTheme.of(context).primary.withValues(alpha: 0.25)
                   : isToday
-                      ? AppTheme.accentAmber.withValues(alpha: 0.15)
+                      ? AppTheme.of(context).amber.withValues(alpha: 0.15)
                       : (isDark
-                          ? AppTheme.darkSurface
-                          : AppTheme.lightSurface),
+                          ? AppTheme.of(context).surface
+                          : AppTheme.of(context).surface),
               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(
                 color: isSelected
-                    ? AppTheme.primaryCyan
+                    ? AppTheme.of(context).primary
                     : isToday
-                        ? AppTheme.accentAmber
-                        : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                        ? AppTheme.of(context).amber
+                        : (isDark ? AppTheme.of(context).border : AppTheme.of(context).border),
                 width: isSelected ? 1.5 : 0.8,
               ),
             ),
@@ -713,13 +713,13 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                         ? FontWeight.w900
                         : FontWeight.bold,
                     color: isSelected
-                        ? AppTheme.primaryCyan
+                        ? AppTheme.of(context).primary
                         : (isDark ? Colors.white : Colors.black87),
                   ),
                 ),
                 if (hasDowntime) ...[
                   const SizedBox(height: 2),
-                  Container(width: 12, height: 3, decoration: BoxDecoration(color: AppTheme.accentCoral, borderRadius: BorderRadius.circular(2))),
+                  Container(width: 12, height: 3, decoration: BoxDecoration(color: AppTheme.of(context).coral, borderRadius: BorderRadius.circular(2))),
                 ],
                 if (tasksOnDay.isNotEmpty || hasNote) ...[
                   const SizedBox(height: 2),
@@ -732,15 +732,15 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                           height: 6,
                           decoration: BoxDecoration(
                             color: hasIncomplete
-                                ? AppTheme.accentCoral
-                                : AppTheme.accentEmerald,
+                                ? AppTheme.of(context).coral
+                                : AppTheme.of(context).emerald,
                             shape: BoxShape.circle,
                           ),
                         ),
                       if (hasNote) ...[
                         const SizedBox(width: 3),
-                        const Icon(Icons.sticky_note_2_outlined,
-                            size: 10, color: AppTheme.accentAmber),
+                        Icon(Icons.sticky_note_2_outlined,
+                            size: 10, color: AppTheme.of(context).amber),
                       ],
                     ],
                   ),
@@ -855,7 +855,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentCoral),
+                backgroundColor: AppTheme.of(context).coral),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),

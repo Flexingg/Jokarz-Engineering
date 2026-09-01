@@ -36,14 +36,14 @@ class _BearingLubeViewState extends State<BearingLubeView> {
       padding: const EdgeInsets.all(16),
       children: [
         Text('Regrease Volume Calculator',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
         const SizedBox(height: 4),
         Text('Approx. grease per regrease = 0.114 × OD × width (ounces). '
             'Fill the housing cavity about 1/3 to 1/2 full.',
             style: TextStyle(
                 fontSize: 12,
                 height: 1.4,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
         const SizedBox(height: 14),
         Row(children: [
           Expanded(
@@ -66,7 +66,7 @@ class _BearingLubeViewState extends State<BearingLubeView> {
         ]),
         const SizedBox(height: 14),
         Card(
-          color: AppTheme.accentAmber.withValues(alpha: 0.12),
+          color: AppTheme.of(context).amber.withValues(alpha: 0.12),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(children: [
@@ -74,7 +74,7 @@ class _BearingLubeViewState extends State<BearingLubeView> {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                      color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
               const SizedBox(height: 4),
               Text('${_oz.toStringAsFixed(2)} oz  (${(_oz * 28.35).toStringAsFixed(1)} g)',
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
@@ -83,7 +83,7 @@ class _BearingLubeViewState extends State<BearingLubeView> {
         ),
         const SizedBox(height: 20),
         Text('Recommended Regreasing Frequency (ball bearings)',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary)),
         const SizedBox(height: 8),
         _freqTable(isDark),
       ],
@@ -114,7 +114,7 @@ class _BearingLubeViewState extends State<BearingLubeView> {
                   Text(freq,
                       style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
                 ],
               ),
             ),
@@ -125,7 +125,7 @@ class _BearingLubeViewState extends State<BearingLubeView> {
               'Intervals assume clean, dry environment and moderate load. '
               'Consult OEM/manufacturer for severe duty, high temp, or vibration.',
               style: TextStyle(fontSize: 10.5, height: 1.3,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
             ),
           ),
         ]),

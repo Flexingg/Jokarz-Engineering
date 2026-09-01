@@ -60,8 +60,8 @@ class _GreaseDictionaryViewState extends State<GreaseDictionaryView> {
                               fontSize: 12.5,
                               height: 1.4,
                               color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary)),
+                                  ? AppTheme.of(context).textSecondary
+                                  : AppTheme.of(context).textSecondary)),
                     ],
                   ),
                 ),

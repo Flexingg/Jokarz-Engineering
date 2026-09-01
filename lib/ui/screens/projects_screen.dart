@@ -34,17 +34,17 @@ class ProjectsScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
+            icon: Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Maintenance Task Calendar',
             onPressed: () => context.push('/calendar'),
           ),
           IconButton(
-            icon: const Icon(Icons.queue_play_next_rounded, color: AppTheme.accentEmerald),
+            icon: Icon(Icons.queue_play_next_rounded, color: AppTheme.of(context).emerald),
             tooltip: 'What\'s Next? Priority Queue',
             onPressed: () => context.push('/projects/queue'),
           ),
           IconButton(
-            icon: const Icon(Icons.print_rounded, color: AppTheme.accentAmber),
+            icon: Icon(Icons.print_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Daily Walk-Around Report',
             onPressed: () => context.push('/report'),
           ),
@@ -147,7 +147,7 @@ class ProjectsScreen extends ConsumerWidget {
                               : 'Tap + to create a new project',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -161,7 +161,7 @@ class ProjectsScreen extends ConsumerWidget {
                             icon: const Icon(Icons.add_rounded),
                             label: Text('Create "${state.searchQuery}"'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryCyan,
+                              backgroundColor: AppTheme.of(context).primary,
                               foregroundColor: Colors.white,
                             ),
                           )
@@ -243,26 +243,26 @@ class _ProjectCard extends ConsumerWidget {
                 ExpressiveBadge(
                   label: '#${project.priority}',
                   color: project.priority == 1
-                      ? AppTheme.accentCoral
+                      ? AppTheme.of(context).coral
                       : (project.priority <= 3
-                          ? AppTheme.accentAmber
-                          : AppTheme.primaryCyan),
+                          ? AppTheme.of(context).amber
+                          : AppTheme.of(context).primary),
                   fontSize: 11,
                 ),
               const SizedBox(width: 6),
               ExpressiveBadge(
                 label: project.category.label,
-                color: AppTheme.primaryCyan,
+                color: AppTheme.of(context).primary,
                 fontSize: 10,
               ),
               const SizedBox(width: 6),
               ExpressiveBadge(
                 label: project.phase,
                 color: project.phase.toLowerCase() == 'complete'
-                    ? AppTheme.accentEmerald
+                    ? AppTheme.of(context).emerald
                     : (project.phase.toLowerCase() == 'cancelled'
-                        ? AppTheme.accentCoral
-                        : AppTheme.accentAmber),
+                        ? AppTheme.of(context).coral
+                        : AppTheme.of(context).amber),
                 isOutlined: true,
                 fontSize: 10,
               ),
@@ -308,9 +308,9 @@ class _ProjectCard extends ConsumerWidget {
                   ...project.machineList.map((m) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryCyan.withValues(alpha: 0.1),
+                      color: AppTheme.of(context).primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.primaryCyan.withValues(alpha: 0.4), width: 0.6),
+                      border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.4), width: 0.6),
                     ),
                     child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
                   )),
@@ -334,7 +334,7 @@ class _ProjectCard extends ConsumerWidget {
                     color: project.daysSinceLastAction >= 7
                         ? Colors.red.shade400
                         : project.daysSinceLastAction >= 3
-                            ? AppTheme.accentAmber
+                            ? AppTheme.of(context).amber
                             : Colors.grey,
                   ),
                   const SizedBox(width: 4),
@@ -347,7 +347,7 @@ class _ProjectCard extends ConsumerWidget {
                       color: project.daysSinceLastAction >= 7
                           ? Colors.red.shade400
                           : project.daysSinceLastAction >= 3
-                              ? AppTheme.accentAmber
+                              ? AppTheme.of(context).amber
                               : Colors.grey,
                     ),
                   ),
@@ -361,20 +361,20 @@ class _ProjectCard extends ConsumerWidget {
               margin: const EdgeInsets.symmetric(vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.accentAmber.withValues(alpha: 0.12),
+                color: AppTheme.of(context).amber.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.pending_actions_rounded, size: 14, color: AppTheme.accentAmber),
+                  Icon(Icons.pending_actions_rounded, size: 14, color: AppTheme.of(context).amber),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Next: ${nextTask.description}${nextTask.pendingReason.isNotEmpty ? " • ${nextTask.pendingReason}" : ""}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.accentAmber,
+                        color: AppTheme.of(context).amber,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -395,7 +395,7 @@ class _ProjectCard extends ConsumerWidget {
                 '${project.completedTasksCount}/${project.tasks.length} Tasks',
                 style: TextStyle(
                   fontSize: 11,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -407,7 +407,7 @@ class _ProjectCard extends ConsumerWidget {
                   '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -418,9 +418,9 @@ class _ProjectCard extends ConsumerWidget {
               if (project.completedAt != null)
                 Text(
                   'Closed ${dateFormat.format(project.completedAt!)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppTheme.accentEmerald,
+                    color: AppTheme.of(context).emerald,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

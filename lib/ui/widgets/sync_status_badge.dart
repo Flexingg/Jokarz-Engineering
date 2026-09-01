@@ -21,28 +21,28 @@ class SyncStatusBadge extends ConsumerWidget {
 
     if (user == null) {
       label = 'Local Only';
-      color = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+      color = isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary;
       icon = Icons.cloud_off_rounded;
     } else {
       switch (syncState.status) {
         case SyncStatus.synced:
           label = 'Cloud Synced';
-          color = AppTheme.accentEmerald;
+          color = AppTheme.of(context).emerald;
           icon = Icons.cloud_done_rounded;
           break;
         case SyncStatus.syncing:
           label = 'Syncing...';
-          color = AppTheme.accentAmber;
+          color = AppTheme.of(context).amber;
           icon = Icons.sync_rounded;
           break;
         case SyncStatus.offline:
           label = 'Offline Cache';
-          color = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+          color = isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary;
           icon = Icons.cloud_queue_rounded;
           break;
         case SyncStatus.error:
           label = 'Sync Issue';
-          color = AppTheme.accentCoral;
+          color = AppTheme.of(context).coral;
           icon = Icons.cloud_off_rounded;
           break;
       }
@@ -58,7 +58,7 @@ class SyncStatusBadge extends ConsumerWidget {
               CircleAvatar(
                 radius: 14,
                 backgroundImage: NetworkImage(user!.photoURL!),
-                backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+                backgroundColor: isDark ? AppTheme.of(context).surfaceCard : AppTheme.of(context).surfaceCard,
               )
             else
               Icon(

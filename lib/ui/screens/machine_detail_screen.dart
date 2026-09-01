@@ -71,7 +71,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
             },
 
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentCoral,
+              backgroundColor: AppTheme.of(context).coral,
               foregroundColor: Colors.white,
             ),
             child: const Text('Log Downtime'),
@@ -100,17 +100,17 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
 
     switch (asset.status) {
       case MachineStatus.breakdown:
-        statusColor = AppTheme.accentCoral;
+        statusColor = AppTheme.of(context).coral;
         statusLabel = 'BREAKDOWN / DOWN';
         statusIcon = Icons.warning_rounded;
         break;
       case MachineStatus.inMaintenance:
-        statusColor = AppTheme.accentAmber;
+        statusColor = AppTheme.of(context).amber;
         statusLabel = 'IN MAINTENANCE';
         statusIcon = Icons.build_rounded;
         break;
       case MachineStatus.operational:
-        statusColor = AppTheme.accentEmerald;
+        statusColor = AppTheme.of(context).emerald;
         statusLabel = 'OPERATIONAL';
         statusIcon = Icons.check_circle_rounded;
         break;
@@ -124,12 +124,12 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_alert_rounded, color: AppTheme.accentCoral),
+            icon: Icon(Icons.add_alert_rounded, color: AppTheme.of(context).coral),
             tooltip: 'Log Downtime',
             onPressed: () => _showAddDowntimeDialog(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primaryCyan),
+            icon: Icon(Icons.add_rounded, color: AppTheme.of(context).primary),
             tooltip: 'New Project on Machine',
             onPressed: () => context.push('/projects/new', extra: {
               'initialTitle': '${widget.machineName} - ',
@@ -153,7 +153,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
           // Machine Status & Summary Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: isDark ? AppTheme.darkSurfaceVariant : AppTheme.lightSurfaceVariant,
+            color: isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -202,7 +202,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                     children: [
                                       ExpressiveBadge(
                                         label: '#${p.priority}',
-                                        color: AppTheme.primaryCyan,
+                                        color: AppTheme.of(context).primary,
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
@@ -231,7 +231,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                   onTap: () => context.push('/projects/${p.id}'),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.check_circle_rounded, color: AppTheme.accentEmerald, size: 18),
+                                      Icon(Icons.check_circle_rounded, color: AppTheme.of(context).emerald, size: 18),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -282,15 +282,15 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                   spacing: 6,
                                   children: [
                                     if (o.po.isNotEmpty)
-                                      ExpressiveBadge(label: 'PO: ${o.po}', color: AppTheme.primaryCyan, fontSize: 10),
+                                      ExpressiveBadge(label: 'PO: ${o.po}', color: AppTheme.of(context).primary, fontSize: 10),
                                     if (o.pr.isNotEmpty)
                                       ExpressiveBadge(label: 'PR: ${o.pr}', color: Colors.grey, fontSize: 10),
                                     if (o.vendorName.isNotEmpty)
-                                      ExpressiveBadge(label: o.vendorName, color: AppTheme.accentAmber, fontSize: 10),
+                                      ExpressiveBadge(label: o.vendorName, color: AppTheme.of(context).amber, fontSize: 10),
                                     if (o.eta != null)
                                       ExpressiveBadge(
                                         label: 'ETA: ${dateFormat.format(o.eta!)}',
-                                        color: o.delivered ? AppTheme.accentEmerald : AppTheme.accentAmber,
+                                        color: o.delivered ? AppTheme.of(context).emerald : AppTheme.of(context).amber,
                                         fontSize: 10,
                                       ),
                                   ],
@@ -313,9 +313,9 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                             margin: const EdgeInsets.only(bottom: 8),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.report_problem_rounded,
-                                  color: AppTheme.accentCoral,
+                                  color: AppTheme.of(context).coral,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

@@ -71,7 +71,7 @@ class JapaneseTranslateView extends StatelessWidget {
           // Camera Direct Launcher Hero Card
           ExpressiveCard(
             isGlowing: true,
-            glowColor: AppTheme.accentCoral,
+            glowColor: AppTheme.of(context).coral,
             padding: const EdgeInsets.all(18),
             child: Column(
               children: [
@@ -80,10 +80,10 @@ class JapaneseTranslateView extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentCoral.withValues(alpha: 0.15),
+                        color: AppTheme.of(context).coral.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
-                      child: const Icon(Icons.camera_alt_rounded, color: AppTheme.accentCoral, size: 36),
+                      child: Icon(Icons.camera_alt_rounded, color: AppTheme.of(context).coral, size: 36),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -105,7 +105,7 @@ class JapaneseTranslateView extends StatelessWidget {
                             'Scan Japanese electrical cabinets, PLC schematics, touch panels, and machine drawings directly with live camera translation.',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                              color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                             ),
                           ),
                         ],
@@ -120,7 +120,7 @@ class JapaneseTranslateView extends StatelessWidget {
                       flex: 2,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentCoral,
+                          backgroundColor: AppTheme.of(context).coral,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 4,
@@ -149,14 +149,14 @@ class JapaneseTranslateView extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Common Plant Vocabulary Reference Header
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'FACTORY FLOOR JAPANESE REFERENCE',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.1),
               ),
-              ExpressiveBadge(label: 'Manufacturing Terms', color: AppTheme.primaryCyan, fontSize: 10),
+              ExpressiveBadge(label: 'Manufacturing Terms', color: AppTheme.of(context).primary, fontSize: 10),
             ],
           ),
           const SizedBox(height: 10),
@@ -172,9 +172,9 @@ class JapaneseTranslateView extends StatelessWidget {
                     width: 90,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentCoral.withValues(alpha: 0.1),
+                      color: AppTheme.of(context).coral.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      border: Border.all(color: AppTheme.accentCoral.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppTheme.of(context).coral.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       phrase.kanji,
@@ -195,7 +195,7 @@ class JapaneseTranslateView extends StatelessWidget {
                           '${phrase.romaji} • ${phrase.category}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                           ),
                         ),
                       ],

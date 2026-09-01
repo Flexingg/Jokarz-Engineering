@@ -126,7 +126,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppTheme.accentEmerald,
+          backgroundColor: AppTheme.of(context).emerald,
         ),
       );
     }
@@ -145,10 +145,10 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
       child: Container(
         padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+          color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
           border: Border.all(
-            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+            color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
             width: 1,
           ),
         ),
@@ -175,10 +175,10 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentAmber.withValues(alpha: 0.15),
+                    color: AppTheme.of(context).amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
-                  child: const Icon(Icons.mic, color: AppTheme.accentAmber, size: 24),
+                  child: Icon(Icons.mic, color: AppTheme.of(context).amber, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -193,7 +193,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                         'Hands-free speech dictation for lab & workbench notes',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -257,7 +257,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
               onChanged: (v) => setState(() => _splitIntoTasks = v ?? false),
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              activeColor: AppTheme.accentEmerald,
+              activeColor: AppTheme.of(context).emerald,
               title: const Text('Split dictation into tasks',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               subtitle: const Text(
@@ -281,18 +281,18 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _isRecording
-                              ? AppTheme.accentCoral
-                              : (isDark ? AppTheme.darkSurfaceHighlight : AppTheme.lightSurfaceHighlight),
+                              ? AppTheme.of(context).coral
+                              : (isDark ? AppTheme.of(context).surfaceHighlight : AppTheme.of(context).surfaceHighlight),
                           border: Border.all(
                             color: _isRecording
-                                ? AppTheme.accentCoral
-                                : AppTheme.primaryCyan,
+                                ? AppTheme.of(context).coral
+                                : AppTheme.of(context).primary,
                             width: 2,
                           ),
                           boxShadow: _isRecording
                               ? [
                                   BoxShadow(
-                                    color: AppTheme.accentCoral.withValues(
+                                    color: AppTheme.of(context).coral.withValues(
                                       alpha: 0.2 + (_animController.value * 0.4),
                                     ),
                                     blurRadius: 18 * _animController.value + 4,
@@ -303,7 +303,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                         ),
                         child: Icon(
                           _isRecording ? Icons.stop : Icons.mic,
-                          color: _isRecording ? Colors.white : AppTheme.primaryCyan,
+                          color: _isRecording ? Colors.white : AppTheme.of(context).primary,
                           size: 26,
                         ),
                       );
