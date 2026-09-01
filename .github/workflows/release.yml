@@ -1,0 +1,138 @@
+name: Build & Release
+
+# Builds the Android APK and Windows desktop app, runs the test/analyze gate,
+# then publishes a downloadable GitHub Release with both artifacts.
+#
+# Trigger it one of two ways:
+#   • Push a tag matching v* (e.g. `git tag v1.0.9 && git push origin v1.0.9`).
+#     The version is taken from the tag; the release is created for that tag.
+#   • GitHub → Actions → "Build & Release" → "Run workflow" → enter a version
+#     (e.g. v1.0.9). A release is created/updated at that tag.
+#
+# Artifacts match the README download links:
+#   jokarz-engineering-<version>.apk
+#   jokarz-engineering-windows-<version>.zip
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. v1.0.9'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # Resolve the release version once and share it with every job.
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ github.event.inputs.version }}"
+          else
+            VER="${GITHUB_REF_NAME}"
+          fi
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyze
+        # --no-fatal-infos so the repo's existing deprecation infos don't block
+        # releases; errors and warnings still fail the build.
+        run: flutter analyze --no-fatal-infos
+      - name: Test
+        run: flutter test
+
+  build-android:
+    name: Build Android APK
+    needs: [version, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Stage APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "dist/jokarz-engineering-${{ needs.version.outputs.version }}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/*.apk
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows app
+    needs: [version, test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build Windows release
+        run: flutter build windows --release
+      - name: Package Windows zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build/windows/x64/runner/Release/* `
+            -DestinationPath "dist/jokarz-engineering-windows-${{ needs.version.outputs.version }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [version, build-android, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -la artifacts
+      - name: Create/Update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.version }}
+          name: ${{ needs.version.outputs.version }}
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
