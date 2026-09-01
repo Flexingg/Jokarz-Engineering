@@ -8,6 +8,9 @@ import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
 import '../models/activity_log.dart';
 import '../models/downtime_event.dart';
+import '../models/inbox_item.dart';
+import '../models/vendor.dart';
+import '../models/project_template.dart';
 
 class StorageService {
   static const String _downtimesFile = 'jokarz_downtimes.json';
@@ -28,12 +31,20 @@ class StorageService {
           voiceNotes: initialData.voiceNotes,
           customFilaments: initialData.filaments,
           standaloneOrders: initialData.standaloneOrders,
+          inboxItems: initialData.inboxItems,
+          vendors: initialData.vendors,
+          customTemplates: initialData.customTemplates,
+          snoozedProjects: initialData.snoozedProjects,
         );
         return {
           'projects': initialData.projects,
           'voiceNotes': initialData.voiceNotes,
           'filaments': initialData.filaments,
           'standaloneOrders': initialData.standaloneOrders,
+          'inboxItems': initialData.inboxItems,
+          'vendors': initialData.vendors,
+          'customTemplates': initialData.customTemplates,
+          'snoozedProjects': initialData.snoozedProjects,
         };
       }
 
@@ -45,6 +56,10 @@ class StorageService {
           'voiceNotes': initialData.voiceNotes,
           'filaments': initialData.filaments,
           'standaloneOrders': initialData.standaloneOrders,
+          'inboxItems': initialData.inboxItems,
+          'vendors': initialData.vendors,
+          'customTemplates': initialData.customTemplates,
+          'snoozedProjects': initialData.snoozedProjects,
         };
       }
 
@@ -65,11 +80,34 @@ class StorageService {
               .toList() ??
           [];
 
+      final inboxItems = (jsonMap['inboxItems'] as List<dynamic>?)
+              ?.map((e) => InboxItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      final vendors = (jsonMap['vendors'] as List<dynamic>?)
+              ?.map((e) => Vendor.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      final customTemplates = (jsonMap['customTemplates'] as List<dynamic>?)
+              ?.map((e) => ProjectTemplate.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      final snoozedProjects = (jsonMap['snoozedProjects'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v.toString())) ??
+          <String, String>{};
+
       return {
         'projects': projects,
         'voiceNotes': voiceNotes,
         'filaments': FilamentProfile.defaultProfiles,
         'standaloneOrders': standaloneOrders,
+        'inboxItems': inboxItems,
+        'vendors': vendors,
+        'customTemplates': customTemplates,
+        'snoozedProjects': snoozedProjects,
       };
     } catch (e, stack) {
       debugPrint('Error loading storage data: $e\n$stack');
@@ -79,6 +117,10 @@ class StorageService {
         'voiceNotes': initialData.voiceNotes,
         'filaments': initialData.filaments,
         'standaloneOrders': initialData.standaloneOrders,
+        'inboxItems': initialData.inboxItems,
+        'vendors': initialData.vendors,
+        'customTemplates': initialData.customTemplates,
+        'snoozedProjects': initialData.snoozedProjects,
       };
     }
   }
@@ -214,15 +256,23 @@ class StorageService {
     required List<VoiceNote> voiceNotes,
     required List<FilamentProfile> customFilaments,
     List<StandaloneOrder> standaloneOrders = const [],
+    List<InboxItem> inboxItems = const [],
+    List<Vendor> vendors = const [],
+    List<ProjectTemplate> customTemplates = const [],
+    Map<String, String> snoozedProjects = const {},
   }) async {
     try {
       final file = await _getFile();
       final data = {
-        'version': 4,
+        'version': 5,
         'updatedAt': DateTime.now().toIso8601String(),
         'projects': projects.map((e) => e.toJson()).toList(),
         'voiceNotes': voiceNotes.map((e) => e.toJson()).toList(),
         'standaloneOrders': standaloneOrders.map((e) => e.toJson()).toList(),
+        'inboxItems': inboxItems.map((e) => e.toJson()).toList(),
+        'vendors': vendors.map((e) => e.toJson()).toList(),
+        'customTemplates': customTemplates.map((e) => e.toJson()).toList(),
+        'snoozedProjects': snoozedProjects,
       };
       await file.writeAsString(jsonEncode(data), flush: true);
     } catch (e) {
@@ -230,12 +280,26 @@ class StorageService {
     }
   }
 
-  ({List<Project> projects, List<VoiceNote> voiceNotes, List<FilamentProfile> filaments, List<StandaloneOrder> standaloneOrders}) _generateBlankData() {
+  ({
+    List<Project> projects,
+    List<VoiceNote> voiceNotes,
+    List<FilamentProfile> filaments,
+    List<StandaloneOrder> standaloneOrders,
+    List<InboxItem> inboxItems,
+    List<Vendor> vendors,
+    List<ProjectTemplate> customTemplates,
+    Map<String, String> snoozedProjects,
+  }) _generateBlankData() {
     return (
       projects: <Project>[],
       voiceNotes: <VoiceNote>[],
       filaments: FilamentProfile.defaultProfiles,
       standaloneOrders: <StandaloneOrder>[],
+      inboxItems: <InboxItem>[],
+      vendors: <Vendor>[],
+      customTemplates: <ProjectTemplate>[],
+      snoozedProjects: <String, String>{},
     );
   }
 }
+

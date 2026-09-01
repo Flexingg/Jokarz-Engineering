@@ -14,6 +14,10 @@ class OrderItem {
   final bool storeRequested;
   /// The storeroom request / requisition number.
   final String storeRequestNumber;
+  final String? vendorId;
+  final String vendorName;
+  final String vendorQuoteNumber;
+  final String trackingUrl;
 
   OrderItem({
     String? id,
@@ -26,6 +30,10 @@ class OrderItem {
     this.addToStores = false,
     this.storeRequested = false,
     this.storeRequestNumber = '',
+    this.vendorId,
+    this.vendorName = '',
+    this.vendorQuoteNumber = '',
+    this.trackingUrl = '',
   }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
 
   OrderItem copyWith({
@@ -39,6 +47,11 @@ class OrderItem {
     bool? addToStores,
     bool? storeRequested,
     String? storeRequestNumber,
+    String? vendorId,
+    bool clearVendorId = false,
+    String? vendorName,
+    String? vendorQuoteNumber,
+    String? trackingUrl,
   }) {
     return OrderItem(
       id: id,
@@ -52,6 +65,10 @@ class OrderItem {
       storeRequested: storeRequested ?? this.storeRequested,
       storeRequestNumber:
           storeRequestNumber ?? this.storeRequestNumber,
+      vendorId: clearVendorId ? null : (vendorId ?? this.vendorId),
+      vendorName: vendorName ?? this.vendorName,
+      vendorQuoteNumber: vendorQuoteNumber ?? this.vendorQuoteNumber,
+      trackingUrl: trackingUrl ?? this.trackingUrl,
     );
   }
 
@@ -67,6 +84,10 @@ class OrderItem {
       'addToStores': addToStores,
       'storeRequested': storeRequested,
       'storeRequestNumber': storeRequestNumber,
+      'vendorId': vendorId,
+      'vendorName': vendorName,
+      'vendorQuoteNumber': vendorQuoteNumber,
+      'trackingUrl': trackingUrl,
     };
   }
 
@@ -82,6 +103,10 @@ class OrderItem {
       addToStores: json['addToStores'] as bool? ?? false,
       storeRequested: json['storeRequested'] as bool? ?? false,
       storeRequestNumber: json['storeRequestNumber'] as String? ?? '',
+      vendorId: json['vendorId'] as String?,
+      vendorName: json['vendorName'] as String? ?? '',
+      vendorQuoteNumber: json['vendorQuoteNumber'] as String? ?? '',
+      trackingUrl: json['trackingUrl'] as String? ?? '',
     );
   }
 }

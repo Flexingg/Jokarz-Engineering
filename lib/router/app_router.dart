@@ -14,6 +14,10 @@ import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
 import '../ui/screens/search_screen.dart';
 import '../ui/screens/photo_note_editor_screen.dart';
+import '../ui/screens/inbox_screen.dart';
+import '../ui/screens/vendors_screen.dart';
+import '../ui/screens/machines_screen.dart';
+import '../ui/screens/machine_detail_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -160,8 +164,40 @@ final appRouter = GoRouter(
         ),
       ),
     ),
+    GoRoute(
+      path: '/inbox',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: InboxScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/vendors',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: VendorsScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/machines',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: MachinesScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: ':name',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final name = Uri.decodeComponent(state.pathParameters['name']!);
+            return MachineDetailScreen(machineName: name);
+          },
+        ),
+      ],
+    ),
   ],
 );
+
 
 /// The root navigator's BuildContext, used by global shortcuts to show dialogs.
 BuildContext? get appRootContext => _rootNavigatorKey.currentContext;

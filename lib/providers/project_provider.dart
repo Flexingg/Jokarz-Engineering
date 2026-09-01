@@ -10,6 +10,10 @@ import '../models/activity_log.dart';
 import '../models/downtime_event.dart';
 import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
+import '../models/inbox_item.dart';
+import '../models/vendor.dart';
+import '../models/project_template.dart';
+import '../models/machine_asset.dart';
 import '../models/search_result.dart';
 import '../services/storage_service.dart';
 
@@ -29,6 +33,10 @@ class EngineeringState {
   final List<VoiceNote> voiceNotes;
   final List<FilamentProfile> filaments;
   final List<StandaloneOrder> standaloneOrders;
+  final List<InboxItem> inboxItems;
+  final List<Vendor> vendors;
+  final List<ProjectTemplate> customTemplates;
+  final Map<String, String> snoozedProjects;
   final List<ActivityLog> activityLog;
   final List<DowntimeEvent> downtimes;
   final bool isLoading;
@@ -42,6 +50,10 @@ class EngineeringState {
     this.voiceNotes = const [],
     this.filaments = const [],
     this.standaloneOrders = const [],
+    this.inboxItems = const [],
+    this.vendors = const [],
+    this.customTemplates = const [],
+    this.snoozedProjects = const {},
     this.activityLog = const [],
     this.downtimes = const [],
     this.isLoading = true,
@@ -103,10 +115,19 @@ class EngineeringState {
     return list;
   }
 
+  static String get todayString {
+    final now = DateTime.now();
+    return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+  }
+
   /// Returns active projects sorted by "needs attention" score (highest first).
   /// Score = daysSinceLastAction / priority  →  low priority + long ignored = top of queue.
+  /// Projects snoozed for today are excluded.
   List<Project> get queuedProjects {
-    final active = activeProjects; // already sorted by priority
+    final today = todayString;
+    final active = activeProjects
+        .where((p) => snoozedProjects[p.id] != today)
+        .toList();
     final scored = active.map((p) {
       final days = p.daysSinceLastAction.toDouble();
       final score = days / p.priority.toDouble();
@@ -114,6 +135,77 @@ class EngineeringState {
     }).toList()
       ..sort((a, b) => b.score.compareTo(a.score));
     return scored.map((s) => s.project).toList();
+  }
+
+  List<InboxItem> get unprocessedInboxItems =>
+      inboxItems.where((i) => !i.isProcessed).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  int get unprocessedInboxCount => unprocessedInboxItems.length;
+
+  List<ProjectTemplate> get allTemplates =>
+      [...ProjectTemplate.systemTemplates, ...customTemplates];
+
+  List<MachineAsset> get machineAssets {
+    final machines = availableMachines;
+    final assets = <MachineAsset>[];
+
+    for (final m in machines) {
+      final mLower = m.toLowerCase();
+
+      final mActiveProjects = projects.where((p) =>
+          !p.isCompletedOrCancelled &&
+          (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+              p.machine.toLowerCase() == mLower)).toList();
+
+      final mCompletedProjects = projects.where((p) =>
+          p.isCompletedOrCancelled &&
+          (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+              p.machine.toLowerCase() == mLower)).toList();
+
+      final mOrders = <MachineOrderEntry>[];
+      for (final p in projects) {
+        if (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+            p.machine.toLowerCase() == mLower) {
+          for (final o in p.orders) {
+            mOrders.add(MachineOrderEntry(project: p, order: o));
+          }
+        }
+      }
+      for (final so in standaloneOrders) {
+        if (so.notes.toLowerCase().contains(mLower) ||
+            so.description.toLowerCase().contains(mLower)) {
+          mOrders.add(MachineOrderEntry(standaloneOrder: so));
+        }
+      }
+
+      final mDowntimes = downtimes.where((d) =>
+          d.machine.toLowerCase() == mLower ||
+          d.machine.split('/').any((dm) => dm.trim().toLowerCase() == mLower)).toList();
+
+      final mNotes = voiceNotes.where((n) {
+        if (n.title.toLowerCase().contains(mLower) || n.transcript.toLowerCase().contains(mLower)) return true;
+        if (n.projectId != null) {
+          final p = projects.where((p) => p.id == n.projectId).firstOrNull;
+          if (p != null && (p.machineList.any((pm) => pm.toLowerCase() == mLower) || p.machine.toLowerCase() == mLower)) {
+            return true;
+          }
+        }
+        return false;
+      }).toList();
+
+      assets.add(MachineAsset(
+        name: m,
+        activeProjects: mActiveProjects,
+        completedProjects: mCompletedProjects,
+        openOrders: mOrders,
+        downtimes: mDowntimes,
+        notes: mNotes,
+        subAssemblies: availableSubAssembliesFor(m),
+      ));
+    }
+
+    return assets;
   }
 
   List<String> get availablePhases {
@@ -226,7 +318,8 @@ class EngineeringState {
         if (matches(o.description) ||
             matches(o.pr) ||
             matches(o.po) ||
-            matches(p.title)) {
+            matches(p.title) ||
+            matches(o.vendorName)) {
           orderHits.add(OrderSearchHit.fromOrder(o, p));
         }
       }
@@ -249,7 +342,10 @@ class EngineeringState {
     }
 
     for (final o in standaloneOrders) {
-      if (matches(o.description) || matches(o.pr) || matches(o.po)) {
+      if (matches(o.description) ||
+          matches(o.pr) ||
+          matches(o.po) ||
+          matches(o.vendorName)) {
         orderHits.add(OrderSearchHit(
           description: o.description,
           pr: o.pr,
@@ -295,6 +391,10 @@ class EngineeringState {
     List<VoiceNote>? voiceNotes,
     List<FilamentProfile>? filaments,
     List<StandaloneOrder>? standaloneOrders,
+    List<InboxItem>? inboxItems,
+    List<Vendor>? vendors,
+    List<ProjectTemplate>? customTemplates,
+    Map<String, String>? snoozedProjects,
     List<ActivityLog>? activityLog,
     List<DowntimeEvent>? downtimes,
     bool? isLoading,
@@ -311,6 +411,10 @@ class EngineeringState {
       voiceNotes: voiceNotes ?? this.voiceNotes,
       filaments: filaments ?? this.filaments,
       standaloneOrders: standaloneOrders ?? this.standaloneOrders,
+      inboxItems: inboxItems ?? this.inboxItems,
+      vendors: vendors ?? this.vendors,
+      customTemplates: customTemplates ?? this.customTemplates,
+      snoozedProjects: snoozedProjects ?? this.snoozedProjects,
       activityLog: activityLog ?? this.activityLog,
       downtimes: downtimes ?? this.downtimes,
       isLoading: isLoading ?? this.isLoading,
@@ -331,6 +435,7 @@ class _ScoredProject {
   const _ScoredProject(this.project, this.score);
 }
 
+
 class ProjectNotifier extends StateNotifier<EngineeringState> {
   final StorageService _storage;
 
@@ -344,11 +449,21 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     var loadedProjects = data['projects'] as List<Project>;
     loadedProjects = _rebalancePriorities(loadedProjects);
 
+    // Clean up expired snoozes from previous days
+    final today = EngineeringState.todayString;
+    final rawSnoozed = data['snoozedProjects'] as Map<String, String>? ?? {};
+    final validSnoozed = Map<String, String>.from(rawSnoozed)
+      ..removeWhere((key, dateStr) => dateStr != today);
+
     state = state.copyWith(
       projects: loadedProjects,
       voiceNotes: data['voiceNotes'] as List<VoiceNote>,
       filaments: data['filaments'] as List<FilamentProfile>,
       standaloneOrders: data['standaloneOrders'] as List<StandaloneOrder>? ?? [],
+      inboxItems: data['inboxItems'] as List<InboxItem>? ?? [],
+      vendors: data['vendors'] as List<Vendor>? ?? [],
+      customTemplates: data['customTemplates'] as List<ProjectTemplate>? ?? [],
+      snoozedProjects: validSnoozed,
       activityLog: await _storage.loadActivityLog(),
       downtimes: await _storage.loadDowntimes(),
       isLoading: false,
@@ -390,8 +505,244 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       voiceNotes: state.voiceNotes,
       customFilaments: state.filaments,
       standaloneOrders: state.standaloneOrders,
+      inboxItems: state.inboxItems,
+      vendors: state.vendors,
+      customTemplates: state.customTemplates,
+      snoozedProjects: state.snoozedProjects,
     );
   }
+
+  // --- Queue Snooze (Disk-persisted) ---
+  Future<void> snoozeProjectUntilTomorrow(String projectId) async {
+    final updated = Map<String, String>.from(state.snoozedProjects);
+    updated[projectId] = EngineeringState.todayString;
+    state = state.copyWith(snoozedProjects: updated);
+    await _persist();
+  }
+
+  Future<void> clearSnooze(String projectId) async {
+    final updated = Map<String, String>.from(state.snoozedProjects)..remove(projectId);
+    state = state.copyWith(snoozedProjects: updated);
+    await _persist();
+  }
+
+  // --- Quick-Capture Inbox Management & Triage ---
+  Future<void> addInboxItem(InboxItem item) async {
+    final updated = [item, ...state.inboxItems];
+    state = state.copyWith(inboxItems: updated);
+    await _log(ActivityType.noteAdded, 'Quick dump: ${item.text}');
+    await _persist();
+  }
+
+  Future<void> updateInboxItem(InboxItem item) async {
+    final updated = state.inboxItems.map((i) => i.id == item.id ? item : i).toList();
+    state = state.copyWith(inboxItems: updated);
+    await _persist();
+  }
+
+  Future<void> deleteInboxItem(String id) async {
+    final updated = state.inboxItems.where((i) => i.id != id).toList();
+    state = state.copyWith(inboxItems: updated);
+    await _persist();
+  }
+
+  Future<void> dismissInboxItem(String id) async {
+    final updated = state.inboxItems.map((i) {
+      if (i.id == id) return i.copyWith(isProcessed: true);
+      return i;
+    }).toList();
+    state = state.copyWith(inboxItems: updated);
+    await _persist();
+  }
+
+  /// Triage an inbox item directly into a task on an existing project.
+  Future<void> triageToTask(String inboxId, String projectId, {DateTime? scheduledDate}) async {
+    final inboxItem = state.inboxItems.where((i) => i.id == inboxId).firstOrNull;
+    if (inboxItem == null) return;
+
+    final task = TaskItem(
+      description: inboxItem.text,
+      scheduledDate: scheduledDate,
+    );
+    await addTask(projectId, task);
+    await dismissInboxItem(inboxId);
+  }
+
+  /// Triage an inbox item into a new standalone purchase order.
+  Future<void> triageToOrder(String inboxId, StandaloneOrder order) async {
+    await addStandaloneOrder(order);
+    await dismissInboxItem(inboxId);
+  }
+
+  /// Triage an inbox item into a machine downtime event.
+  Future<void> triageToDowntime(String inboxId, DowntimeEvent downtime) async {
+    await addDowntime(downtime);
+    await dismissInboxItem(inboxId);
+  }
+
+  /// Triage an inbox item into a field note.
+  Future<void> triageToNote(String inboxId, VoiceNote note) async {
+    await addVoiceNote(note);
+    await dismissInboxItem(inboxId);
+  }
+
+  // --- Vendor Directory Management ---
+  Future<void> addVendor(Vendor vendor) async {
+    final updated = [...state.vendors, vendor];
+    state = state.copyWith(vendors: updated);
+    await _persist();
+  }
+
+  Future<void> updateVendor(Vendor vendor) async {
+    final updated = state.vendors.map((v) => v.id == vendor.id ? vendor : v).toList();
+    state = state.copyWith(vendors: updated);
+    await _persist();
+  }
+
+  Future<void> deleteVendor(String id) async {
+    final updated = state.vendors.where((v) => v.id != id).toList();
+    state = state.copyWith(vendors: updated);
+    await _persist();
+  }
+
+  // --- Reusable Project & PM Templates ---
+  Future<void> addCustomTemplate(ProjectTemplate template) async {
+    final updated = [...state.customTemplates, template];
+    state = state.copyWith(customTemplates: updated);
+    await _persist();
+  }
+
+  Future<void> deleteCustomTemplate(String id) async {
+    final updated = state.customTemplates.where((t) => t.id != id).toList();
+    state = state.copyWith(customTemplates: updated);
+    await _persist();
+  }
+
+  /// Saves an existing project's structure (tasks & orders) as a reusable template.
+  Future<ProjectTemplate?> saveProjectAsTemplate(
+    String projectId,
+    String templateName, {
+    String? description,
+  }) async {
+    final project = getProjectById(projectId);
+    if (project == null) return null;
+
+    final taskTemplates = project.tasks.asMap().entries.map((e) {
+      return TaskTemplate(
+        description: e.value.description,
+        pendingReason: e.value.pendingReason,
+        offsetDays: e.key, // sequential offset days
+      );
+    }).toList();
+
+    final orderTemplates = project.orders.map((o) {
+      return OrderTemplate(
+        description: o.description,
+        estimatedPrice: o.price,
+        addToStores: o.addToStores,
+      );
+    }).toList();
+
+    final template = ProjectTemplate(
+      name: templateName.trim(),
+      description: description?.trim() ?? project.description,
+      category: project.category,
+      defaultPhase: project.phase,
+      defaultMachine: project.machine,
+      tags: project.tags,
+      tasks: taskTemplates,
+      suggestedOrders: orderTemplates,
+      isSystemTemplate: false,
+    );
+
+    await addCustomTemplate(template);
+    return template;
+  }
+
+  /// Instantiates a new project from a template.
+  Future<Project> createProjectFromTemplate(
+    ProjectTemplate template, {
+    String? customTitle,
+    String? customMachine,
+    DateTime? startDate,
+  }) async {
+    final baseDate = startDate ?? DateTime.now();
+    final newTasks = template.tasks.asMap().entries.map((e) {
+      final t = e.value;
+      return TaskItem(
+        description: t.description,
+        pendingReason: t.pendingReason,
+        scheduledDate: baseDate.add(Duration(days: t.offsetDays)),
+        sortOrder: e.key,
+      );
+    }).toList();
+
+    final newOrders = template.suggestedOrders.map((o) {
+      return OrderItem(
+        description: o.description,
+        price: o.estimatedPrice,
+        addToStores: o.addToStores,
+      );
+    }).toList();
+
+    final project = Project(
+      title: customTitle?.trim().isNotEmpty == true
+          ? customTitle!.trim()
+          : template.name,
+      description: template.description,
+      category: template.category,
+      phase: template.defaultPhase,
+      machine: customMachine?.trim().isNotEmpty == true
+          ? customMachine!.trim()
+          : template.defaultMachine,
+      tags: template.tags,
+      tasks: newTasks,
+      orders: newOrders,
+    );
+
+    await addProject(project);
+    return project;
+  }
+
+  // --- Cloud Merge Handlers ---
+  Future<void> mergeCloudStandaloneOrders(List<StandaloneOrder> remoteOrders) async {
+    final localMap = {for (var o in state.standaloneOrders) o.id: o};
+    for (final remote in remoteOrders) {
+      localMap[remote.id] = remote;
+    }
+    state = state.copyWith(standaloneOrders: localMap.values.toList());
+    await _persist();
+  }
+
+  Future<void> mergeCloudInbox(List<InboxItem> remoteItems) async {
+    final localMap = {for (var i in state.inboxItems) i.id: i};
+    for (final remote in remoteItems) {
+      localMap[remote.id] = remote;
+    }
+    state = state.copyWith(inboxItems: localMap.values.toList());
+    await _persist();
+  }
+
+  Future<void> mergeCloudVendors(List<Vendor> remoteVendors) async {
+    final localMap = {for (var v in state.vendors) v.id: v};
+    for (final remote in remoteVendors) {
+      localMap[remote.id] = remote;
+    }
+    state = state.copyWith(vendors: localMap.values.toList());
+    await _persist();
+  }
+
+  Future<void> mergeCloudTemplates(List<ProjectTemplate> remoteTemplates) async {
+    final localMap = {for (var t in state.customTemplates) t.id: t};
+    for (final remote in remoteTemplates) {
+      if (!remote.isSystemTemplate) {
+        localMap[remote.id] = remote;
+      }
+    }
+    state = state.copyWith(customTemplates: localMap.values.toList());
+    await _persist();
+  }
+
 
   void setSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);
@@ -790,7 +1141,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     final project = getProjectById(projectId);
     if (project == null) return;
 
-    await _log(ActivityType.logAdded, '${log.title}', pid: projectId, ptitle: project.title);
+    await _log(ActivityType.logAdded, log.title, pid: projectId, ptitle: project.title);
     final updatedLogs = [log, ...project.logs];
     final updatedProject = project.copyWith(
       logs: updatedLogs,
@@ -820,7 +1171,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
   // --- Voice Notes ---
   Future<void> addVoiceNote(VoiceNote note) async {
-    await _log(ActivityType.noteAdded, '${note.title}', pid: note.projectId);
+    await _log(ActivityType.noteAdded, note.title, pid: note.projectId);
     final updated = [note, ...state.voiceNotes];
     state = state.copyWith(voiceNotes: updated);
 
@@ -972,6 +1323,13 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       price: standalone.price,
       eta: standalone.eta,
       delivered: standalone.delivered,
+      addToStores: standalone.addToStores,
+      storeRequested: standalone.storeRequested,
+      storeRequestNumber: standalone.storeRequestNumber,
+      vendorId: standalone.vendorId,
+      vendorName: standalone.vendorName,
+      vendorQuoteNumber: standalone.vendorQuoteNumber,
+      trackingUrl: standalone.trackingUrl,
     );
 
     final updatedOrders = [...project.orders, orderItem];

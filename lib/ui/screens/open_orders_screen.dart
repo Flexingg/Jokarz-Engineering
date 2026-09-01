@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/order_item.dart';
@@ -29,9 +30,13 @@ class _OrderEntry {
   bool get addToStores => order?.addToStores ?? standalone?.addToStores ?? false;
   bool get storeRequested => order?.storeRequested ?? standalone?.storeRequested ?? false;
   String get storeRequestNumber => order?.storeRequestNumber ?? standalone?.storeRequestNumber ?? '';
+  String get vendorName => order?.vendorName ?? standalone?.vendorName ?? '';
+  String get vendorQuoteNumber => order?.vendorQuoteNumber ?? standalone?.vendorQuoteNumber ?? '';
+  String get trackingUrl => order?.trackingUrl ?? standalone?.trackingUrl ?? '';
   String get projectTitle => project?.title ?? 'Unlinked';
   String get machine => project?.machine ?? '';
 }
+
 
 class OpenOrdersScreen extends ConsumerStatefulWidget {
   const OpenOrdersScreen({super.key});
@@ -50,8 +55,12 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
     final prCtrl = TextEditingController(text: order.pr);
     final poCtrl = TextEditingController(text: order.po);
     final descCtrl = TextEditingController(text: order.description);
+    final quoteCtrl = TextEditingController(text: order.vendorQuoteNumber);
+    final trackingCtrl = TextEditingController(text: order.trackingUrl);
     final priceCtrl =
         TextEditingController(text: order.price > 0 ? order.price.toStringAsFixed(2) : '');
+    String? selectedVendorId = order.vendorId;
+    String selectedVendorName = order.vendorName;
     DateTime? eta = order.eta;
     bool delivered = order.delivered;
 
@@ -59,6 +68,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          final vendors = ref.read(projectProvider).vendors;
           final etaText = eta != null ? DateFormat('MMM d, y').format(eta!) : 'No ETA Date';
           return AlertDialog(
             title: const Text('Edit Purchase Order'),
@@ -68,13 +78,51 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                 children: [
                   TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Part / Material Description *')),
                   const SizedBox(height: 12),
+                  if (vendors.isNotEmpty) ...[
+                    DropdownButtonFormField<String>(
+                      value: vendors.any((v) => v.id == selectedVendorId) ? selectedVendorId : null,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Vendor / Supplier',
+                        prefixIcon: Icon(Icons.storefront_rounded, size: 18),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('None / Unspecified')),
+                        ...vendors.map((v) => DropdownMenuItem(
+                              value: v.id,
+                              child: Text(v.name),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedVendorId = val;
+                          final v = vendors.where((vend) => vend.id == val).firstOrNull;
+                          selectedVendorName = v?.name ?? '';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   Row(children: [
                     Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR (Requisition)'))),
                     const SizedBox(width: 10),
                     Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO Number'))),
                   ]),
                   const SizedBox(height: 12),
-                  TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price / Cost (\$)', prefixText: '\$ ')),
+                  Row(children: [
+                    Expanded(child: TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price / Cost (\$)', prefixText: '\$ '))),
+                    const SizedBox(width: 10),
+                    Expanded(child: TextField(controller: quoteCtrl, decoration: const InputDecoration(labelText: 'Quote #'))),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: trackingCtrl,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      labelText: 'Tracking Link / URL',
+                      prefixIcon: Icon(Icons.track_changes_rounded, size: 18),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -111,9 +159,18 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                 onPressed: () async {
                   final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
                   final updated = order.copyWith(
-                    pr: prCtrl.text.trim(), po: poCtrl.text.trim(),
-                    description: descCtrl.text.trim(), price: price,
-                    eta: eta, clearEta: eta == null, delivered: delivered,
+                    pr: prCtrl.text.trim(),
+                    po: poCtrl.text.trim(),
+                    description: descCtrl.text.trim(),
+                    price: price,
+                    eta: eta,
+                    clearEta: eta == null,
+                    delivered: delivered,
+                    vendorId: selectedVendorId,
+                    clearVendorId: selectedVendorId == null,
+                    vendorName: selectedVendorName,
+                    vendorQuoteNumber: quoteCtrl.text.trim(),
+                    trackingUrl: trackingCtrl.text.trim(),
                   );
                   await ref.read(projectProvider.notifier).updateOrder(projectId, updated);
                   if (context.mounted) Navigator.pop(ctx);
@@ -126,6 +183,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -190,12 +248,21 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         ]),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline_rounded, color: Colors.grey),
-            tooltip: 'Orders & Requisition Guide',
+            icon: const Icon(Icons.storefront_rounded, color: AppTheme.primaryCyan),
+            tooltip: 'Vendor Directory',
+            onPressed: () => context.push('/vendors'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded, color: AppTheme.accentAmber),
+            tooltip: 'Order Workflow Guide',
             onPressed: () => showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Row(children: [Icon(Icons.local_shipping_outlined, color: AppTheme.primaryCyan), SizedBox(width: 8), Text('Orders Guide')]),
+                title: const Row(children: [
+                  Icon(Icons.info_outline_rounded, color: AppTheme.primaryCyan),
+                  SizedBox(width: 8),
+                  Text('PO vs PR & Delivery Info'),
+                ]),
                 content: const SingleChildScrollView(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                     Text('📦 PR vs PO Tracking', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryCyan)),
@@ -361,6 +428,10 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
             Wrap(spacing: 6, runSpacing: 4, children: [
               if (e.po.isNotEmpty) ExpressiveBadge(label: 'PO: ${e.po}', color: AppTheme.primaryCyan, fontSize: 10),
               if (e.pr.isNotEmpty) ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.accentAmber, fontSize: 10),
+              if (e.vendorName.isNotEmpty)
+                ExpressiveBadge(label: e.vendorName, color: Colors.purpleAccent, icon: Icons.storefront_rounded, fontSize: 10),
+              if (e.vendorQuoteNumber.isNotEmpty)
+                ExpressiveBadge(label: 'Quote #${e.vendorQuoteNumber}', color: Colors.blueGrey, fontSize: 10),
               if (e.addToStores)
                 e.storeRequestNumber.isNotEmpty
                     ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.accentEmerald, fontSize: 10)
@@ -370,6 +441,27 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                             ? const ExpressiveBadge(label: 'Stores: Pending', color: AppTheme.accentAmber, fontSize: 10)
                             : const ExpressiveBadge(label: 'Add to Stores', color: Colors.grey, fontSize: 10),
             ]),
+            if (e.trackingUrl.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              ActionChip(
+                avatar: const Icon(Icons.track_changes_rounded, size: 12, color: AppTheme.primaryCyan),
+                label: const Text('Track Shipment', style: TextStyle(fontSize: 10, color: AppTheme.primaryCyan)),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                onPressed: () async {
+                  var url = e.trackingUrl.trim();
+                  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://$url';
+                  }
+                  final uri = Uri.tryParse(url);
+                  if (uri != null) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            ],
+
           ])),
           Text(currency.format(e.price), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
         ]),

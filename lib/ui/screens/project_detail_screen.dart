@@ -14,6 +14,7 @@ import '../../services/sync_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
+import '../widgets/template_dialogs.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -728,10 +729,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.content_copy_rounded, color: AppTheme.primaryCyan),
+            tooltip: 'Save as Reusable Template',
+            onPressed: () => TemplateDialogs.showSaveAsTemplateDialog(context, ref, project),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryCyan),
             tooltip: 'Edit Project Details',
             onPressed: () => context.push('/projects/${project.id}/edit'),
           ),
+
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppTheme.accentCoral),
             tooltip: 'Delete Project',

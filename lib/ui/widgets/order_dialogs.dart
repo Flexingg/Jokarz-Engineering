@@ -19,12 +19,18 @@ Future<void> showStandaloneOrderDialog(
   final poCtrl = TextEditingController();
   final priceCtrl = TextEditingController();
   final notesCtrl = TextEditingController();
+  final quoteCtrl = TextEditingController();
+  final trackingCtrl = TextEditingController();
+  String? selectedVendorId;
+  String selectedVendorName = '';
   DateTime? eta;
 
   return showDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {
+        final vendors = ref.read(projectProvider).vendors;
+
         return AlertDialog(
           title: const Text('Add Unlinked Order'),
           content: SingleChildScrollView(
@@ -37,6 +43,31 @@ Future<void> showStandaloneOrderDialog(
                   decoration: const InputDecoration(labelText: 'Description *'),
                 ),
                 const SizedBox(height: 10),
+                if (vendors.isNotEmpty) ...[
+                  DropdownButtonFormField<String>(
+                    value: selectedVendorId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Vendor / Supplier',
+                      prefixIcon: Icon(Icons.storefront_rounded, size: 18),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('None / Other')),
+                      ...vendors.map((v) => DropdownMenuItem(
+                            value: v.id,
+                            child: Text(v.name),
+                          )),
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() {
+                        selectedVendorId = val;
+                        final v = vendors.where((vend) => vend.id == val).firstOrNull;
+                        selectedVendorName = v?.name ?? '';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Row(
                   children: [
                     Expanded(
@@ -57,10 +88,32 @@ Future<void> showStandaloneOrderDialog(
                   ],
                 ),
                 const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: priceCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ '),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: quoteCtrl,
+                        decoration: const InputDecoration(labelText: 'Quote #'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 TextField(
-                  controller: priceCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ '),
+                  controller: trackingCtrl,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Shipment Tracking Link / URL',
+                    prefixIcon: Icon(Icons.track_changes_rounded, size: 18),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ListTile(
@@ -107,6 +160,10 @@ Future<void> showStandaloneOrderDialog(
                         price: double.tryParse(priceCtrl.text) ?? 0.0,
                         eta: eta,
                         notes: notesCtrl.text.trim(),
+                        vendorId: selectedVendorId,
+                        vendorName: selectedVendorName,
+                        vendorQuoteNumber: quoteCtrl.text.trim(),
+                        trackingUrl: trackingCtrl.text.trim(),
                       ),
                     );
                 Navigator.pop(ctx);
@@ -120,3 +177,4 @@ Future<void> showStandaloneOrderDialog(
     ),
   );
 }
+

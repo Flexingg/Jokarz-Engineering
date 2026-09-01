@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../models/project.dart';
+import '../../models/task_item.dart';
+import '../../models/order_item.dart';
+import '../../models/project_template.dart';
 import '../../providers/project_provider.dart';
 import '../../utils/text_utils.dart';
+import '../widgets/template_dialogs.dart';
 
 class ProjectEditScreen extends ConsumerStatefulWidget {
   final String? projectId; // null for new project
@@ -31,6 +35,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
   bool _isCustomPhase = false;
   int _priority = 1;
   String? _nextPendingTaskId;
+  ProjectTemplate? _templateToApply;
 
   Project? _existingProject;
 
@@ -119,7 +124,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
       );
       await ref.read(projectProvider.notifier).updateProject(updated);
     } else {
-      final newProject = Project(
+      var newProject = Project(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _category,
@@ -131,6 +136,32 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         nextPendingTaskId: _nextPendingTaskId,
         tags: tags,
       );
+
+      if (_templateToApply != null) {
+        final now = DateTime.now();
+        final tasks = _templateToApply!.tasks
+            .map((tt) => TaskItem(
+                  description: tt.description,
+                  pendingReason: tt.pendingReason,
+                  scheduledDate: now.add(Duration(days: tt.offsetDays)),
+                ))
+            .toList();
+
+        final orders = _templateToApply!.suggestedOrders
+            .map((ot) => OrderItem(
+                  description: ot.description,
+                  price: ot.estimatedPrice,
+                  addToStores: ot.addToStores,
+                ))
+            .toList();
+
+        newProject = newProject.copyWith(
+          tasks: tasks,
+          orders: orders,
+        );
+      }
+
+
       await ref.read(projectProvider.notifier).addProject(newProject);
       // Jump straight to the new project's detail view.
       if (mounted) {
@@ -160,6 +191,28 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          if (isNew)
+            TextButton.icon(
+              onPressed: () async {
+                final template = await TemplateDialogs.showTemplatePicker(context, ref);
+                if (template != null) {
+                  setState(() {
+                    _titleController.text = template.name;
+                    _descController.text = template.description;
+                    _category = template.category;
+                    if (template.defaultMachine.isNotEmpty) {
+                      _machineController.text = template.defaultMachine;
+                    }
+                    if (template.tags.isNotEmpty) {
+                      _tagsController.text = template.tags.join(', ');
+                    }
+                    _templateToApply = template;
+                  });
+                }
+              },
+              icon: const Icon(Icons.dashboard_customize_rounded, size: 16, color: AppTheme.accentEmerald),
+              label: const Text('Template', style: TextStyle(color: AppTheme.accentEmerald, fontWeight: FontWeight.bold)),
+            ),
           IconButton(
             icon: const Icon(Icons.check, color: AppTheme.primaryCyan),
             onPressed: _saveProject,
@@ -168,6 +221,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
           const SizedBox(width: 8),
         ],
       ),
+
       body: Form(
         key: _formKey,
         child: ListView(

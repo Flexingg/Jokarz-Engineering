@@ -6,7 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/activity_log.dart';
 import '../../providers/project_provider.dart';
-import '../widgets/voice_memo_modal.dart';
+import '../widgets/inbox_quick_capture_modal.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -43,8 +43,11 @@ class DashboardScreen extends ConsumerWidget {
     int tasksAddedWeek = 0, tasksClosedWeek = 0;
     for (final l in state.activityLog) {
       if (l.timestamp.isAfter(weekAgo)) {
-        if (l.type == ActivityType.taskAdded) tasksAddedWeek++;
-        else if (l.type == ActivityType.taskCompleted) tasksClosedWeek++;
+        if (l.type == ActivityType.taskAdded) {
+          tasksAddedWeek++;
+        } else if (l.type == ActivityType.taskCompleted) {
+          tasksClosedWeek++;
+        }
       }
     }
     // Open orders due within the next 14 days (including overdue), by ETA.
@@ -66,9 +69,18 @@ class DashboardScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.mic_rounded, color: AppTheme.accentAmber),
-            tooltip: 'Record Field Memo',
-            onPressed: () => VoiceMemoModal.show(context),
+            icon: Badge(
+              isLabelVisible: state.unprocessedInboxCount > 0,
+              label: Text('${state.unprocessedInboxCount}'),
+              child: const Icon(Icons.flash_on_rounded, color: AppTheme.accentAmber),
+            ),
+            tooltip: 'Quick-Capture Inbox (${state.unprocessedInboxCount} pending)',
+            onPressed: () => context.push('/inbox'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.precision_manufacturing_rounded, color: AppTheme.primaryCyan),
+            tooltip: 'Plant Machines Hub',
+            onPressed: () => context.push('/machines'),
           ),
           IconButton(
             icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.accentAmber),
@@ -82,6 +94,13 @@ class DashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => InboxQuickCaptureModal.show(context),
+        icon: const Icon(Icons.flash_on_rounded),
+        label: const Text('Quick Dump'),
+        backgroundColor: AppTheme.accentAmber,
+        foregroundColor: Colors.black87,
       ),
       body: RefreshIndicator(
         onRefresh: () async {},
@@ -102,7 +121,51 @@ class DashboardScreen extends ConsumerWidget {
               onTapProjects: () => context.go('/projects'),
               onTapOrders: () => context.go('/orders'),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // Plant Hub Shortcuts Row
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/inbox'),
+                    icon: Badge(
+                      isLabelVisible: state.unprocessedInboxCount > 0,
+                      label: Text('${state.unprocessedInboxCount}'),
+                      child: const Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.accentAmber),
+                    ),
+                    label: const Text('Triage Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/machines'),
+                    icon: const Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.primaryCyan),
+                    label: const Text('Machines', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/vendors'),
+                    icon: const Icon(Icons.storefront_rounded, size: 16, color: AppTheme.accentEmerald),
+                    label: const Text('Vendors', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
             _TodayTile(
               today: today,
               taskCount: todayTaskCount,
@@ -115,6 +178,7 @@ class DashboardScreen extends ConsumerWidget {
               _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.accentEmerald),
             ]),
             const SizedBox(height: 20),
+
 
             // Top Priority
             _SectionHeader(
@@ -166,14 +230,10 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/search'),
-        tooltip: 'Search & Quick Add',
-        child: const Icon(Icons.search),
-      ),
     );
   }
 }
+
 
 class _KpiCard extends StatelessWidget {
   final String label;

@@ -6,10 +6,6 @@ import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../providers/project_provider.dart';
 
-/// In-memory snooze set: project IDs snoozed until tomorrow.
-/// Resets on app restart (intentional for v1.0.3).
-final _snoozedTodayProvider = StateProvider<Set<String>>((ref) => {});
-
 class WhatNextScreen extends ConsumerStatefulWidget {
   const WhatNextScreen({super.key});
 
@@ -40,9 +36,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   }
 
   List<Project> _getQueue() {
-    final state = ref.read(projectProvider);
-    final snoozed = ref.read(_snoozedTodayProvider);
-    return state.queuedProjects.where((p) => !snoozed.contains(p.id)).toList();
+    final state = ref.watch(projectProvider);
+    return state.queuedProjects;
   }
 
   Future<void> _markActioned(Project project) async {
@@ -50,8 +45,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     if (mounted) setState(() => _currentIndex = 0);
   }
 
-  void _snooze(Project project) {
-    ref.read(_snoozedTodayProvider.notifier).update((s) => {...s, project.id});
+  Future<void> _snooze(Project project) async {
+    await ref.read(projectProvider.notifier).snoozeProjectUntilTomorrow(project.id);
     if (mounted) setState(() => _currentIndex = 0);
   }
 
