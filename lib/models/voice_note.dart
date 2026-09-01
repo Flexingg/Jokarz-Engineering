@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 class VoiceNote {
   final String id;
   final DateTime timestamp;
+  final DateTime updatedAt;
   final String title;
   final String transcript;
   final int durationSeconds;
@@ -13,6 +14,7 @@ class VoiceNote {
   VoiceNote({
     String? id,
     DateTime? timestamp,
+    DateTime? updatedAt,
     required this.title,
     required this.transcript,
     this.durationSeconds = 0,
@@ -20,7 +22,8 @@ class VoiceNote {
     this.date,
     this.photoPath,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
-        timestamp = timestamp ?? DateTime.now();
+        timestamp = timestamp ?? DateTime.now(),
+        updatedAt = updatedAt ?? timestamp ?? DateTime.now();
 
   VoiceNote copyWith({
     String? title,
@@ -32,10 +35,12 @@ class VoiceNote {
     bool clearDate = false,
     String? photoPath,
     bool clearPhotoPath = false,
+    DateTime? updatedAt,
   }) {
     return VoiceNote(
       id: id,
       timestamp: timestamp,
+      updatedAt: updatedAt ?? this.updatedAt,
       title: title ?? this.title,
       transcript: transcript ?? this.transcript,
       durationSeconds: durationSeconds ?? this.durationSeconds,
@@ -49,6 +54,7 @@ class VoiceNote {
     return {
       'id': id,
       'timestamp': timestamp.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'title': title,
       'transcript': transcript,
       'durationSeconds': durationSeconds,
@@ -64,6 +70,11 @@ class VoiceNote {
       timestamp: json['timestamp'] != null
           ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
           : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : (json['timestamp'] != null
+              ? DateTime.tryParse(json['timestamp'] as String)
+              : DateTime.now()),
       title: json['title'] as String? ?? 'Voice Note',
       transcript: json['transcript'] as String? ?? '',
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,

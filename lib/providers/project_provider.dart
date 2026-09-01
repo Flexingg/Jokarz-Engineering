@@ -917,6 +917,16 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
     await _persist();
   }
 
+  /// Removes a project from LOCAL state + disk only (no cloud delete). Used when
+  /// a remote snapshot tells us the project was deleted on another device, so we
+  /// never push it back up (sync resurrection).
+  Future<void> removeProjectLocal(String id) async {
+    final list = state.projects.where((p) => p.id != id).toList();
+    final rebalanced = _rebalancePriorities(list);
+    state = state.copyWith(projects: rebalanced);
+    await _persist();
+  }
+
   Project? getProjectById(String id) {
     try {
       return state.projects.firstWhere((p) => p.id == id);
@@ -1189,10 +1199,20 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   }
 
   Future<void> updateVoiceNote(VoiceNote updatedNote) async {
+    final withStamp = updatedNote.copyWith(updatedAt: DateTime.now());
     final updatedList = state.voiceNotes.map((n) {
-      return n.id == updatedNote.id ? updatedNote : n;
+      return n.id == withStamp.id ? withStamp : n;
     }).toList();
     state = state.copyWith(voiceNotes: updatedList);
+    await _persist();
+  }
+
+  /// Removes a note from LOCAL state + disk only (no cloud delete). Used when a
+  /// remote snapshot tells us the note was deleted on another device, so we
+  /// never push it back up (sync resurrection).
+  Future<void> removeVoiceNoteLocal(String id) async {
+    final updated = state.voiceNotes.where((n) => n.id != id).toList();
+    state = state.copyWith(voiceNotes: updated);
     await _persist();
   }
 
@@ -1243,7 +1263,12 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
   Future<void> mergeCloudNotes(List<VoiceNote> remoteNotes) async {
     final localMap = {for (var n in state.voiceNotes) n.id: n};
     for (final remote in remoteNotes) {
-      localMap[remote.id] = remote;
+      final local = localMap[remote.id];
+      // Keep the newer edit (last-write-wins by updatedAt). This prevents a
+      // stale device's older copy from clobbering newer local edits.
+      if (local == null || remote.updatedAt.isAfter(local.updatedAt)) {
+        localMap[remote.id] = remote;
+      }
     }
     state = state.copyWith(
       voiceNotes: localMap.values.toList(),

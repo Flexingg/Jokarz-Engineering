@@ -200,6 +200,16 @@ class SyncNotifier extends StateNotifier<SyncState> {
       if (_isProcessingRemoteUpdate) return;
       _isProcessingRemoteUpdate = true;
 
+      // 1) Process remote deletions FIRST: a project deleted on another device
+      //    arrives here as a `removed` doc change. We remove it locally so the
+      //    "push local-only" loop below cannot re-upload it (sync resurrection).
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.removed) {
+          unawaited(
+              _ref.read(projectProvider.notifier).removeProjectLocal(change.doc.id));
+        }
+      }
+
       final remoteProjects = snapshot.docs.map((doc) {
         final data = doc.data();
         return Project.fromJson(data);
@@ -216,6 +226,8 @@ class SyncNotifier extends StateNotifier<SyncState> {
       }
 
       // Push any local-only projects (e.g. created while offline) not on cloud.
+      // Projects removed above are already gone from local state, so they are
+      // correctly excluded here.
       final remoteProjectIds = {for (final p in remoteProjects) p.id};
       final localAfter = _ref.read(projectProvider);
       for (final p in localAfter.projects) {
@@ -240,6 +252,15 @@ class SyncNotifier extends StateNotifier<SyncState> {
     try {
       if (_isProcessingRemoteUpdate) return;
       _isProcessingRemoteUpdate = true;
+
+      // 1) Process remote deletions FIRST so a note deleted on another device
+      //    is removed locally and not re-uploaded (sync resurrection).
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.removed) {
+          unawaited(
+              _ref.read(projectProvider.notifier).removeVoiceNoteLocal(change.doc.id));
+        }
+      }
 
       final remoteNotes = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -762,11 +783,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     // Voice Notes
     for (final n in next.voiceNotes) {
       final old = prevNotes[n.id];
-      if (old == null ||
-          old.title != n.title ||
-          old.transcript != n.transcript ||
-          old.projectId != n.projectId ||
-          old.timestamp != n.timestamp) {
+      if (old == null || old.updatedAt != n.updatedAt) {
         futures.add(syncVoiceNote(n));
       }
     }

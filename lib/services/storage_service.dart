@@ -16,6 +16,19 @@ class StorageService {
   static const String _downtimesFile = 'jokarz_downtimes.json';
   static const String _dataFile = 'jokarz_engineering_data.json';
 
+  /// Writes content atomically: write to a temp file in the same directory,
+  /// then rename over the target. Prevents a crash mid-write from leaving a
+  /// truncated/corrupt data file (the previous in-place writeAsString truncates
+  /// the live file before writing, so an interruption destroyed everything).
+  Future<void> _atomicWrite(File file, String content) async {
+    final tmp = File('${file.path}.tmp');
+    await tmp.writeAsString(content, flush: true);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    await tmp.rename(file.path);
+  }
+
   Future<File> _getFile() async {
     final dir = await getApplicationDocumentsDirectory();
     return File('${dir.path}/$_dataFile');
@@ -157,7 +170,7 @@ class StorageService {
   Future<void> saveKeyBindings(Map<String, String> bindings) async {
     try {
       final file = await _getBindingsFile();
-      await file.writeAsString(jsonEncode(bindings), flush: true);
+      await _atomicWrite(file, jsonEncode(bindings));
     } catch (e) {
       debugPrint('Error saving keybindings: $e');
     }
@@ -184,7 +197,7 @@ class StorageService {
   Future<void> saveReportSettings(Map<String, dynamic> data) async {
     try {
       final file = await _getReportFile();
-      await file.writeAsString(jsonEncode(data), flush: true);
+      await _atomicWrite(file, jsonEncode(data));
     } catch (e) {
       debugPrint('Error saving report settings: $e');
     }
@@ -219,9 +232,8 @@ class StorageService {
   Future<void> saveActivityLog(List<ActivityLog> logs) async {
     try {
       final file = await _getActivityFile();
-      await file.writeAsString(
-          jsonEncode(logs.map((l) => l.toJson()).toList()),
-          flush: true);
+      await _atomicWrite(
+          file, jsonEncode(logs.map((l) => l.toJson()).toList()));
     } catch (e) {
       debugPrint('Error saving activity log: $e');
     }
@@ -243,9 +255,8 @@ class StorageService {
   Future<void> saveDowntimes(List<DowntimeEvent> downtimes) async {
     try {
       final file = await _getDowntimesFile();
-      await file.writeAsString(
-          jsonEncode(downtimes.map((l) => l.toJson()).toList()),
-          flush: true);
+      await _atomicWrite(
+          file, jsonEncode(downtimes.map((l) => l.toJson()).toList()));
     } catch (e) {
       debugPrint('Error saving downtimes: $e');
     }
@@ -274,7 +285,7 @@ class StorageService {
         'customTemplates': customTemplates.map((e) => e.toJson()).toList(),
         'snoozedProjects': snoozedProjects,
       };
-      await file.writeAsString(jsonEncode(data), flush: true);
+      await _atomicWrite(file, jsonEncode(data));
     } catch (e) {
       debugPrint('Error saving storage data: $e');
     }
