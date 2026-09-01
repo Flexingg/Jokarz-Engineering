@@ -10,6 +10,7 @@ import '../ui/screens/workbench_screen.dart';
 import '../ui/screens/voice_notes_screen.dart';
 import '../ui/screens/settings_screen.dart';
 import '../ui/screens/tasks_calendar_screen.dart';
+import '../ui/screens/overdue_tasks_screen.dart';
 import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
 import '../ui/screens/search_screen.dart';
@@ -142,6 +143,11 @@ final appRouter = GoRouter(
       path: '/calendar',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const TasksCalendarScreen(),
+    ),
+    GoRoute(
+      path: '/overdue',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const OverdueTasksScreen(),
     ),
     GoRoute(
       path: '/report',

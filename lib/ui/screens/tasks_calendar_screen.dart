@@ -139,6 +139,28 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             ),
           ],
         ),
+        actions: [
+          // Overdue tasks shortcut (count badge navigates to the list).
+          Builder(builder: (context) {
+            final overdueCount = state.overdueTasks.length;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: overdueCount == 0
+                    ? 'No overdue tasks'
+                    : '$overdueCount overdue task${overdueCount == 1 ? '' : 's'}',
+                onPressed: () => context.push('/overdue'),
+                icon: Badge(
+                  isLabelVisible: overdueCount > 0,
+                  label: Text('$overdueCount'),
+                  backgroundColor: AppTheme.accentCoral,
+                  child: const Icon(Icons.event_busy_rounded,
+                      color: AppTheme.accentCoral),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
       body: Column(children: [
         Padding(

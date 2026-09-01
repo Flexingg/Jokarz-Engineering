@@ -120,6 +120,27 @@ class EngineeringState {
     return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
   }
 
+  /// Incomplete tasks whose scheduled date is before today (overdue).
+  List<({Project project, TaskItem task})> get overdueTasks {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final list = <({Project project, TaskItem task})>[];
+    for (final p in projects) {
+      for (final t in p.tasks) {
+        if (!t.isCompleted && t.scheduledDate != null) {
+          final d = t.scheduledDate!;
+          final day = DateTime(d.year, d.month, d.day);
+          if (day.isBefore(today)) {
+            list.add((project: p, task: t));
+          }
+        }
+      }
+    }
+    // Most overdue first
+    list.sort((a, b) => a.task.scheduledDate!.compareTo(b.task.scheduledDate!));
+    return list;
+  }
+
   /// Returns active projects sorted by "needs attention" score (highest first).
   /// Score = daysSinceLastAction / priority  →  low priority + long ignored = top of queue.
   /// Projects snoozed for today are excluded.
@@ -981,6 +1002,23 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
 
   Future<void> toggleTask(String projectId, String taskId) async {
     await toggleTaskCompleted(projectId, taskId);
+  }
+
+  /// One-click "make it due today": reschedules an overdue task's scheduled
+  /// date to today (date-only), keeping the time-of-day if one was set.
+  Future<void> rescheduleTaskToToday(String projectId, String taskId) async {
+    final project = getProjectById(projectId);
+    if (project == null) return;
+    final task = project.tasks.where((t) => t.id == taskId).firstOrNull;
+    if (task == null || task.scheduledDate == null) return;
+
+    final old = task.scheduledDate!;
+    final now = DateTime.now();
+    final updated = task.copyWith(
+      scheduledDate: DateTime(now.year, now.month, now.day,
+          old.hour, old.minute),
+    );
+    await updateTask(projectId, updated);
   }
 
   Future<void> deleteTask(String projectId, String taskId) async {

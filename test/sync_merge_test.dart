@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/project.dart';
+import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/voice_note.dart';
 import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/services/storage_service.dart';
@@ -96,6 +97,44 @@ void main() {
       expect(notifier.getProjectById('p1'), isNotNull);
       await notifier.removeProjectLocal('p1');
       expect(notifier.getProjectById('p1'), isNull);
+    });
+  });
+
+  group('overdueTasks', () {
+    test('only incomplete tasks with a past date are overdue', () async {
+      final n = ProjectNotifier(StorageService());
+      await _waitForLoad(n);
+      final today = DateTime.now();
+      final yesterday = DateTime(today.year, today.month, today.day - 1);
+      final tomorrow = DateTime(today.year, today.month, today.day + 1);
+
+      await n.addProject(Project(id: 'p1', title: 'P', tasks: [
+        TaskItem(id: 't1', description: 'past incomplete', scheduledDate: yesterday),
+        TaskItem(id: 't2', description: 'today incomplete', scheduledDate: today),
+        TaskItem(id: 't3', description: 'future', scheduledDate: tomorrow),
+        TaskItem(id: 't4', description: 'past done', scheduledDate: yesterday, isCompleted: true),
+      ]));
+
+      expect(n.state.overdueTasks.length, 1);
+      expect(n.state.overdueTasks.first.task.id, 't1');
+    });
+
+    test('rescheduleTaskToToday moves an overdue task to today, keeping time',
+        () async {
+      final n = ProjectNotifier(StorageService());
+      await _waitForLoad(n);
+      final today = DateTime.now();
+      final past = DateTime(today.year, today.month, today.day - 5, 9, 30);
+
+      await n.addProject(Project(id: 'p1', title: 'P', tasks: [
+        TaskItem(id: 't1', description: 'x', scheduledDate: past),
+      ]));
+
+      await n.rescheduleTaskToToday('p1', 't1');
+      final task = n.getProjectById('p1')!.tasks.first;
+      expect(task.scheduledDate!.day, today.day);
+      expect(task.scheduledDate!.hour, 9); // time-of-day preserved
+      expect(n.state.overdueTasks, isEmpty);
     });
   });
 }

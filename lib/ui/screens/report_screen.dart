@@ -55,11 +55,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             icon: const Icon(Icons.ios_share_rounded),
             tooltip: 'Export Report',
             onSelected: (v) => _export(v, cfg),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'png', child: Text('PNG Image')),
-              PopupMenuItem(value: 'pdf', child: Text('PDF')),
-              PopupMenuItem(value: 'txt', child: Text('Plain Text')),
-              PopupMenuItem(value: 'csv', child: Text('CSV')),
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'share_pdf', child: Text('PDF — Share')),
+              PopupMenuItem(value: 'save_pdf', child: Text('PDF — Save to Downloads')),
+              PopupMenuItem(value: 'share_txt', child: Text('Plain Text — Share')),
+              PopupMenuItem(value: 'save_txt', child: Text('Plain Text — Save to Downloads')),
+              PopupMenuItem(value: 'share_csv', child: Text('CSV — Share')),
+              PopupMenuItem(value: 'save_csv', child: Text('CSV — Save to Downloads')),
+              PopupMenuItem(value: 'share_png', child: Text('PNG Image — Share')),
+              PopupMenuItem(value: 'save_png', child: Text('PNG Image — Save to Downloads')),
             ],
           ),
           const SizedBox(width: 8),
@@ -314,33 +318,99 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }
   }
 
-  Future<void> _export(String format, ReportConfig cfg) async {
+  /// Builds and writes the requested report format to [dir], returning the File.
+  /// `format` is one of: png, pdf, txt, csv.
+  Future<File> _writeReportFile(
+      Directory dir, String format, String filename, ReportConfig cfg) async {
     final state = ref.read(projectProvider);
     final data = buildReportData(state, cfg, _today);
-    final dir = await getTemporaryDirectory();
+    final f = File('${dir.path}/$filename');
+    if (format == 'png') {
+      final boundary =
+          _repaintKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 2);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      await f.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+    } else if (format == 'pdf') {
+      final pdfBytes = await reportToPdf(data, cfg, _today);
+      await f.writeAsBytes(pdfBytes, flush: true);
+    } else if (format == 'txt') {
+      await f.writeAsString(reportToText(data, cfg, _today), flush: true);
+    } else if (format == 'csv') {
+      await f.writeAsString(reportToCsv(data, cfg, _today), flush: true);
+    }
+    return f;
+  }
+
+  static String _mime(String format) {
+    switch (format) {
+      case 'png':
+        return 'image/png';
+      case 'pdf':
+        return 'application/pdf';
+      case 'csv':
+        return 'text/csv';
+      default:
+        return 'text/plain';
+    }
+  }
+
+  /// Dispatch a menu action of the form `<share|save>_<format>`.
+  Future<void> _export(String action, ReportConfig cfg) async {
+    final idx = action.indexOf('_');
+    final mode = action.substring(0, idx);
+    final format = action.substring(idx + 1);
+    if (mode == 'save') {
+      await _saveToDownloads(format, cfg);
+    } else {
+      await _share(format, cfg);
+    }
+  }
+
+  /// Writes the report to a permanent, user-visible location (Downloads on
+  /// Windows/Linux/desktop, Documents elsewhere) so the engineer can find and
+  /// keep the file — not just hand it to the OS share sheet.
+  Future<void> _saveToDownloads(String format, ReportConfig cfg) async {
+    final base = 'jokarz_report_${DateFormat('MMddyy').format(_today)}';
+    final stamp = DateFormat('HHmmss').format(DateTime.now());
+    try {
+      Directory dir;
+      String locationLabel;
+      try {
+        final downloads = await getDownloadsDirectory();
+        if (downloads != null) {
+          dir = downloads;
+          locationLabel = 'Downloads';
+        } else {
+          dir = await getApplicationDocumentsDirectory();
+          locationLabel = 'Documents';
+        }
+      } catch (_) {
+        dir = await getTemporaryDirectory();
+        locationLabel = 'temp';
+      }
+      final f = await _writeReportFile(dir, format, '$base-$stamp.$format', cfg);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Report saved to $locationLabel: ${f.path.split('/').last}'),
+          backgroundColor: AppTheme.accentEmerald,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      }
+    }
+  }
+
+  /// Builds the report in the temp dir and hands it to the OS share sheet.
+  Future<void> _share(String format, ReportConfig cfg) async {
     final base = 'jokarz_report_${DateFormat('MMddyy').format(_today)}';
     try {
-      if (format == 'png') {
-        final boundary = _repaintKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-        final image = await boundary.toImage(pixelRatio: 2);
-        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final f = File('${dir.path}/$base.png');
-        await f.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
-        await Share.shareXFiles([XFile(f.path, mimeType: 'image/png')], text: 'Jokarz Daily Report');
-      } else if (format == 'pdf') {
-        final pdfBytes = await reportToPdf(data, cfg, _today);
-        final f = File('${dir.path}/$base.pdf');
-        await f.writeAsBytes(pdfBytes, flush: true);
-        await Share.shareXFiles([XFile(f.path, mimeType: 'application/pdf')], text: 'Jokarz Daily Report');
-      } else if (format == 'txt') {
-        final f = File('${dir.path}/$base.txt');
-        await f.writeAsString(reportToText(data, cfg, _today), flush: true);
-        await Share.shareXFiles([XFile(f.path, mimeType: 'text/plain')], text: 'Jokarz Daily Report');
-      } else if (format == 'csv') {
-        final f = File('${dir.path}/$base.csv');
-        await f.writeAsString(reportToCsv(data, cfg, _today), flush: true);
-        await Share.shareXFiles([XFile(f.path, mimeType: 'text/csv')], text: 'Jokarz Daily Report');
-      }
+      final dir = await getTemporaryDirectory();
+      final f = await _writeReportFile(dir, format, '$base.$format', cfg);
+      await Share.shareXFiles(
+          [XFile(f.path, mimeType: _mime(format))], text: 'Jokarz Daily Report');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
