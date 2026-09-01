@@ -10,6 +10,11 @@ set(BINARY_NAME "jokarz_engineering")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# The Firebase FlutterFire C++ SDK (used by cloud_firestore on Windows) declares
+# cmake_minimum_required below 3.5, which newer CMake runners reject. Raising the
+# policy version minimum lets that subproject configure without erroring.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
