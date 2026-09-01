@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -30,11 +32,33 @@ android {
         versionName = flutter.versionName
     }
 
+    // Release signing: reads a keystore + credentials from env vars (set by CI
+    // from GitHub secrets) so the released APK is signed with the registered
+    // key and Google Sign-In works. Falls back to debug signing when no
+    // keystore is present (e.g. local `flutter run --release` / debug builds).
+    signingConfigs {
+        create("release") {
+            val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!ksPath.isNullOrBlank()) {
+                val ks = File(ksPath)
+                if (ks.exists()) {
+                    storeFile = ks
+                    storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                    keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val releaseCfg = signingConfigs.getByName("release")
+            signingConfig = if (releaseCfg.storeFile?.exists() == true) {
+                releaseCfg
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
