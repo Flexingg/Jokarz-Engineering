@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -48,6 +49,11 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
   double _rollOffset = 0; // zeroed-offset so current reading shows 0
   double _pitchOffset = 0;
   double _headingOffset = 0;
+
+  // Magnetometer calibration feedback: smoothed magnitude of change between
+  // samples. High while the phone is moving (figure-8), low when still.
+  final ValueNotifier<double> _magMotion = ValueNotifier<double>(0);
+  (double, double, double)? _lastMagVec;
 
   final List<_LevelPoint> _points = [];
   final TextEditingController _noteTitleCtrl =
@@ -107,6 +113,17 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
         if (!mounted) return;
         var h = math.atan2(event.y, event.x) * 180 / math.pi;
         if (h < 0) h += 360;
+        // Track sample-to-sample vector change to sense figure-8 motion.
+        final vec = (event.x, event.y, event.z);
+        double delta = 0;
+        final last = _lastMagVec;
+        if (last != null) {
+          delta = math.sqrt(math.pow(vec.$1 - last.$1, 2) +
+              math.pow(vec.$2 - last.$2, 2) +
+              math.pow(vec.$3 - last.$3, 2));
+        }
+        _lastMagVec = vec;
+        _magMotion.value = _magMotion.value * 0.85 + delta * 0.15;
         setState(() {
           _rawHeading = h;
           _headingOk = true;
@@ -138,6 +155,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
     _magSub?.cancel();
     _holdTimer?.cancel();
     _noteTitleCtrl.dispose();
+    _magMotion.dispose();
     super.dispose();
   }
 
@@ -156,6 +174,15 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
         _pitchOffset = 0;
         _headingOffset = 0;
       });
+
+  void _openCalibration() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: false,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      builder: (_) => _CalibrationSheet(motion: _magMotion),
+    );
+  }
 
   void _startHold() {
     if (!_available || _holding) return;
@@ -363,6 +390,14 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _openCalibration,
+              icon: const Icon(Icons.explore_rounded, size: 18),
+              label: Text(_headingOk
+                  ? 'Calibrate Compass (Rotation)'
+                  : 'Compass Unavailable'),
             ),
             const SizedBox(height: 16),
             // Record measurement
@@ -586,4 +621,115 @@ class _BubbleLevelPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _BubbleLevelPainter old) =>
       old.roll != roll || old.pitch != pitch || old.isLevel != isLevel;
+}
+
+/// Bottom sheet guiding magnetometer calibration (figure-8) with live feedback
+/// based on detected phone motion.
+class _CalibrationSheet extends StatelessWidget {
+  final ValueListenable<double> motion;
+  const _CalibrationSheet({required this.motion});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              Icon(Icons.explore_rounded, color: c.primary),
+              const SizedBox(width: 10),
+              const Text('Magnetometer Calibration',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ]),
+            const SizedBox(height: 10),
+            Text(
+              'The ROTATION axis reads the phone compass, which uses the '
+              'magnetometer. It can drift near metal, tools, or after travel. '
+              'Re-calibrate by tracing a figure-8:',
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            _step(context, '1', 'Hold the phone roughly flat (face up).'),
+            _step(context, '2',
+                'Trace a figure-8 in the air, slowly, 3–4 times.'),
+            _step(context, '3',
+                'Keep going until the indicator below shows motion.'),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<double>(
+              valueListenable: motion,
+              builder: (context, v, _) {
+                final moving = v > 2.5;
+                final bar = (v / 20).clamp(0.0, 1.0);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: bar,
+                        minHeight: 10,
+                        color: moving ? c.emerald : c.amber,
+                        backgroundColor: c.surfaceHighlight,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Icon(
+                        moving
+                            ? Icons.motion_photos_on_rounded
+                            : Icons.motion_photos_off_rounded,
+                        size: 18,
+                        color: moving ? c.emerald : c.amber,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          moving
+                              ? 'Motion detected — keep tracing figure-8s'
+                              : 'No movement — move the phone',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: moving ? c.emerald : c.amber,
+                          ),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(
+                      'There is no app API to force calibration — the phone '
+                      're-baselines its compass automatically as it sees this '
+                      'pattern. After a few figure-8s, re-zero the rotation and '
+                      'the heading should be stable.',
+                      style: TextStyle(fontSize: 11, color: c.textSecondary),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _step(BuildContext context, String n, String text) {
+    final c = AppTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$n.', style: TextStyle(fontWeight: FontWeight.bold, color: c.primary)),
+          const SizedBox(width: 6),
+          Expanded(
+              child: Text(text, style: const TextStyle(fontSize: 12.5, height: 1.3))),
+        ],
+      ),
+    );
+  }
 }
