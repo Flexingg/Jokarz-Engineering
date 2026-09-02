@@ -53,7 +53,7 @@ class _GreaseDictionaryViewState extends State<GreaseDictionaryView> {
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: e.accent)),
+                              color: e.accent.resolve(AppTheme.of(context)))),
                       const SizedBox(height: 4),
                       Text(e.desc,
                           style: TextStyle(
@@ -77,36 +77,36 @@ class _GreaseDictionaryViewState extends State<GreaseDictionaryView> {
 class _GreaseEntry {
   final String name;
   final String desc;
-  final Color accent;
+  final AccentKey accent;
   const _GreaseEntry(this.name, this.desc, this.accent);
 }
 
 const List<_GreaseEntry> _greaseEntries = [
   _GreaseEntry('NLGI Grade', 'Consistency rating of grease (ASTM worked penetration). '
       'Higher number = stiffer grease. NLGI 0 = semi-fluid, NLGI 2 = standard multipurpose, '
-      'NLGI 3 = firmer (larger/vertical bearings), NLGI 000-00 = fluid for centralized systems.', AppTheme.primaryCyan),
+      'NLGI 3 = firmer (larger/vertical bearings), NLGI 000-00 = fluid for centralized systems.', AccentKey.primary),
   _GreaseEntry('Lithium Complex', 'Most common modern thickener. High drop point (~260°C+), '
-      'good water resistance, multipurpose. Great general-purpose EP grease.', AppTheme.accentEmerald),
+      'good water resistance, multipurpose. Great general-purpose EP grease.', AccentKey.emerald),
   _GreaseEntry('Lithium (12-OH)', 'General-purpose grease, good pumpability and water resistance. '
-      'Drop point ~190°C. Standard multipurpose (e.g. general chassis/bearing grease).', AppTheme.accentEmerald),
+      'Drop point ~190°C. Standard multipurpose (e.g. general chassis/bearing grease).', AccentKey.emerald),
   _GreaseEntry('Calcium / Calcium Sulfonate', 'Excellent water resistance and rust protection. '
-      'Calcium sulfonate complex is high-temp and EP capable; good for wet/marine environments.', AppTheme.accentAmber),
+      'Calcium sulfonate complex is high-temp and EP capable; good for wet/marine environments.', AccentKey.amber),
   _GreaseEntry('Polyurea', 'High-temp, long-life electric motor bearing grease. '
-      'Not compatible with many soap thickeners (separation risk). Use only where specified.', AppTheme.accentCoral),
+      'Not compatible with many soap thickeners (separation risk). Use only where specified.', AccentKey.coral),
   _GreaseEntry('Bentonite / Clay', 'Non-soap thickener, very high drop point. '
-      'Good for high-temp applications where soap greases would melt out.', AppTheme.accentCoral),
+      'Good for high-temp applications where soap greases would melt out.', AccentKey.coral),
   _GreaseEntry('Mineral Base Oil', 'Petroleum-derived base oil. Cost-effective; '
-      'temperature range typically -20°C to +120°C. Most industrial greases use mineral oil.', AppTheme.primaryBlue),
+      'temperature range typically -20°C to +120°C. Most industrial greases use mineral oil.', AccentKey.blue),
   _GreaseEntry('Synthetic (PAO) / Synthetic Esters', 'Synthetic base oils with wider temperature range '
-      '(-50°C to +180°C+), better oxidation stability and longer life. For high-temp, high-speed, or cold service.', AppTheme.accentEmerald),
+      '(-50°C to +180°C+), better oxidation stability and longer life. For high-temp, high-speed, or cold service.', AccentKey.emerald),
   _GreaseEntry('EP Additives', 'Extreme-pressure additives (sulfur/phosphorus compounds). '
-      'Protect against scoring and wear under heavy loads and shock loading (gear, heavy bearing service).', AppTheme.accentAmber),
+      'Protect against scoring and wear under heavy loads and shock loading (gear, heavy bearing service).', AccentKey.amber),
   _GreaseEntry('Molybdenum Disulfide (MoS₂)', 'Solid lubricant additive for extreme pressure, '
-      'boundary lubrication, and anti-seize. Good for slow, heavily-loaded sliding surfaces.', AppTheme.accentCoral),
+      'boundary lubrication, and anti-seize. Good for slow, heavily-loaded sliding surfaces.', AccentKey.coral),
   _GreaseEntry('Drop Point', 'Temperature at which the grease thickener changes phase and the '
-      'grease melts. Higher is generally better for high-temperature service.', AppTheme.primaryCyan),
+      'grease melts. Higher is generally better for high-temperature service.', AccentKey.primary),
   _GreaseEntry('Worked Penetration', 'A measure of grease consistency/softness (ASTM D217). '
-      '60-stroke worked penetration of 265-295 corresponds to NLGI 2. Lower number = stiffer.', AppTheme.primaryCyan),
+      '60-stroke worked penetration of 265-295 corresponds to NLGI 2. Lower number = stiffer.', AccentKey.primary),
   _GreaseEntry('Compatibility', 'Greases with different thickener types should NOT be mixed '
-      '(can soften or harden). Flush or purge old grease before switching types.', AppTheme.accentCoral),
+      '(can soften or harden). Flush or purge old grease before switching types.', AccentKey.coral),
 ];

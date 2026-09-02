@@ -1,5 +1,20 @@
 import 'package:flutter/material.dart';
 
+/// A semantic accent used by const data tables/dictionaries so they stay
+/// theme-dynamic: store the [AccentKey] in const data, then resolve it to the
+/// active theme's color with [AccentKeyX.resolve] in the build method.
+enum AccentKey { primary, blue, amber, emerald, coral }
+
+extension AccentKeyX on AccentKey {
+  Color resolve(AppColors colors) => switch (this) {
+        AccentKey.primary => colors.primary,
+        AccentKey.blue => colors.primaryBlue,
+        AccentKey.amber => colors.amber,
+        AccentKey.emerald => colors.emerald,
+        AccentKey.coral => colors.coral,
+      };
+}
+
 /// A theme family the user can select. Drives the whole app's palette.
 enum AppThemeFamily {
   vibesDark('Vibes Dark'),
