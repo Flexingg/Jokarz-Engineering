@@ -352,19 +352,17 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
           // Keypad Rows
           Column(
             children: [
-              // Row 1: Clear, Backspace, Divide
+              // Row 1: Clear & Backspace — take full width of their row
               Row(
                 children: [
                   _buildBtn('CE / C', _onClear, isCoral: true),
                   const SizedBox(width: 8),
                   _buildBtn('⌫', _onBackspace, isOperator: true),
-                  const SizedBox(width: 8),
-                  _buildBtn('÷', () => _onOperator('÷'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
 
-              // Row 2: Powers, Roots, Multiply
+              // Row 2: Powers, Roots, Divide
               Row(
                 children: [
                   _buildBtn('1/x', _onReciprocal, isOperator: true),
@@ -373,12 +371,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('√x', _onSqrt, isOperator: true),
                   const SizedBox(width: 8),
-                  _buildBtn('×', () => _onOperator('×'), isCyan: true),
+                  _buildBtn('÷', () => _onOperator('÷'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
 
-              // Row 3: 7, 8, 9, Minus
+              // Row 3: 7, 8, 9, Multiply
               Row(
                 children: [
                   _buildBtn('7', () => _onDigit('7')),
@@ -387,12 +385,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('9', () => _onDigit('9')),
                   const SizedBox(width: 8),
-                  _buildBtn('-', () => _onOperator('-'), isCyan: true),
+                  _buildBtn('×', () => _onOperator('×'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
 
-              // Row 4: 4, 5, 6, Plus
+              // Row 4: 4, 5, 6, Minus
               Row(
                 children: [
                   _buildBtn('4', () => _onDigit('4')),
@@ -401,12 +399,12 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   const SizedBox(width: 8),
                   _buildBtn('6', () => _onDigit('6')),
                   const SizedBox(width: 8),
-                  _buildBtn('+', () => _onOperator('+'), isCyan: true),
+                  _buildBtn('-', () => _onOperator('-'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),
 
-              // Row 5: 1, 2, 3
+              // Row 5: 1, 2, 3, Plus
               Row(
                 children: [
                   _buildBtn('1', () => _onDigit('1')),
@@ -414,6 +412,8 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
                   _buildBtn('2', () => _onDigit('2')),
                   const SizedBox(width: 8),
                   _buildBtn('3', () => _onDigit('3')),
+                  const SizedBox(width: 8),
+                  _buildBtn('+', () => _onOperator('+'), isCyan: true),
                 ],
               ),
               const SizedBox(height: 8),

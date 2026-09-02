@@ -158,12 +158,22 @@ void main() {
     test('Built-in system templates are available and populated', () {
       final templates = ProjectTemplate.systemTemplates;
       expect(templates, isNotEmpty);
-      expect(templates.any((t) => t.name.contains('Motor & Gearbox')), isTrue);
-      expect(templates.any((t) => t.name.contains('Preventative Maintenance')), isTrue);
+      expect(templates.length, equals(6));
 
-      final motorTemplate = templates.firstWhere((t) => t.name.contains('Motor & Gearbox'));
-      expect(motorTemplate.tasks.length, greaterThanOrEqualTo(5));
-      expect(motorTemplate.suggestedOrders, isNotEmpty);
+      final inHouse =
+          templates.firstWhere((t) => t.name.contains('In House Design'));
+      expect(inHouse.tasks.map((t) => t.description),
+          containsAll(['Fabricate', 'Install', 'Validate']));
+
+      final partsRequest =
+          templates.firstWhere((t) => t.name.contains('Parts Request'));
+      expect(partsRequest.tasks.length, equals(3));
+
+      final largeCapital =
+          templates.firstWhere((t) => t.name.contains('Large Capital'));
+      expect(largeCapital.tasks.length, equals(11));
+      expect(largeCapital.tasks.map((t) => t.description),
+          contains('Make PPMA docs'));
     });
 
     test('Custom template serialization round-trip', () {
