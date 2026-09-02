@@ -21,7 +21,8 @@ enum AppThemeFamily {
   vibesLight('Vibes White'),
   materialLight('Material Light'),
   materialDark('Material Dark'),
-  brutalist('Bridgestone Brutalist');
+  brutalistLight('Bridgestone Brutalist Light'),
+  brutalistDark('Bridgestone Brutalist Dark');
 
   final String label;
   const AppThemeFamily(this.label);
@@ -180,24 +181,44 @@ class AppTheme {
     textSecondary: Color(0xFF64748B),
   );
 
-  // Bridgestone red — the pop accent of the Brutalist theme.
+  // Bridgestone red — the pop accent of the Brutalist themes.
   static const Color bridgestoneRed = Color(0xFFE4002B);
 
-  static AppColors get _brutalist => const AppColors(
-        primary: bridgestoneRed,
-        primaryBlue: Color(0xFF111111),
-        amber: Color(0xFF222222),
-        emerald: Color(0xFF111111),
-        coral: bridgestoneRed,
-        background: Color(0xFFFAFAFA),
-        surface: Color(0xFFFFFFFF),
-        surfaceCard: Color(0xFFFFFFFF),
-        surfaceHighlight: Color(0xFFEDEDED),
-        surfaceVariant: Color(0xFFEDEDED),
-        border: Color(0xFF000000),
-        textPrimary: Color(0xFF000000),
-        textSecondary: Color(0xFF444444),
-      );
+  // Brutalist uses red for EVERY accent token: the app renders its accent
+  // buttons with mixed hardcoded foregrounds (black AND white), and Bridgestone
+  // red is the single color with enough contrast for both (~5:1 / ~4.2:1),
+  // keeping surfaces monochrome with red as the unified action/pop color.
+  static const AppColors _brutalistLight = AppColors(
+    primary: bridgestoneRed,
+    primaryBlue: bridgestoneRed,
+    amber: bridgestoneRed,
+    emerald: bridgestoneRed,
+    coral: bridgestoneRed,
+    background: Color(0xFFFAFAFA),
+    surface: Color(0xFFFFFFFF),
+    surfaceCard: Color(0xFFFFFFFF),
+    surfaceHighlight: Color(0xFFEDEDED),
+    surfaceVariant: Color(0xFFEDEDED),
+    border: Color(0xFF000000),
+    textPrimary: Color(0xFF000000),
+    textSecondary: Color(0xFF444444),
+  );
+
+  static const AppColors _brutalistDark = AppColors(
+    primary: bridgestoneRed,
+    primaryBlue: bridgestoneRed,
+    amber: bridgestoneRed,
+    emerald: bridgestoneRed,
+    coral: bridgestoneRed,
+    background: Color(0xFF0A0A0A),
+    surface: Color(0xFF141414),
+    surfaceCard: Color(0xFF1A1A1A),
+    surfaceHighlight: Color(0xFF242424),
+    surfaceVariant: Color(0xFF242424),
+    border: Color(0xFF3A3A3A),
+    textPrimary: Color(0xFFF5F5F5),
+    textSecondary: Color(0xFFA0A0A0),
+  );
 
   static ThemeData themeFor(AppThemeFamily family) {
     switch (family) {
@@ -209,8 +230,10 @@ class AppTheme {
         return materialLightTheme;
       case AppThemeFamily.materialDark:
         return materialDarkTheme;
-      case AppThemeFamily.brutalist:
-        return brutalistTheme;
+      case AppThemeFamily.brutalistLight:
+        return brutalistLightTheme;
+      case AppThemeFamily.brutalistDark:
+        return brutalistDarkTheme;
     }
   }
 
@@ -309,103 +332,123 @@ class AppTheme {
     );
   }
 
-  /// Bridgestone Brutalist: monochrome (white/black/greys) with Bridgestone red
-  /// as the pop color, in a brutalist design language (sharp corners, thick
-  /// black borders, high contrast, no soft elevation).
-  static ThemeData get brutalistTheme {
-    final c = _brutalist;
-    _active = _brutalist;
+  /// Bridgestone Brutalist — Light variant: monochrome white/grey surfaces with
+  /// Bridgestone red as the pop, sharp corners, thick borders, no elevation.
+  static ThemeData get brutalistLightTheme =>
+      _buildBrutalist(_brutalistLight, Brightness.light);
+
+  /// Bridgestone Brutalist — Dark variant: near-black surfaces, light text,
+  /// Bridgestone red pop.
+  static ThemeData get brutalistDarkTheme =>
+      _buildBrutalist(_brutalistDark, Brightness.dark);
+
+  /// Builds a Bridgestone Brutalist theme. [c] selects the light/dark palette;
+  /// [brightness] drives inverted button fills and text so contrast holds in
+  /// both modes.
+  static ThemeData _buildBrutalist(AppColors c, Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    _active = c;
     final scheme = ColorScheme.fromSeed(
       seedColor: bridgestoneRed,
-      brightness: Brightness.light,
+      brightness: brightness,
       surface: c.background,
     ).copyWith(
       primary: bridgestoneRed,
       onPrimary: Colors.white,
       surface: c.background,
       onSurface: c.textPrimary,
-      outline: Colors.black,
+      outline: c.border,
       error: bridgestoneRed,
     );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: brightness,
       scaffoldBackgroundColor: c.background,
       colorScheme: scheme,
       extensions: [c],
-      // Sharp corners, thick black borders, no elevation.
+      // Sharp corners, thick borders, no elevation.
       cardTheme: CardThemeData(
         color: c.surfaceCard,
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
-          side: const BorderSide(color: Colors.black, width: 2),
+          side: BorderSide(color: c.border, width: 2),
         ),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      appBarTheme: AppBarTheme(
+        backgroundColor: c.surface,
+        foregroundColor: c.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: Colors.black,
+          color: c.textPrimary,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
           fontSize: 20,
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: Colors.black,
+      dividerTheme: DividerThemeData(
+        color: c.border,
         thickness: 2,
         space: 2,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: bridgestoneRed.withValues(alpha: 0.15),
+        backgroundColor: c.surface,
+        indicatorColor: bridgestoneRed.withValues(alpha: 0.18),
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-                color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12);
+            return TextStyle(
+                color: c.textPrimary, fontWeight: FontWeight.w900, fontSize: 12);
           }
-          return const TextStyle(color: Colors.black54, fontSize: 12);
+          return TextStyle(color: c.textSecondary, fontSize: 12);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: bridgestoneRed);
           }
-          return const IconThemeData(color: Colors.black87);
+          return IconThemeData(color: c.textSecondary);
         }),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: c.surface,
+        indicatorColor: bridgestoneRed.withValues(alpha: 0.18),
+        selectedIconTheme: const IconThemeData(color: bridgestoneRed),
+        unselectedIconTheme: IconThemeData(color: c.textSecondary),
+        selectedLabelTextStyle: TextStyle(
+            color: c.textPrimary, fontWeight: FontWeight.w900, fontSize: 12),
+        unselectedLabelTextStyle:
+            TextStyle(color: c.textSecondary, fontSize: 12),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: c.surfaceCard,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: const OutlineInputBorder(
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: Colors.black, width: 2),
+          borderSide: BorderSide(color: c.border, width: 2),
         ),
-        enabledBorder: const OutlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: Colors.black, width: 2),
+          borderSide: BorderSide(color: c.border, width: 2),
         ),
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: bridgestoneRed, width: 2),
+          borderSide: const BorderSide(color: bridgestoneRed, width: 2),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+          backgroundColor: isDark ? Colors.white : Colors.black,
+          foregroundColor: isDark ? Colors.black : Colors.white,
           elevation: 0,
-          shape: const RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.zero,
-            side: BorderSide(color: Colors.black, width: 2),
+            side: BorderSide(color: c.border, width: 2),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           textStyle: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
@@ -413,25 +456,26 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.black,
-          side: const BorderSide(color: Colors.black, width: 2),
+          foregroundColor: c.textPrimary,
+          side: BorderSide(color: c.border, width: 2),
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           textStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: c.surfaceCard,
         selectedColor: bridgestoneRed.withValues(alpha: 0.2),
-        side: const BorderSide(color: Colors.black, width: 1.5),
+        side: BorderSide(color: c.border, width: 1.5),
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        labelStyle: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(
+            fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
       ),
-      textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontWeight: FontWeight.w900, color: Colors.black),
-        titleLarge: TextStyle(fontWeight: FontWeight.w900, color: Colors.black),
-        titleMedium: TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
-        bodyMedium: TextStyle(color: Colors.black87),
+      textTheme: TextTheme(
+        headlineSmall: TextStyle(fontWeight: FontWeight.w900, color: c.textPrimary),
+        titleLarge: TextStyle(fontWeight: FontWeight.w900, color: c.textPrimary),
+        titleMedium: TextStyle(fontWeight: FontWeight.w800, color: c.textPrimary),
+        bodyMedium: TextStyle(color: c.textPrimary),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: Colors.black,
