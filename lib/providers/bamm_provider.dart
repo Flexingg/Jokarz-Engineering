@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bamm_models.dart';
 import '../services/bamm_service.dart';
@@ -15,10 +16,12 @@ class BammState {
   final List<BammWorkOrder> workOrders;
   final List<BammSavedFilter> savedFilters;
   final BammSavedFilter? activeFilter;
-  final String searchQuery;
-  final String? statusFilter;
-  final String? stepFilter;
-  final String? cellFilter;
+  final BammFilterCriteria criteria;
+  final List<BammLookupItem> statusLookups;
+  final List<BammLookupItem> stepLookups;
+  final List<BammLookupItem> maintLookups;
+  final List<BammLookupItem> cellLookups;
+  final List<BammLookupItem> execLookups;
   final bool isLoading;
   final String? errorMessage;
 
@@ -30,13 +33,21 @@ class BammState {
     this.workOrders = const [],
     this.savedFilters = const [],
     this.activeFilter,
-    this.searchQuery = '',
-    this.statusFilter,
-    this.stepFilter,
-    this.cellFilter,
+    this.criteria = const BammFilterCriteria(),
+    this.statusLookups = const [],
+    this.stepLookups = const [],
+    this.maintLookups = const [],
+    this.cellLookups = const [],
+    this.execLookups = const [],
     this.isLoading = false,
     this.errorMessage,
   });
+
+  // Backwards compatibility getters
+  String get searchQuery => criteria.searchQuery;
+  String? get statusFilter => criteria.status;
+  String? get stepFilter => criteria.step;
+  String? get cellFilter => criteria.cell;
 
   BammState copyWith({
     bool? isOnline,
@@ -47,13 +58,12 @@ class BammState {
     List<BammSavedFilter>? savedFilters,
     BammSavedFilter? activeFilter,
     bool clearActiveFilter = false,
-    String? searchQuery,
-    String? statusFilter,
-    bool clearStatusFilter = false,
-    String? stepFilter,
-    bool clearStepFilter = false,
-    String? cellFilter,
-    bool clearCellFilter = false,
+    BammFilterCriteria? criteria,
+    List<BammLookupItem>? statusLookups,
+    List<BammLookupItem>? stepLookups,
+    List<BammLookupItem>? maintLookups,
+    List<BammLookupItem>? cellLookups,
+    List<BammLookupItem>? execLookups,
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -66,45 +76,59 @@ class BammState {
       workOrders: workOrders ?? this.workOrders,
       savedFilters: savedFilters ?? this.savedFilters,
       activeFilter: clearActiveFilter ? null : (activeFilter ?? this.activeFilter),
-      searchQuery: searchQuery ?? this.searchQuery,
-      statusFilter: clearStatusFilter ? null : (statusFilter ?? this.statusFilter),
-      stepFilter: clearStepFilter ? null : (stepFilter ?? this.stepFilter),
-      cellFilter: clearCellFilter ? null : (cellFilter ?? this.cellFilter),
+      criteria: criteria ?? this.criteria,
+      statusLookups: statusLookups ?? this.statusLookups,
+      stepLookups: stepLookups ?? this.stepLookups,
+      maintLookups: maintLookups ?? this.maintLookups,
+      cellLookups: cellLookups ?? this.cellLookups,
+      execLookups: execLookups ?? this.execLookups,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
+  /// List of work orders matching current query.
+  /// Server queries apply the filters directly. If offline, local in-memory fallback applies.
   List<BammWorkOrder> get filteredWorkOrders {
+    if (criteria.isEmpty) return workOrders;
+
+    // In case workOrders is not already filtered (e.g. offline cache)
     return workOrders.where((wo) {
-      if (searchQuery.isNotEmpty) {
-        final q = searchQuery.toLowerCase();
-        final matchesQuery = wo.worNoSeq.toLowerCase().contains(q) ||
+      if (criteria.searchQuery.trim().isNotEmpty) {
+        final q = criteria.searchQuery.trim().toLowerCase();
+        final match = wo.worNoSeq.toLowerCase().contains(q) ||
             wo.description.toLowerCase().contains(q) ||
             wo.cell.toLowerCase().contains(q) ||
             wo.machine.toLowerCase().contains(q) ||
             wo.responsible.toLowerCase().contains(q) ||
             wo.requester.toLowerCase().contains(q) ||
+            wo.workDone.toLowerCase().contains(q) ||
             wo.status.toLowerCase().contains(q);
-        if (!matchesQuery) return false;
+        if (!match) return false;
       }
 
-      if (statusFilter != null && statusFilter!.isNotEmpty && statusFilter != 'All') {
-        if (wo.status.toLowerCase() != statusFilter!.toLowerCase()) {
-          return false;
-        }
+      if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
+        if (wo.status.toLowerCase() != criteria.status!.toLowerCase()) return false;
       }
 
-      if (stepFilter != null && stepFilter!.isNotEmpty && stepFilter != 'All') {
-        if (wo.step.toLowerCase() != stepFilter!.toLowerCase()) {
-          return false;
-        }
+      if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
+        if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
       }
 
-      if (cellFilter != null && cellFilter!.isNotEmpty && cellFilter != 'All') {
-        if (!wo.cell.toLowerCase().contains(cellFilter!.toLowerCase())) {
-          return false;
-        }
+      if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
+        if (!wo.cell.toLowerCase().contains(criteria.cell!.toLowerCase())) return false;
+      }
+
+      if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
+        if (!wo.responsible.toLowerCase().contains(criteria.responsible!.toLowerCase().trim())) return false;
+      }
+
+      if (criteria.requester != null && criteria.requester!.trim().isNotEmpty) {
+        if (!wo.requester.toLowerCase().contains(criteria.requester!.toLowerCase().trim())) return false;
+      }
+
+      if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
+        if (!wo.machine.toLowerCase().contains(criteria.machine!.toLowerCase().trim())) return false;
       }
 
       return true;
@@ -112,12 +136,13 @@ class BammState {
   }
 
   int get emergencyCount => workOrders.where((w) => w.step.toLowerCase().contains('emerg')).length;
-  int get openCount => workOrders.where((w) => !w.status.toLowerCase().contains('complet')).length;
+  int get openCount => workOrders.where((w) => !w.status.toLowerCase().contains('complet') && !w.status.toLowerCase().contains('clos')).length;
 }
 
 class BammNotifier extends StateNotifier<BammState> {
   final BammService _service;
   Timer? _autoPollTimer;
+  Timer? _debounceTimer;
 
   BammNotifier(this._service) : super(const BammState()) {
     init();
@@ -135,9 +160,16 @@ class BammNotifier extends StateNotifier<BammState> {
       workOrders: cachedOrders,
     );
 
-    // Initial quick poll
-    await pollNetwork();
-    await refreshWorkOrders();
+    // Initial quick poll & load lookup dropdown options
+    final online = await pollNetwork();
+    await loadLookups();
+
+    // Query BAMM with default criteria (latest 2000 descending by WO#)
+    if (online) {
+      await refreshWorkOrders();
+    } else {
+      state = state.copyWith(isLoading: false);
+    }
 
     // Setup background periodic polling every 20 seconds
     _autoPollTimer?.cancel();
@@ -149,6 +181,7 @@ class BammNotifier extends StateNotifier<BammState> {
   @override
   void dispose() {
     _autoPollTimer?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -164,11 +197,32 @@ class BammNotifier extends StateNotifier<BammState> {
     return online;
   }
 
-  /// Refresh work orders (hits BAMM API if online, loads cached if offline)
+  /// Loads lookup lists for dropdowns (statuses, steps, maintenance types, cells, execution modes)
+  Future<void> loadLookups() async {
+    try {
+      final statuses = await _service.fetchLookup('GetWorkOrderStatus');
+      final steps = await _service.fetchLookup('GetWorkOrderStep');
+      final maints = await _service.fetchLookup('GetMaintenanceType');
+      final cells = await _service.fetchLookup('GetDepartment');
+      final execs = await _service.fetchLookup('GetExecutionMode');
+
+      state = state.copyWith(
+        statusLookups: statuses,
+        stepLookups: steps,
+        maintLookups: maints,
+        cellLookups: cells,
+        execLookups: execs,
+      );
+    } catch (e) {
+      debugPrint('Error loading BAMM lookups: $e');
+    }
+  }
+
+  /// Executes a query against BAMM with current criteria or refreshes default list.
   Future<void> refreshWorkOrders() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
     try {
-      final list = await _service.fetchWorkOrders();
+      final list = await _service.fetchWorkOrders(criteria: state.criteria);
       state = state.copyWith(
         workOrders: list,
         isLoading: false,
@@ -181,37 +235,156 @@ class BammNotifier extends StateNotifier<BammState> {
     }
   }
 
+  /// Updates criteria and runs server-side query across 196k+ work orders.
+  void setCriteria(BammFilterCriteria criteria) {
+    state = state.copyWith(criteria: criteria);
+    _debouncedQuery();
+  }
+
+  void _debouncedQuery() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      refreshWorkOrders();
+    });
+  }
+
+  /// Updates the search query and immediately queries BAMM.
+  void setSearchQuery(String query) {
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(searchQuery: query),
+    );
+    _debouncedQuery();
+  }
+
+  /// Filter by Status dropdown
+  void setStatusFilter(String? status, [int? statusId]) {
+    final clear = status == null || status.isEmpty || status == 'All';
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        status: status,
+        clearStatus: clear,
+        statusId: statusId,
+      ),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Filter by Step / Urgency dropdown
+  void setStepFilter(String? step, [int? stepId]) {
+    final clear = step == null || step.isEmpty || step == 'All';
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        step: step,
+        clearStep: clear,
+        stepId: stepId,
+      ),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Filter by Maintenance Type dropdown
+  void setMaintenanceTypeFilter(String? maint, [int? maintId]) {
+    final clear = maint == null || maint.isEmpty || maint == 'All';
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        maintenanceType: maint,
+        clearMaintenanceType: clear,
+        maintenanceTypeId: maintId,
+      ),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Filter by Cell / Area
+  void setCellFilter(String? cell) {
+    final clear = cell == null || cell.isEmpty || cell == 'All';
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        cell: cell,
+        clearCell: clear,
+      ),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Filter by Responsible Person
+  void setResponsibleFilter(String? resp) {
+    final clear = resp == null || resp.trim().isEmpty;
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        responsible: resp,
+        clearResponsible: clear,
+      ),
+    );
+    _debouncedQuery();
+  }
+
+  /// Filter by Requester Person
+  void setRequesterFilter(String? req) {
+    final clear = req == null || req.trim().isEmpty;
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        requester: req,
+        clearRequester: clear,
+      ),
+    );
+    _debouncedQuery();
+  }
+
+  /// Filter by Machine / Equipment
+  void setMachineFilter(String? machine) {
+    final clear = machine == null || machine.trim().isEmpty;
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        machine: machine,
+        clearMachine: clear,
+      ),
+    );
+    _debouncedQuery();
+  }
+
+  /// Filter by Machine Status / Execution Mode
+  void setExecutionModeFilter(String? exec, [int? execId]) {
+    final clear = exec == null || exec.isEmpty || exec == 'All';
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        executionMode: exec,
+        clearExecutionMode: clear,
+        executionModeId: execId,
+      ),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Clears all active filters and queries the latest 2000 records.
+  void clearFilters() {
+    state = state.copyWith(
+      criteria: const BammFilterCriteria(),
+      clearActiveFilter: true,
+    );
+    refreshWorkOrders();
+  }
+
   /// Apply a saved filter preset
   void applySavedFilter(BammSavedFilter? filter) {
     if (filter == null) {
-      state = state.copyWith(
-        clearActiveFilter: true,
-        clearStatusFilter: true,
-        clearStepFilter: true,
-        clearCellFilter: true,
-        searchQuery: '',
-      );
+      clearFilters();
     } else {
       state = state.copyWith(
         activeFilter: filter,
-        searchQuery: filter.searchQuery,
-        statusFilter: filter.status,
-        stepFilter: filter.step,
-        cellFilter: filter.cell,
+        criteria: filter.toCriteria(),
       );
+      refreshWorkOrders();
     }
   }
 
   /// Saves the current filter state as a new preset
   Future<void> saveCurrentFilterAsPreset(String name) async {
     if (name.trim().isEmpty) return;
-    final newFilter = BammSavedFilter(
+    final newFilter = BammSavedFilter.fromCriteria(
       id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
       name: name.trim(),
-      searchQuery: state.searchQuery,
-      status: state.statusFilter,
-      step: state.stepFilter,
-      cell: state.cellFilter,
+      criteria: state.criteria,
     );
 
     final updated = [...state.savedFilters, newFilter];
@@ -233,42 +406,14 @@ class BammNotifier extends StateNotifier<BammState> {
     await _service.saveSavedFilters(updated);
   }
 
-  void setSearchQuery(String query) {
-    state = state.copyWith(searchQuery: query);
-  }
-
-  void setStatusFilter(String? status) {
-    if (status == null || status.isEmpty || status == 'All') {
-      state = state.copyWith(clearStatusFilter: true);
-    } else {
-      state = state.copyWith(statusFilter: status);
+  /// Fetches individual detail for a single work order on click.
+  Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async {
+    final detail = await _service.fetchWorkOrderDetail(worId);
+    if (detail != null) {
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? detail : w).toList();
+      state = state.copyWith(workOrders: updatedList);
     }
-  }
-
-  void setStepFilter(String? step) {
-    if (step == null || step.isEmpty || step == 'All') {
-      state = state.copyWith(clearStepFilter: true);
-    } else {
-      state = state.copyWith(stepFilter: step);
-    }
-  }
-
-  void setCellFilter(String? cell) {
-    if (cell == null || cell.isEmpty || cell == 'All') {
-      state = state.copyWith(clearCellFilter: true);
-    } else {
-      state = state.copyWith(cellFilter: cell);
-    }
-  }
-
-  void clearFilters() {
-    state = state.copyWith(
-      searchQuery: '',
-      clearStatusFilter: true,
-      clearStepFilter: true,
-      clearCellFilter: true,
-      clearActiveFilter: true,
-    );
+    return detail;
   }
 
   /// Creates a new Work Order on BAMM
@@ -350,6 +495,7 @@ class BammNotifier extends StateNotifier<BammState> {
     await _service.saveConfig(newConfig);
     state = state.copyWith(config: newConfig);
     await pollNetwork();
+    await loadLookups();
     await refreshWorkOrders();
   }
 }

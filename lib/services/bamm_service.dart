@@ -123,11 +123,16 @@ class BammService {
   // Work Order List Fetching & Caching
   // ---------------------------------------------------------------------------
 
-  /// Fetches Work Orders from BAMM or falls back to local cached list if offline.
+  /// Fetches Work Orders from BAMM with server-side sorting and filtering,
+  /// or falls back to local cache when offline. Zero dummy data is generated.
   Future<List<BammWorkOrder>> fetchWorkOrders({
+    BammFilterCriteria? criteria,
     Map<String, dynamic>? customPayload,
     bool forceOffline = false,
   }) async {
+    final bool hasCriteria = criteria != null && !criteria.isEmpty;
+    final payload = customPayload ?? (hasCriteria ? buildFilterPayload(criteria) : _buildDefaultFilterPayload());
+
     if (!forceOffline) {
       final online = await quickPollNetwork();
       if (online) {
@@ -139,16 +144,31 @@ class BammService {
           final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
           final listUrl = Uri.parse('$origin/api/WorkOrderList/GetListData');
 
-          final payload = customPayload ?? _buildDefaultFilterPayload();
-
           final headers = _buildHeaders(
             refererPath: '/workorder/list/work-order/${config.spwId}',
             contentType: 'application/json',
           );
 
-          final response = await _client
-              .post(listUrl, headers: headers, body: jsonEncode(payload))
-              .timeout(const Duration(seconds: 6));
+          http.Response response;
+          try {
+            response = await _client
+                .post(listUrl, headers: headers, body: jsonEncode(payload))
+                .timeout(const Duration(seconds: 9));
+          } catch (e) {
+            // Defensive: If sorting by worNoSeq failed on the server SQL engine, retry with woIssueDate
+            if (payload['listFormat'] is Map && (payload['listFormat']['orderByFields'] as List).isNotEmpty) {
+              final fallbackPayload = Map<String, dynamic>.from(payload);
+              fallbackPayload['listFormat'] = Map<String, dynamic>.from(fallbackPayload['listFormat'] as Map);
+              fallbackPayload['listFormat']['orderByFields'] = [
+                {'name': 'woIssueDate', 'ascending': false},
+              ];
+              response = await _client
+                  .post(listUrl, headers: headers, body: jsonEncode(fallbackPayload))
+                  .timeout(const Duration(seconds: 9));
+            } else {
+              rethrow;
+            }
+          }
 
           if (response.statusCode >= 200 && response.statusCode < 300) {
             final body = jsonDecode(response.body);
@@ -163,127 +183,441 @@ class BammService {
               }
             }
 
-            if (workOrders.isNotEmpty) {
+            // Only cache the full initial view (unfiltered latest 2000) so a search doesn't wipe base cache
+            if (!hasCriteria && customPayload == null && workOrders.isNotEmpty) {
               await saveCachedWorkOrders(workOrders);
-              return workOrders;
             }
+            return workOrders;
           }
         } catch (e) {
-          debugPrint('BAMM live fetch failed ($e), falling back to cached work orders.');
+          debugPrint('BAMM live fetch failed ($e), falling back to local cached work orders.');
         }
       }
     }
 
-    // Fallback to cache or realistic sample plant data
+    // Fallback to cache when offline
     final cached = await loadCachedWorkOrders();
-    if (cached.isNotEmpty) {
-      return cached;
+    if (cached.isEmpty) {
+      return []; // ZERO DUMMY DATA!
     }
 
-    // Default plant sample work orders for instant usability
-    final seed = _getInitialPlantSampleOrders();
-    await saveCachedWorkOrders(seed);
-    return seed;
+    if (hasCriteria) {
+      return _filterCachedLocally(cached, criteria);
+    }
+
+    return cached;
   }
 
   /// Construct standard list format payload matching Cogep GuideTi requirements.
+  /// Major columns: WO, registered date, responsible, requester, work done, description, asset.
   Map<String, dynamic> _buildDefaultFilterPayload() {
     return {
       'filters': [],
       'listFormat': {
-        'fields': [
-          {
-            'name': 'workOrderId',
-            'key': 'workOrderId',
-            'header': 'ID',
-            'isVisible': true,
-            'fieldDataType': 4,
-          },
-          {
-            'name': 'worNoSeq',
-            'key': 'worNoSeq',
-            'header': 'Work order',
-            'isVisible': true,
-            'fieldDataType': 6,
-          },
-          {
-            'name': 'woDescription',
-            'key': 'woDescription',
-            'header': 'WO description',
-            'isVisible': true,
-            'fieldDataType': 1,
-          },
-          {
-            'name': 'woStatusDescription',
-            'key': 'woStatusDescription',
-            'header': 'Status',
-            'isVisible': true,
-            'fieldDataType': 15,
-          },
-          {
-            'name': 'functionInfo2',
-            'key': 'functionInfo2',
-            'header': 'Cell',
-            'isVisible': true,
-            'fieldDataType': 1,
-          },
-          {
-            'name': 'funCodeLevelNiv3Description',
-            'key': 'funCodeLevelNiv3Description',
-            'header': 'Machine',
-            'isVisible': true,
-            'fieldDataType': 15,
-          },
-          {
-            'name': 'recipientName',
-            'key': 'recipientName',
-            'header': 'Responsible',
-            'isVisible': true,
-            'fieldDataType': 15,
-          },
-          {
-            'name': 'requesterName',
-            'key': 'requesterName',
-            'header': 'Requester',
-            'isVisible': true,
-            'fieldDataType': 15,
-          },
-          {
-            'name': 'woRequiredDate',
-            'key': 'woRequiredDate',
-            'header': 'Required date',
-            'isVisible': true,
-            'fieldDataType': 5,
-          },
-          {
-            'name': 'woIssueDate',
-            'key': 'woIssueDate',
-            'header': 'Issue date',
-            'isVisible': true,
-            'fieldDataType': 5,
-          },
-          {
-            'name': 'worEstLaborTime',
-            'key': 'worEstLaborTime',
-            'header': 'Labor Hours',
-            'isVisible': true,
-            'fieldDataType': 3,
-          },
-          {
-            'name': 'worNumber3',
-            'key': 'worNumber3',
-            'header': 'EM Priority',
-            'isVisible': true,
-            'fieldDataType': 3,
-          },
-        ],
+        'fields': _buildMajorFieldsList(),
         'orderByFields': [
-          {'name': 'woIssueDate', 'ascending': false},
+          {'name': 'worNoSeq', 'ascending': false},
         ],
         'topCount': 2000,
       },
       'isCountOnly': false,
     };
+  }
+
+  /// Builds the complete list of major columns requested by GuideTi.
+  List<Map<String, dynamic>> _buildMajorFieldsList() {
+    return [
+      {
+        'name': 'workOrderId',
+        'key': 'workOrderId',
+        'header': 'ID',
+        'isVisible': false,
+        'fieldDataType': 4,
+      },
+      {
+        'name': 'worNoSeq',
+        'key': 'worNoSeq',
+        'header': 'Work order',
+        'isVisible': true,
+        'fieldDataType': 6,
+      },
+      {
+        'name': 'woIssueDate',
+        'key': 'woIssueDate',
+        'header': 'WO registered date',
+        'isVisible': true,
+        'fieldDataType': 5,
+      },
+      {
+        'name': 'recipientName',
+        'key': 'recipientName',
+        'header': 'Responsible',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'requesterName',
+        'key': 'requesterName',
+        'header': 'Requester',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'woTask',
+        'key': 'woTask',
+        'header': 'Work done',
+        'isVisible': true,
+        'fieldDataType': 1,
+      },
+      {
+        'name': 'woDescription',
+        'key': 'woDescription',
+        'header': 'WO description',
+        'isVisible': true,
+        'fieldDataType': 1,
+      },
+      {
+        'name': 'funCodeLevelNiv3Description',
+        'key': 'funCodeLevelNiv3Description',
+        'header': 'Machine',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'functionInfo2',
+        'key': 'functionInfo2',
+        'header': 'Cell',
+        'isVisible': true,
+        'fieldDataType': 1,
+      },
+      {
+        'name': 'woStatusDescription',
+        'key': 'woStatusDescription',
+        'header': 'Status',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'woStepDescription',
+        'key': 'woStepDescription',
+        'header': 'Step',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'executionModeDescription',
+        'key': 'executionModeDescription',
+        'header': 'Machine Status',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'woRequiredDate',
+        'key': 'woRequiredDate',
+        'header': 'Required date',
+        'isVisible': true,
+        'fieldDataType': 5,
+      },
+      {
+        'name': 'worNumber3',
+        'key': 'worNumber3',
+        'header': 'EM Priority',
+        'isVisible': true,
+        'fieldDataType': 3,
+      },
+      {
+        'name': 'worEstLaborTime',
+        'key': 'worEstLaborTime',
+        'header': 'Labor Hours',
+        'isVisible': true,
+        'fieldDataType': 3,
+      },
+    ];
+  }
+
+  /// Builds a GuideTi filter payload for server-side execution across 196k+ work orders.
+  Map<String, dynamic> buildFilterPayload(BammFilterCriteria criteria) {
+    final filters = <Map<String, dynamic>>[];
+
+    // Status filter (woStatusId, filterType 8)
+    if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
+      final sId = criteria.statusId ?? _lookupStatusId(criteria.status!);
+      filters.add({
+        'searchFieldKey': 'woStatusId',
+        'filterType': 8,
+        'sourceUrl': 'GetWorkOrderStatus',
+        'categoryDescription': 'WO parameters',
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [
+              {
+                'id': sId,
+                'value': 0,
+                'description': criteria.status!,
+                'code': '',
+                'type': null,
+                'inactive': false,
+              }
+            ],
+            'stringValues': [],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Step filter (woStepId, filterType 3)
+    if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
+      final stId = criteria.stepId ?? _lookupStepId(criteria.step!);
+      filters.add({
+        'searchFieldKey': 'woStepId',
+        'filterType': 3,
+        'sourceUrl': 'GetWorkOrderStep',
+        'categoryDescription': 'WO parameters',
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [
+              {
+                'id': stId,
+                'value': 0,
+                'description': criteria.step!,
+                'code': '',
+                'type': null,
+                'inactive': false,
+              }
+            ],
+            'stringValues': [],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Maintenance Type filter (maintenanceTypeId, filterType 8)
+    if (criteria.maintenanceType != null &&
+        criteria.maintenanceType!.isNotEmpty &&
+        criteria.maintenanceType != 'All') {
+      final mtId = criteria.maintenanceTypeId ?? _lookupMaintId(criteria.maintenanceType!);
+      filters.add({
+        'searchFieldKey': 'maintenanceTypeId',
+        'filterType': 8,
+        'sourceUrl': 'GetMaintenanceType',
+        'categoryDescription': 'WO parameters',
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [
+              {
+                'id': mtId,
+                'value': 0,
+                'description': criteria.maintenanceType!,
+                'code': '',
+                'type': null,
+                'inactive': false,
+              }
+            ],
+            'stringValues': [],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Cell / Area (functionInfo2, filterType 1)
+    if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
+      filters.add({
+        'searchFieldKey': 'functionInfo2',
+        'filterType': 1,
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [],
+            'stringValues': [criteria.cell!],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Responsible (recipientName, filterType 1)
+    if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
+      filters.add({
+        'searchFieldKey': 'recipientName',
+        'filterType': 1,
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [],
+            'stringValues': [criteria.responsible!.trim()],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Requester (requesterName, filterType 1)
+    if (criteria.requester != null && criteria.requester!.trim().isNotEmpty) {
+      filters.add({
+        'searchFieldKey': 'requesterName',
+        'filterType': 1,
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [],
+            'stringValues': [criteria.requester!.trim()],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Machine / Equipment (funCodeLevelNiv3Description, filterType 1)
+    if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
+      filters.add({
+        'searchFieldKey': 'funCodeLevelNiv3Description',
+        'filterType': 1,
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [],
+            'stringValues': [criteria.machine!.trim()],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Machine Status / Execution Mode (executionModeId, filterType 8)
+    if (criteria.executionMode != null &&
+        criteria.executionMode!.isNotEmpty &&
+        criteria.executionMode != 'All') {
+      final emId = criteria.executionModeId ?? _lookupExecutionModeId(criteria.executionMode!);
+      filters.add({
+        'searchFieldKey': 'executionModeId',
+        'filterType': 8,
+        'sourceUrl': 'GetExecutionMode',
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [
+              {
+                'id': emId,
+                'value': 0,
+                'description': criteria.executionMode!,
+                'code': '',
+                'type': null,
+                'inactive': false,
+              }
+            ],
+            'stringValues': [],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Text Search / WO Number Search
+    if (criteria.searchQuery.trim().isNotEmpty) {
+      final q = criteria.searchQuery.trim();
+      final isWoNumber = RegExp(r'^(wo-)?\d+(\.\d+)?$', caseSensitive: false).hasMatch(q);
+      filters.add({
+        'searchFieldKey': isWoNumber ? 'worNoSeq' : 'woDescription',
+        'filterType': 1,
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [],
+            'stringValues': [q],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    return {
+      'filters': filters,
+      'listFormat': {
+        'fields': _buildMajorFieldsList(),
+        'orderByFields': [
+          {'name': 'worNoSeq', 'ascending': false},
+        ],
+        'topCount': 2000,
+      },
+      'isCountOnly': false,
+    };
+  }
+
+  /// Filters local cached work orders in-memory when offline.
+  List<BammWorkOrder> _filterCachedLocally(List<BammWorkOrder> list, BammFilterCriteria criteria) {
+    return list.where((wo) {
+      if (criteria.searchQuery.trim().isNotEmpty) {
+        final q = criteria.searchQuery.trim().toLowerCase();
+        final match = wo.worNoSeq.toLowerCase().contains(q) ||
+            wo.description.toLowerCase().contains(q) ||
+            wo.cell.toLowerCase().contains(q) ||
+            wo.machine.toLowerCase().contains(q) ||
+            wo.responsible.toLowerCase().contains(q) ||
+            wo.requester.toLowerCase().contains(q) ||
+            wo.workDone.toLowerCase().contains(q) ||
+            wo.status.toLowerCase().contains(q);
+        if (!match) return false;
+      }
+
+      if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
+        if (wo.status.toLowerCase() != criteria.status!.toLowerCase()) return false;
+      }
+
+      if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
+        if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
+      }
+
+      if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
+        if (!wo.cell.toLowerCase().contains(criteria.cell!.toLowerCase())) return false;
+      }
+
+      if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
+        if (!wo.responsible.toLowerCase().contains(criteria.responsible!.toLowerCase().trim())) return false;
+      }
+
+      if (criteria.requester != null && criteria.requester!.trim().isNotEmpty) {
+        if (!wo.requester.toLowerCase().contains(criteria.requester!.toLowerCase().trim())) return false;
+      }
+
+      if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
+        if (!wo.machine.toLowerCase().contains(criteria.machine!.toLowerCase().trim())) return false;
+      }
+
+      return true;
+    }).toList();
   }
 
   // ---------------------------------------------------------------------------
@@ -418,28 +752,10 @@ class BammService {
       }
     }
 
-    // Offline / Fallback Local Creation
-    final generatedId = 700000000 + (DateTime.now().millisecondsSinceEpoch % 900000);
-    final generatedNo = (185600 + (DateTime.now().millisecondsSinceEpoch % 900)).toString();
-
-    final created = BammWorkOrder(
-      worId: generatedId,
-      worNoSeq: generatedNo,
-      description: description,
-      status: 'Registered',
-      step: stepId == 3 ? 'Emergency' : 'Normal',
-      cell: cell,
-      machine: machine,
-      assetId: assetId,
-      priority: priority,
-      responsible: responsible,
-      requiredDate: requiredDate,
-      issueDate: DateTime.now(),
-      laborHours: laborHours,
+    throw HttpException(
+      'Cannot create work order while disconnected from BAMM (${config.origin}). '
+      'Please ensure device is connected to the plant Wi-Fi / VPN.',
     );
-
-    await _upsertLocalCachedWorkOrder(created);
-    return created;
   }
 
   // ---------------------------------------------------------------------------
@@ -498,16 +814,23 @@ class BammService {
         model['state'] = 2;
         model['shortTypeName'] = 'WORK_ORDER';
 
-        // 3. Acquire Pessimistic Record Lock
+        // 3. Acquire lock
         try {
-          final lockUrl = Uri.parse('$origin/api/RecordLocking/Lock?programId=1&tableName=WORK_ORDER&recordId=$worId');
-          await _client.get(
+          final lockUrl = Uri.parse('$origin/api/dataLock/Save');
+          final lockPayload = {
+            'ProgramID': 1,
+            'TableName': 'WORK_ORDER',
+            'RecordID': worId,
+            'CompanyID': config.companyId,
+          };
+          await _client.post(
             lockUrl,
             headers: _buildHeaders(refererPath: '/workorder/detail/$worId'),
-          ).timeout(const Duration(seconds: 2));
+            body: jsonEncode(lockPayload),
+          ).timeout(const Duration(seconds: 3));
         } catch (_) {}
 
-        // 4. Commit Save
+        // 4. Save
         final saveUrl = Uri.parse('$origin/api/WorkOrder/Save?duplicateQuestionSettingsJson=');
         final saveResp = await _client.post(
           saveUrl,
@@ -516,23 +839,38 @@ class BammService {
             contentType: 'application/cogep.dynamicdtoV1+json',
           ),
           body: jsonEncode(model),
-        ).timeout(const Duration(seconds: 5));
+        ).timeout(const Duration(seconds: 6));
 
-        if (saveResp.statusCode == 200) {
-          final cachedList = await loadCachedWorkOrders();
-          final index = cachedList.indexWhere((w) => w.worId == worId);
-          final existing = index >= 0 ? cachedList[index] : null;
+        // 5. Release lock
+        try {
+          final unlockUrl = Uri.parse('$origin/api/dataLock/Delete');
+          final unlockPayload = {
+            'ProgramID': 1,
+            'TableName': 'WORK_ORDER',
+            'RecordID': worId,
+            'CompanyID': config.companyId,
+          };
+          await _client.post(
+            unlockUrl,
+            headers: _buildHeaders(refererPath: '/workorder/detail/$worId'),
+            body: jsonEncode(unlockPayload),
+          ).timeout(const Duration(seconds: 3));
+        } catch (_) {}
 
-          final updated = (existing ?? BammWorkOrder(worId: worId, worNoSeq: worId.toString(), description: description)).copyWith(
+        if (saveResp.statusCode >= 200 && saveResp.statusCode < 300) {
+          final updated = BammWorkOrder(
+            worId: worId,
+            worNoSeq: worId.toString(),
             description: description,
-            status: status ?? existing?.status,
-            step: step ?? existing?.step,
-            priority: priority ?? existing?.priority,
-            requiredDate: requiredDate ?? existing?.requiredDate,
-            cell: cell ?? existing?.cell,
-            machine: machine ?? existing?.machine,
-            responsible: responsible ?? existing?.responsible,
-            laborHours: laborHours ?? existing?.laborHours,
+            status: status ?? 'Registered',
+            step: step ?? 'Normal',
+            cell: cell ?? '',
+            machine: machine ?? '',
+            priority: priority ?? '',
+            responsible: responsible ?? '',
+            requiredDate: requiredDate,
+            laborHours: laborHours,
+            rawDto: model,
           );
 
           await _upsertLocalCachedWorkOrder(updated);
@@ -541,43 +879,208 @@ class BammService {
       }
     }
 
-    // Offline / Local update
-    final cachedList = await loadCachedWorkOrders();
-    final index = cachedList.indexWhere((w) => w.worId == worId);
-    final existing = index >= 0 ? cachedList[index] : null;
-
-    final updated = (existing ?? BammWorkOrder(worId: worId, worNoSeq: worId.toString(), description: description)).copyWith(
-      description: description,
-      status: status ?? existing?.status,
-      step: step ?? existing?.step,
-      priority: priority ?? existing?.priority,
-      requiredDate: requiredDate ?? existing?.requiredDate,
-      cell: cell ?? existing?.cell,
-      machine: machine ?? existing?.machine,
-      responsible: responsible ?? existing?.responsible,
-      laborHours: laborHours ?? existing?.laborHours,
+    throw HttpException(
+      'Cannot update work order #$worId while disconnected from BAMM (${config.origin}). '
+      'Please ensure device is connected to the plant Wi-Fi / VPN.',
     );
+  }
 
-    await _upsertLocalCachedWorkOrder(updated);
-    return updated;
+  /// Fetches complete Work Order detail on demand from BAMM using GetById.
+  Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async {
+    if (worId <= 0) return null;
+    final online = await quickPollNetwork();
+    if (!online) return null;
+
+    try {
+      if (!isAuthenticated && config.usercode.isNotEmpty) {
+        await login();
+      }
+
+      final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
+      final url = Uri.parse('$origin/api/WorkOrder/GetById?id=$worId&spwId=${config.spwId}');
+
+      final response = await _client
+          .get(url, headers: _buildHeaders(refererPath: '/workorder/detail/$worId'))
+          .timeout(const Duration(seconds: 6));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        final val = body is Map ? body['value'] : null;
+        if (val is Map<String, dynamic>) {
+          final detail = BammWorkOrder.fromDynamicDto(val);
+          await _upsertLocalCachedWorkOrder(detail);
+          return detail;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching BAMM work order detail for $worId: $e');
+    }
+    return null;
+  }
+
+  /// Fetches lookup options dynamically from BAMM WorkOrderLookup endpoints.
+  Future<List<BammLookupItem>> fetchLookup(String method, {String search = ''}) async {
+    final online = await quickPollNetwork();
+    if (online) {
+      try {
+        if (!isAuthenticated && config.usercode.isNotEmpty) {
+          await login();
+        }
+
+        final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
+        final searchParam = search.isNotEmpty ? '&search=${Uri.encodeComponent(search)}&searchColumns=description' : '';
+        final url = Uri.parse(
+          '$origin/api/WorkOrderLookup/$method?querytype=top&pageSize=200&companyId=${config.companyId}&sortColumn=description$searchParam',
+        );
+
+        final headers = _buildHeaders(refererPath: '/');
+        final response = await _client.post(url, headers: headers).timeout(const Duration(seconds: 5));
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final body = jsonDecode(response.body);
+          final rows = (body is Map && body['value'] is List) ? body['value'] as List<dynamic> : [];
+          final items = rows
+              .whereType<Map<String, dynamic>>()
+              .map((r) => BammLookupItem.fromJson(r))
+              .toList();
+          if (items.isNotEmpty) return items;
+        }
+      } catch (e) {
+        debugPrint('Error fetching BAMM lookup $method: $e');
+      }
+    }
+
+    // Fallback standard options from GuideTi dictionary when offline
+    return _getStandardFallbackLookup(method);
   }
 
   // ---------------------------------------------------------------------------
-  // Storage & Persistence
+  // Lookup Id Resolvers & Defaults
   // ---------------------------------------------------------------------------
 
-  Future<File> _getFile(String filename) async {
+  int _lookupStatusId(String status) {
+    final s = status.trim().toLowerCase();
+    if (s.contains('prep')) return 1; // In preparation
+    if (s.contains('schedul')) return 2; // Scheduled
+    if (s.contains('estimat')) return 7; // In estimate
+    if (s.contains('regist')) return 8; // Registered
+    if (s.contains('ready')) return 9; // Ready to schedule
+    if (s.contains('complet')) return 3; // Completed
+    if (s.contains('close')) return 6; // Closed
+    if (s.contains('cancel')) return 4; // Cancelled
+    if (s.contains('declin')) return 5; // Declined
+    return 1;
+  }
+
+  int _lookupStepId(String step) {
+    final s = step.trim().toLowerCase();
+    if (s.contains('emerg')) return 3; // Emergency
+    if (s.contains('plan')) return 5; // Planned Work
+    if (s.contains('follow')) return 4; // Follow-up
+    if (s.contains('counter')) return 2; // Countermeasure
+    if (s.contains('defect')) return 700000007; // Defect Handling
+    return 1;
+  }
+
+  int _lookupMaintId(String maint) {
+    final m = maint.trim().toLowerCase();
+    if (m.contains('corrective')) return 107;
+    if (m.contains('kaizen')) return 111;
+    if (m.contains('preventive') || m.contains('pm')) return 108;
+    if (m.contains('assist')) return 118;
+    if (m.contains('pitstop')) return 117;
+    if (m.contains('emerg')) return 105;
+    if (m.contains('defect')) return 700000019;
+    if (m.contains('safety')) return 700000020;
+    if (m.contains('project') || m.contains('capex')) return 115;
+    return 107;
+  }
+
+  int _lookupExecutionModeId(String mode) {
+    final m = mode.trim().toLowerCase();
+    if (m.contains('run')) return 1;
+    if (m.contains('stop')) return 2;
+    if (m.contains('reduc')) return 3;
+    return 1;
+  }
+
+  List<BammLookupItem> _getStandardFallbackLookup(String method) {
+    switch (method) {
+      case 'GetWorkOrderStatus':
+        return const [
+          BammLookupItem(id: 1, description: 'In preparation'),
+          BammLookupItem(id: 2, description: 'Scheduled'),
+          BammLookupItem(id: 9, description: 'Ready to schedule'),
+          BammLookupItem(id: 7, description: 'In estimate'),
+          BammLookupItem(id: 8, description: 'Registered'),
+          BammLookupItem(id: 3, description: 'Completed'),
+          BammLookupItem(id: 6, description: 'Closed'),
+          BammLookupItem(id: 4, description: 'Cancelled'),
+          BammLookupItem(id: 5, description: 'Declined'),
+        ];
+      case 'GetWorkOrderStep':
+        return const [
+          BammLookupItem(id: 3, description: 'Emergency'),
+          BammLookupItem(id: 5, description: 'Planned Work'),
+          BammLookupItem(id: 2, description: 'Countermeasure'),
+          BammLookupItem(id: 4, description: 'Follow-up'),
+          BammLookupItem(id: 700000007, description: 'Defect Handling'),
+        ];
+      case 'GetMaintenanceType':
+        return const [
+          BammLookupItem(id: 107, description: 'Corrective'),
+          BammLookupItem(id: 111, description: 'Kaizen'),
+          BammLookupItem(id: 108, description: 'Preventive'),
+          BammLookupItem(id: 105, description: 'Emergency'),
+          BammLookupItem(id: 118, description: 'Emergency - Assist'),
+          BammLookupItem(id: 117, description: 'Emergency - Pitstop'),
+          BammLookupItem(id: 700000019, description: 'Defect'),
+          BammLookupItem(id: 700000020, description: 'Defect - Safety'),
+          BammLookupItem(id: 115, description: 'Project / CapEx'),
+        ];
+      case 'GetDepartment':
+        return const [
+          BammLookupItem(id: 700000001, description: 'CG1 (831)'),
+          BammLookupItem(id: 700000002, description: 'EG1 (MX)'),
+          BammLookupItem(id: 700000003, description: 'EG2 (EX/CL)'),
+          BammLookupItem(id: 700000024, description: 'EG3 (SP)'),
+          BammLookupItem(id: 700000025, description: 'EG4 (TA)'),
+          BammLookupItem(id: 700000026, description: 'EG5 (FL/CR/FL)'),
+          BammLookupItem(id: 700000022, description: 'MSG1 (MX)'),
+          BammLookupItem(id: 700000009, description: 'MSG2 (EX/CL)'),
+          BammLookupItem(id: 700000023, description: 'MSG3 (SP)'),
+          BammLookupItem(id: 700000010, description: 'MSG4 (TA)'),
+          BammLookupItem(id: 700000011, description: 'MSG5 (FL/CR/FL)'),
+          BammLookupItem(id: 1, description: 'Line 1'),
+          BammLookupItem(id: 2, description: 'Line 2'),
+          BammLookupItem(id: 3, description: 'Line 3'),
+          BammLookupItem(id: 4, description: 'Line 4'),
+          BammLookupItem(id: 5, description: 'Line 5'),
+        ];
+      case 'GetExecutionMode':
+        return const [
+          BammLookupItem(id: 1, description: 'Running'),
+          BammLookupItem(id: 2, description: 'Stopped'),
+          BammLookupItem(id: 3, description: 'Reduced Speed'),
+        ];
+      default:
+        return const [];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Local File & Storage Utilities
+  // ---------------------------------------------------------------------------
+
+  Future<File> _getFile(String fileName) async {
     final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$filename');
+    return File('${dir.path}/$fileName');
   }
 
   Future<void> _atomicWrite(File file, String content) async {
-    final tmp = File('${file.path}.tmp');
-    await tmp.writeAsString(content, flush: true);
-    if (await file.exists()) {
-      await file.delete();
-    }
-    await tmp.rename(file.path);
+    final tempFile = File('${file.path}.tmp');
+    await tempFile.writeAsString(content);
+    await tempFile.rename(file.path);
   }
 
   Future<List<BammWorkOrder>> loadCachedWorkOrders() async {
@@ -670,112 +1173,10 @@ class BammService {
 
   List<BammSavedFilter> _getDefaultSavedFilters() {
     return const [
-      BammSavedFilter(id: 'filter_prep', name: 'In Preparation', status: 'In preparation'),
-      BammSavedFilter(id: 'filter_scheduled', name: 'Scheduled', status: 'Scheduled'),
-      BammSavedFilter(id: 'filter_emergency', name: 'Emergency', step: 'Emergency'),
-      BammSavedFilter(id: 'filter_line3', name: 'Line 3 Orders', cell: 'Line 3'),
-    ];
-  }
-
-  List<BammWorkOrder> _getInitialPlantSampleOrders() {
-    final now = DateTime.now();
-    return [
-      BammWorkOrder(
-        worId: 700203512,
-        worNoSeq: '185586',
-        description: 'Replace drive motor bearings on Line 3 conveyor',
-        status: 'In preparation',
-        step: 'Emergency',
-        cell: 'Line 3',
-        machine: 'Main Conveyor',
-        priority: '1.0',
-        responsible: 'Miller, John',
-        requester: 'Operator Bill',
-        requiredDate: now.add(const Duration(days: 1)),
-        issueDate: now.subtract(const Duration(days: 2)),
-        laborHours: 2.5,
-        requiredEmployees: 2,
-      ),
-      BammWorkOrder(
-        worId: 700203513,
-        worNoSeq: '185590',
-        description: 'Kaizen: Install pneumatic diverter gate sensors',
-        status: 'Scheduled',
-        step: 'Kaizen',
-        cell: 'Line 2',
-        machine: 'Packer A',
-        priority: '2.5',
-        responsible: 'Davis, Alex',
-        requester: 'Continuous Imprv.',
-        requiredDate: now.add(const Duration(days: 4)),
-        issueDate: now.subtract(const Duration(days: 5)),
-        laborHours: 4.0,
-        requiredEmployees: 1,
-      ),
-      BammWorkOrder(
-        worId: 700203549,
-        worNoSeq: '185610',
-        description: 'Inspect seal integrity and rebuild manifold on Filler B',
-        status: 'Registered',
-        step: 'Corrective',
-        cell: 'Line 1',
-        machine: 'Filler B',
-        priority: '3.0',
-        responsible: 'Wilson, Sarah',
-        requester: 'Quality Dept',
-        requiredDate: now.add(const Duration(days: 3)),
-        issueDate: now.subtract(const Duration(days: 1)),
-        laborHours: 1.5,
-        requiredEmployees: 1,
-      ),
-      BammWorkOrder(
-        worId: 700203490,
-        worNoSeq: '184920',
-        description: 'Fabricate stainless catch pan bracket and support arms',
-        status: 'Ready to schedule',
-        step: 'Corrective',
-        cell: 'Line 3',
-        machine: 'Labeler',
-        priority: '2.0',
-        responsible: 'Doe, Jane',
-        requester: 'Packaging Lead',
-        requiredDate: now.add(const Duration(days: 6)),
-        issueDate: now.subtract(const Duration(days: 7)),
-        laborHours: 3.0,
-        requiredEmployees: 1,
-      ),
-      BammWorkOrder(
-        worId: 700203415,
-        worNoSeq: '184315',
-        description: 'Rebuild gripper cylinder and replace worn air lines',
-        status: 'In estimate',
-        step: 'Corrective',
-        cell: 'Line 4',
-        machine: 'Palletizer',
-        priority: '4.0',
-        responsible: 'Smith, Chris',
-        requester: 'Maint Shift 2',
-        requiredDate: now.add(const Duration(days: 10)),
-        issueDate: now.subtract(const Duration(days: 8)),
-        laborHours: 5.0,
-        requiredEmployees: 2,
-      ),
-      BammWorkOrder(
-        worId: 700202036,
-        worNoSeq: '182036',
-        description: 'Annual safety interlock verification & optical sensor calibration',
-        status: 'Completed',
-        step: 'Preventive',
-        cell: 'Plant-Wide',
-        machine: 'Safety Interlocks',
-        priority: '1.0',
-        responsible: 'Johnson, Mark',
-        requester: 'EHS Safety',
-        requiredDate: now.subtract(const Duration(days: 1)),
-        issueDate: now.subtract(const Duration(days: 14)),
-        laborHours: 6.0,
-        requiredEmployees: 2,
-      ),
+      BammSavedFilter(id: 'filter_prep', name: 'In Preparation', status: 'In preparation', statusId: 1),
+      BammSavedFilter(id: 'filter_scheduled', name: 'Scheduled', status: 'Scheduled', statusId: 2),
+      BammSavedFilter(id: 'filter_emergency', name: 'Emergency', step: 'Emergency', stepId: 3),
+      BammSavedFilter(id: 'filter_planned', name: 'Planned Work', step: 'Planned Work', stepId: 5),
     ];
   }
 }

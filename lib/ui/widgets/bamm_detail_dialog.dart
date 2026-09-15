@@ -31,10 +31,12 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   late final TextEditingController _cellCtrl;
   late final TextEditingController _machineCtrl;
   late final TextEditingController _respCtrl;
+  late final TextEditingController _workDoneCtrl;
   DateTime? _requiredDate;
   String _selectedStatus = '';
   String _selectedStep = '';
   bool _isSaving = false;
+  bool _isLoadingDetail = false;
 
   @override
   void initState() {
@@ -45,9 +47,41 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _cellCtrl = TextEditingController(text: _wo.cell);
     _machineCtrl = TextEditingController(text: _wo.machine);
     _respCtrl = TextEditingController(text: _wo.responsible);
+    _workDoneCtrl = TextEditingController(text: _wo.workDone);
     _requiredDate = _wo.requiredDate;
     _selectedStatus = _wo.status;
     _selectedStep = _wo.step;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchFullDetail();
+    });
+  }
+
+  Future<void> _fetchFullDetail() async {
+    if (_wo.worId <= 0) return;
+    setState(() => _isLoadingDetail = true);
+    try {
+      final detail = await ref.read(bammProvider.notifier).fetchWorkOrderDetail(_wo.worId);
+      if (detail != null && mounted) {
+        setState(() {
+          _wo = detail;
+          _descCtrl.text = detail.description;
+          _priorityCtrl.text = detail.priority;
+          _cellCtrl.text = detail.cell;
+          _machineCtrl.text = detail.machine;
+          _respCtrl.text = detail.responsible;
+          _workDoneCtrl.text = detail.workDone;
+          _requiredDate = detail.requiredDate;
+          _selectedStatus = detail.status;
+          _selectedStep = detail.step;
+          _isLoadingDetail = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoadingDetail = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingDetail = false);
+    }
   }
 
   @override
@@ -57,6 +91,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _cellCtrl.dispose();
     _machineCtrl.dispose();
     _respCtrl.dispose();
+    _workDoneCtrl.dispose();
     super.dispose();
   }
 
@@ -447,18 +482,59 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                 ),
               ] else ...[
                 // View Mode
+                if (_isLoadingDetail)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(),
+                  ),
                 Text(
                   _wo.description,
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
+                if (_wo.workDone.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.of(context).primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded, size: 14, color: AppTheme.of(context).primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Work Done / Activity Log',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.of(context).primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _wo.workDone,
+                          style: const TextStyle(fontSize: 13, height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _buildInfoRow('Machine / Cell', '${_wo.machine.isNotEmpty ? _wo.machine : 'None'} (${_wo.cell.isNotEmpty ? _wo.cell : 'Unspecified'})'),
                 _buildInfoRow('Responsible', _wo.responsible.isNotEmpty ? _wo.responsible : 'Unassigned'),
                 _buildInfoRow('Requester', _wo.requester.isNotEmpty ? _wo.requester : 'None'),
-                if (_wo.requiredDate != null)
-                  _buildInfoRow('Target Date', DateFormat('MMM d, y').format(_wo.requiredDate!)),
                 if (_wo.issueDate != null)
                   _buildInfoRow('Registered Date', DateFormat('MMM d, y').format(_wo.issueDate!)),
+                if (_wo.requiredDate != null)
+                  _buildInfoRow('Target Date', DateFormat('MMM d, y').format(_wo.requiredDate!)),
                 if (_wo.laborHours != null)
                   _buildInfoRow('Est. Labor Hours', '${_wo.laborHours} hrs'),
               ],

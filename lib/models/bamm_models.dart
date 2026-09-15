@@ -15,6 +15,7 @@ class BammWorkOrder {
   final String priority;
   final String responsible;
   final String requester;
+  final String workDone;
   final DateTime? issueDate;
   final DateTime? requiredDate;
   final double? laborHours;
@@ -36,6 +37,7 @@ class BammWorkOrder {
     this.priority = '',
     this.responsible = '',
     this.requester = '',
+    this.workDone = '',
     this.issueDate,
     this.requiredDate,
     this.laborHours,
@@ -81,6 +83,7 @@ class BammWorkOrder {
     String? priority,
     String? responsible,
     String? requester,
+    String? workDone,
     DateTime? issueDate,
     DateTime? requiredDate,
     double? laborHours,
@@ -102,6 +105,7 @@ class BammWorkOrder {
       priority: priority ?? this.priority,
       responsible: responsible ?? this.responsible,
       requester: requester ?? this.requester,
+      workDone: workDone ?? this.workDone,
       issueDate: issueDate ?? this.issueDate,
       requiredDate: requiredDate ?? this.requiredDate,
       laborHours: laborHours ?? this.laborHours,
@@ -126,6 +130,7 @@ class BammWorkOrder {
       'priority': priority,
       'responsible': responsible,
       'requester': requester,
+      'workDone': workDone,
       'issueDate': issueDate?.toIso8601String(),
       'requiredDate': requiredDate?.toIso8601String(),
       'laborHours': laborHours,
@@ -161,6 +166,7 @@ class BammWorkOrder {
       priority: json['priority']?.toString() ?? '',
       responsible: json['responsible']?.toString() ?? '',
       requester: json['requester']?.toString() ?? '',
+      workDone: json['workDone']?.toString() ?? '',
       issueDate: parseDate(json['issueDate']),
       requiredDate: parseDate(json['requiredDate']),
       laborHours: (json['laborHours'] as num?)?.toDouble(),
@@ -205,12 +211,208 @@ class BammWorkOrder {
       priority: (p['worNumber3'] ?? p['WOR_PRIORITY_DESC'] ?? p['PRI_ID'] ?? '').toString(),
       responsible: (p['recipientName'] ?? p['WOR_RESPONSIBLE_NAME'] ?? p['responsible'] ?? '').toString(),
       requester: (p['requesterName'] ?? p['WOR_REQUESTER_NAME'] ?? p['requester'] ?? '').toString(),
+      workDone: (p['woTask'] ?? p['workDone'] ?? p['woDoneDescription'] ?? p['WOD_DESCR'] ?? '').toString(),
       issueDate: parseDate(p['woIssueDate'] ?? p['WOR_ISSUE_DATE']),
       requiredDate: parseDate(p['woRequiredDate'] ?? p['WOR_REQUIRED_DATE']),
       laborHours: (p['worEstLaborTime'] ?? p['WOR_EST_LABOR_HOURS'] as num?)?.toDouble(),
       requiredEmployees: (p['worEstNbEmployee'] ?? p['WOR_EST_NB_EMPLOYEE'] as num?)?.toInt(),
       executionMode: (p['executionModeDescription'] ?? '').toString(),
       rawDto: raw,
+    );
+  }
+
+  /// Parses a full DynamicDTO model returned by GET /api/WorkOrder/GetById.
+  factory BammWorkOrder.fromDynamicDto(Map<String, dynamic> dto) {
+    final properties = (dto['properties'] as List<dynamic>?) ?? [];
+    String getProp(String name, [String fallback = '']) {
+      for (final p in properties) {
+        if (p is Map && p['name'] == name) {
+          final val = p['value'];
+          return val != null ? val.toString() : fallback;
+        }
+      }
+      if (dto.containsKey(name) && dto[name] != null) {
+        return dto[name].toString();
+      }
+      return fallback;
+    }
+
+    DateTime? parseEpochOrDate(String? raw) {
+      if (raw == null || raw.isEmpty) return null;
+      final ms = int.tryParse(raw);
+      if (ms != null && ms > 100000000) {
+        return DateTime.fromMillisecondsSinceEpoch(ms);
+      }
+      return DateTime.tryParse(raw);
+    }
+
+    final id = int.tryParse(getProp('WOR_ID', '0')) ?? 0;
+    final no = getProp('WOR_NO_SEQ', getProp('WOR_NO', id.toString()));
+
+    // Check activity lines for work done description
+    String extractedWorkDone = '';
+    final childSets = (dto['childSets'] as List<dynamic>?) ?? [];
+    for (final cs in childSets) {
+      if (cs is Map && cs['originProperty'] == 'WO_DETAIL') {
+        final items = (cs['items'] as List<dynamic>?) ?? [];
+        for (final item in items) {
+          if (item is Map && item['properties'] is List) {
+            for (final p in item['properties']) {
+              if (p is Map && p['name'] == 'WOD_DESCR' && p['value'] != null && p['value'].toString().isNotEmpty) {
+                extractedWorkDone = p['value'].toString();
+                break;
+              }
+            }
+          }
+          if (extractedWorkDone.isNotEmpty) break;
+        }
+      }
+    }
+
+    return BammWorkOrder(
+      worId: id,
+      worNoSeq: no,
+      description: getProp('WOR_DESCR'),
+      status: getProp('WOR_STATUS_DESC', 'Registered'),
+      statusId: int.tryParse(getProp('WOR_STATUS_ID', '')),
+      step: getProp('WOR_STEP_DESC', 'Normal'),
+      stepId: int.tryParse(getProp('WSP_ID', '')),
+      cell: getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2')),
+      machine: getProp('WOR_EQUIPMENT_CODE', getProp('funCodeLevelNiv3Description')),
+      assetId: getProp('FUN_ID'),
+      priority: getProp('WOR_PRIORITY_DESC', getProp('WOR_NB_3')),
+      responsible: getProp('WOR_RESPONSIBLE_NAME', getProp('recipientName')),
+      requester: getProp('WOR_REQUESTER_NAME', getProp('requesterName')),
+      workDone: extractedWorkDone.isNotEmpty ? extractedWorkDone : getProp('woTask'),
+      issueDate: parseEpochOrDate(getProp('WOR_ISSUE_DATE')),
+      requiredDate: parseEpochOrDate(getProp('WOR_REQUI_DATE')),
+      laborHours: double.tryParse(getProp('WOR_EST_LABOR_HOURS', '')),
+      rawDto: dto,
+    );
+  }
+}
+
+/// A lookup item from BAMM dropdown endpoints (e.g. GetWorkOrderStatus).
+class BammLookupItem {
+  final dynamic id;
+  final String description;
+  final String code;
+
+  const BammLookupItem({
+    required this.id,
+    required this.description,
+    this.code = '',
+  });
+
+  factory BammLookupItem.fromJson(Map<String, dynamic> json) {
+    return BammLookupItem(
+      id: json['id'] ?? json['value'],
+      description: (json['description'] ?? json['label'] ?? json['name'] ?? '').toString(),
+      code: (json['code'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'description': description,
+    'code': code,
+  };
+}
+
+/// Comprehensive filter criteria for server-side and client-side querying.
+class BammFilterCriteria {
+  final String searchQuery;
+  final String? status;
+  final int? statusId;
+  final String? step;
+  final int? stepId;
+  final String? maintenanceType;
+  final int? maintenanceTypeId;
+  final String? cell;
+  final String? responsible;
+  final String? requester;
+  final String? machine;
+  final String? executionMode;
+  final int? executionModeId;
+
+  const BammFilterCriteria({
+    this.searchQuery = '',
+    this.status,
+    this.statusId,
+    this.step,
+    this.stepId,
+    this.maintenanceType,
+    this.maintenanceTypeId,
+    this.cell,
+    this.responsible,
+    this.requester,
+    this.machine,
+    this.executionMode,
+    this.executionModeId,
+  });
+
+  bool get isEmpty =>
+      searchQuery.trim().isEmpty &&
+      (status == null || status == 'All' || status!.isEmpty) &&
+      (step == null || step == 'All' || step!.isEmpty) &&
+      (maintenanceType == null || maintenanceType == 'All' || maintenanceType!.isEmpty) &&
+      (cell == null || cell == 'All' || cell!.isEmpty) &&
+      (responsible == null || responsible!.trim().isEmpty) &&
+      (requester == null || requester!.trim().isEmpty) &&
+      (machine == null || machine!.trim().isEmpty) &&
+      (executionMode == null || executionMode == 'All' || executionMode!.isEmpty);
+
+  int get activeFilterCount {
+    int count = 0;
+    if (searchQuery.trim().isNotEmpty) count++;
+    if (status != null && status != 'All' && status!.isNotEmpty) count++;
+    if (step != null && step != 'All' && step!.isNotEmpty) count++;
+    if (maintenanceType != null && maintenanceType != 'All' && maintenanceType!.isNotEmpty) count++;
+    if (cell != null && cell != 'All' && cell!.isNotEmpty) count++;
+    if (responsible != null && responsible!.trim().isNotEmpty) count++;
+    if (requester != null && requester!.trim().isNotEmpty) count++;
+    if (machine != null && machine!.trim().isNotEmpty) count++;
+    if (executionMode != null && executionMode != 'All' && executionMode!.isNotEmpty) count++;
+    return count;
+  }
+
+  BammFilterCriteria copyWith({
+    String? searchQuery,
+    String? status,
+    bool clearStatus = false,
+    int? statusId,
+    String? step,
+    bool clearStep = false,
+    int? stepId,
+    String? maintenanceType,
+    bool clearMaintenanceType = false,
+    int? maintenanceTypeId,
+    String? cell,
+    bool clearCell = false,
+    String? responsible,
+    bool clearResponsible = false,
+    String? requester,
+    bool clearRequester = false,
+    String? machine,
+    bool clearMachine = false,
+    String? executionMode,
+    bool clearExecutionMode = false,
+    int? executionModeId,
+  }) {
+    return BammFilterCriteria(
+      searchQuery: searchQuery ?? this.searchQuery,
+      status: clearStatus ? null : (status ?? this.status),
+      statusId: clearStatus ? null : (statusId ?? this.statusId),
+      step: clearStep ? null : (step ?? this.step),
+      stepId: clearStep ? null : (stepId ?? this.stepId),
+      maintenanceType: clearMaintenanceType ? null : (maintenanceType ?? this.maintenanceType),
+      maintenanceTypeId: clearMaintenanceType ? null : (maintenanceTypeId ?? this.maintenanceTypeId),
+      cell: clearCell ? null : (cell ?? this.cell),
+      responsible: clearResponsible ? null : (responsible ?? this.responsible),
+      requester: clearRequester ? null : (requester ?? this.requester),
+      machine: clearMachine ? null : (machine ?? this.machine),
+      executionMode: clearExecutionMode ? null : (executionMode ?? this.executionMode),
+      executionModeId: clearExecutionMode ? null : (executionModeId ?? this.executionModeId),
     );
   }
 }
@@ -221,19 +423,73 @@ class BammSavedFilter {
   final String name;
   final String searchQuery;
   final String? status;
+  final int? statusId;
   final String? step;
+  final int? stepId;
+  final String? maintenanceType;
+  final int? maintenanceTypeId;
   final String? cell;
   final String? responsible;
+  final String? requester;
+  final String? machine;
+  final String? executionMode;
 
   const BammSavedFilter({
     required this.id,
     required this.name,
     this.searchQuery = '',
     this.status,
+    this.statusId,
     this.step,
+    this.stepId,
+    this.maintenanceType,
+    this.maintenanceTypeId,
     this.cell,
     this.responsible,
+    this.requester,
+    this.machine,
+    this.executionMode,
   });
+
+  BammFilterCriteria toCriteria() {
+    return BammFilterCriteria(
+      searchQuery: searchQuery,
+      status: status,
+      statusId: statusId,
+      step: step,
+      stepId: stepId,
+      maintenanceType: maintenanceType,
+      maintenanceTypeId: maintenanceTypeId,
+      cell: cell,
+      responsible: responsible,
+      requester: requester,
+      machine: machine,
+      executionMode: executionMode,
+    );
+  }
+
+  factory BammSavedFilter.fromCriteria({
+    required String id,
+    required String name,
+    required BammFilterCriteria criteria,
+  }) {
+    return BammSavedFilter(
+      id: id,
+      name: name,
+      searchQuery: criteria.searchQuery,
+      status: criteria.status,
+      statusId: criteria.statusId,
+      step: criteria.step,
+      stepId: criteria.stepId,
+      maintenanceType: criteria.maintenanceType,
+      maintenanceTypeId: criteria.maintenanceTypeId,
+      cell: criteria.cell,
+      responsible: criteria.responsible,
+      requester: criteria.requester,
+      machine: criteria.machine,
+      executionMode: criteria.executionMode,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -241,9 +497,16 @@ class BammSavedFilter {
       'name': name,
       'searchQuery': searchQuery,
       'status': status,
+      'statusId': statusId,
       'step': step,
+      'stepId': stepId,
+      'maintenanceType': maintenanceType,
+      'maintenanceTypeId': maintenanceTypeId,
       'cell': cell,
       'responsible': responsible,
+      'requester': requester,
+      'machine': machine,
+      'executionMode': executionMode,
     };
   }
 
@@ -253,9 +516,16 @@ class BammSavedFilter {
       name: json['name'] as String? ?? 'Filter',
       searchQuery: json['searchQuery'] as String? ?? '',
       status: json['status'] as String?,
+      statusId: (json['statusId'] as num?)?.toInt(),
       step: json['step'] as String?,
+      stepId: (json['stepId'] as num?)?.toInt(),
+      maintenanceType: json['maintenanceType'] as String?,
+      maintenanceTypeId: (json['maintenanceTypeId'] as num?)?.toInt(),
       cell: json['cell'] as String?,
       responsible: json['responsible'] as String?,
+      requester: json['requester'] as String?,
+      machine: json['machine'] as String?,
+      executionMode: json['executionMode'] as String?,
     );
   }
 }

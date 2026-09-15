@@ -5,6 +5,7 @@ import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/order_item.dart';
 import 'package:jokarz_engineering/models/standalone_order.dart';
 import 'package:jokarz_engineering/providers/project_provider.dart';
+import 'package:jokarz_engineering/services/bamm_service.dart';
 import 'package:jokarz_engineering/services/storage_service.dart';
 
 Future<void> _waitForLoad(ProjectNotifier n) async {
@@ -101,6 +102,10 @@ void main() {
         step: 'Work in progress',
         cell: 'Line 4',
         responsible: 'John',
+        requester: 'Jane',
+        machine: 'MILL-04',
+        maintenanceType: 'Preventive',
+        executionMode: 'Running',
       );
 
       final json = filter.toJson();
@@ -113,6 +118,88 @@ void main() {
       expect(restored.step, 'Work in progress');
       expect(restored.cell, 'Line 4');
       expect(restored.responsible, 'John');
+      expect(restored.requester, 'Jane');
+      expect(restored.machine, 'MILL-04');
+      expect(restored.maintenanceType, 'Preventive');
+      expect(restored.executionMode, 'Running');
+
+      final criteria = restored.toCriteria();
+      expect(criteria.searchQuery, 'cylinder');
+      expect(criteria.status, 'Approved');
+      expect(criteria.cell, 'Line 4');
+      expect(criteria.responsible, 'John');
+
+      final backToFilter = BammSavedFilter.fromCriteria(id: 'f-2', name: 'Rebuilt', criteria: criteria);
+      expect(backToFilter.id, 'f-2');
+      expect(backToFilter.name, 'Rebuilt');
+      expect(backToFilter.status, 'Approved');
+      expect(backToFilter.responsible, 'John');
+    });
+
+    test('BammWorkOrder handles workDone field and DynamicDTO parsing', () {
+      final dto = {
+        'properties': [
+          {'name': 'WOR_ID', 'value': 195001},
+          {'name': 'WOR_NO_SEQ', 'value': '195001'},
+          {'name': 'WOR_DESCR', 'value': 'Gearbox oil change and inspection'},
+          {'name': 'WOR_STATUS_DESC', 'value': 'Closed'},
+          {'name': 'WOR_STEP_DESC', 'value': 'Completed'},
+          {'name': 'WOR_RESPONSIBLE_NAME', 'value': 'Maint Tech'},
+          {'name': 'WOR_REQUESTER_NAME', 'value': 'Supervisor'},
+          {'name': 'WOR_DEPARTMENT_CODE', 'value': 'PACK-LINE-2'},
+          {'name': 'WOR_EQUIPMENT_CODE', 'value': 'CONV-MOTOR-01'},
+          {'name': 'WOR_ISSUE_DATE', 'value': '2026-09-12T07:30:00.000Z'},
+          {'name': 'WOR_REQUI_DATE', 'value': '2026-09-12T16:00:00.000Z'},
+          {'name': 'WOR_EST_LABOR_HOURS', 'value': 2.5},
+        ],
+        'childSets': [
+          {
+            'originProperty': 'WO_DETAIL',
+            'items': [
+              {
+                'properties': [
+                  {
+                    'name': 'WOD_DESCR',
+                    'value': 'Drained oil, flushed gearbox, refilled with ISO VG 220 synthetic. Replaced seal.'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      final parsed = BammWorkOrder.fromDynamicDto(dto);
+      expect(parsed.worId, 195001);
+      expect(parsed.worNoSeq, '195001');
+      expect(parsed.description, 'Gearbox oil change and inspection');
+      expect(parsed.workDone, contains('Drained oil, flushed gearbox'));
+      expect(parsed.status, 'Closed');
+      expect(parsed.step, 'Completed');
+      expect(parsed.responsible, 'Maint Tech');
+      expect(parsed.requester, 'Supervisor');
+      expect(parsed.cell, 'PACK-LINE-2');
+      expect(parsed.machine, 'CONV-MOTOR-01');
+      expect(parsed.laborHours, 2.5);
+
+      final json = parsed.toJson();
+      final roundTrip = BammWorkOrder.fromJson(json);
+      expect(roundTrip.workDone, parsed.workDone);
+      expect(roundTrip.worNoSeq, '195001');
+    });
+
+    test('BammFilterCriteria tracking and counting', () {
+      const emptyCriteria = BammFilterCriteria();
+      expect(emptyCriteria.isEmpty, isTrue);
+      expect(emptyCriteria.activeFilterCount, 0);
+
+      final criteria = const BammFilterCriteria().copyWith(
+        searchQuery: 'leak',
+        status: 'In Progress',
+        cell: 'CELL-1',
+      );
+      expect(criteria.isEmpty, isFalse);
+      expect(criteria.activeFilterCount, 3);
     });
 
     test('BammConnectionConfig copyWith and serialization', () {
@@ -135,6 +222,65 @@ void main() {
       expect(fromJson.origin, 'http://10.0.0.5:82');
       expect(fromJson.usercode, 'MAINT_ENG');
       expect(fromJson.password, 'secret');
+    });
+
+    test('BammService.buildFilterPayload creates correct GuideTi query structure', () {
+      final service = BammService();
+      final criteria = const BammFilterCriteria(
+        status: 'In Progress',
+        step: 'Work in progress',
+        cell: 'CELL-A',
+        maintenanceType: 'Corrective',
+        responsible: 'John Tech',
+        requester: 'Operator Dan',
+        machine: 'PRESS-01',
+        executionMode: 'Stopped',
+        searchQuery: '198440',
+      );
+
+      final payload = service.buildFilterPayload(criteria);
+
+      // Verify server-side sorting: latest 2000 descending by worNoSeq
+      final listFormat = payload['listFormat'] as Map<String, dynamic>;
+      expect(listFormat['topCount'], 2000);
+      final orderBy = (listFormat['orderByFields'] as List).first as Map<String, dynamic>;
+      expect(orderBy['name'], 'worNoSeq');
+      expect(orderBy['ascending'], isFalse);
+
+      // Verify major fields requested
+      final fields = (listFormat['fields'] as List).map((f) => f['name']).toList();
+      expect(fields, containsAll([
+        'worNoSeq',
+        'woIssueDate',
+        'recipientName',
+        'requesterName',
+        'woTask',
+        'woDescription',
+        'funCodeLevelNiv3Description',
+        'functionInfo2',
+        'woStatusDescription',
+        'woStepDescription',
+      ]));
+
+      // Verify filters mapped to GuideTi block structure
+      final filters = payload['filters'] as List;
+      expect(filters.any((f) => f['searchFieldKey'] == 'woStatusId'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'woStepId'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'maintenanceTypeId'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'functionInfo2'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'recipientName'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'requesterName'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv3Description'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'executionModeId'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
+    });
+
+    test('Zero dummy data guarantee: offline returns empty list when no cache', () async {
+      final service = BammService();
+      // forceOffline with an empty/unseeded state
+      final orders = await service.fetchWorkOrders(forceOffline: true);
+      // Must be empty list, NOT synthetic or dummy data
+      expect(orders, isEmpty);
     });
   });
 
