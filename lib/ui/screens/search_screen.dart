@@ -62,22 +62,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _openOrder(OrderSearchHit h) {
     if (h.project != null) {
-      context.push('/projects/${h.project!.id}?tab=orders');
+      final orderParam = h.id != null ? '&orderId=${h.id}' : '';
+      context.push('/projects/${h.project!.id}?tab=orders$orderParam');
     } else {
-      context.push('/orders');
+      final orderParam = h.id != null ? '?orderId=${h.id}' : '';
+      context.go('/orders$orderParam');
     }
   }
 
   void _openNote(NoteSearchHit h) {
-    if (h.projectId != null) {
-      context.push('/projects/${h.projectId}');
+    if (h.projectId != null && h.isProjectNote) {
+      context.push('/projects/${h.projectId}?tab=logs');
+    } else if (h.id != null) {
+      context.go('/voice-notes?noteId=${h.id!}');
     } else {
-      context.push('/voice-notes');
+      context.go('/voice-notes');
     }
   }
 
   void _openTask(TaskSearchHit h) {
-    context.push('/projects/${h.project.id}');
+    context.push('/projects/${h.project.id}?taskId=${h.task.id}');
   }
 
   void _openFirstResult(SearchResults results) {

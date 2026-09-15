@@ -9,6 +9,8 @@ import '../../models/project_template.dart';
 import '../../providers/project_provider.dart';
 import '../../utils/text_utils.dart';
 import '../widgets/template_dialogs.dart';
+import '../widgets/bamm_chip.dart';
+import '../widgets/bamm_assign_dialog.dart';
 
 class ProjectEditScreen extends ConsumerStatefulWidget {
   final String? projectId; // null for new project
@@ -36,6 +38,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
   int _priority = 1;
   String? _nextPendingTaskId;
   ProjectTemplate? _templateToApply;
+  List<String> _bammWorkOrders = [];
 
   Project? _existingProject;
 
@@ -67,6 +70,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         _selectedPhase = _existingProject!.phase;
         _priority = _existingProject!.priority;
         _nextPendingTaskId = _existingProject!.nextPendingTaskId;
+        _bammWorkOrders = List.from(_existingProject!.bammWorkOrders);
       }
     } else {
       // Pre-fill title from search→create flow
@@ -121,6 +125,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         nextPendingTaskId: _nextPendingTaskId,
         clearNextPendingTask: _nextPendingTaskId == null,
         tags: tags,
+        bammWorkOrders: _bammWorkOrders,
       );
       await ref.read(projectProvider.notifier).updateProject(updated);
     } else {
@@ -135,6 +140,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
         subAssembly: _subAssemblyController.text.trim(),
         nextPendingTaskId: _nextPendingTaskId,
         tags: tags,
+        bammWorkOrders: _bammWorkOrders,
       );
 
       if (_templateToApply != null) {
@@ -505,6 +511,87 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                 labelText: 'Tags (Comma separated)',
                 hintText: '100, 621, Shutdown, Line 4, Mill, Hydraulics',
                 prefixIcon: Icon(Icons.tag_rounded),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Linked BAMM Work Orders
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.build_circle_rounded, size: 20, color: AppTheme.primaryBlue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'BAMM Work Orders',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final selected = await showDialog<List<String>>(
+                            context: context,
+                            builder: (ctx) => BammAssignDialog(
+                              initialSelected: _bammWorkOrders,
+                              title: 'Assign BAMM to Project',
+                            ),
+                          );
+                          if (selected != null) {
+                            setState(() {
+                              _bammWorkOrders = selected;
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.add_link_rounded, size: 18),
+                        label: const Text('Assign / Link'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_bammWorkOrders.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        'No BAMM work orders linked yet. Assign one or multiple GuideTi work order numbers.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _bammWorkOrders.map((wo) {
+                          return BammChip(
+                            workOrderNo: wo,
+                            onDeleted: () {
+                              setState(() {
+                                _bammWorkOrders = _bammWorkOrders.where((w) => w != wo).toList();
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 28),

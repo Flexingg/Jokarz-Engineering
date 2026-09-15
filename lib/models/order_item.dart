@@ -18,6 +18,8 @@ class OrderItem {
   final String vendorName;
   final String vendorQuoteNumber;
   final String trackingUrl;
+  /// Assigned BAMM Work Order numbers (e.g. ['185586'])
+  final List<String> bammWorkOrders;
 
   OrderItem({
     String? id,
@@ -34,7 +36,9 @@ class OrderItem {
     this.vendorName = '',
     this.vendorQuoteNumber = '',
     this.trackingUrl = '',
-  }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
+    List<String>? bammWorkOrders,
+  })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
+        bammWorkOrders = bammWorkOrders ?? [];
 
   OrderItem copyWith({
     String? pr,
@@ -52,6 +56,7 @@ class OrderItem {
     String? vendorName,
     String? vendorQuoteNumber,
     String? trackingUrl,
+    List<String>? bammWorkOrders,
   }) {
     return OrderItem(
       id: id,
@@ -69,6 +74,7 @@ class OrderItem {
       vendorName: vendorName ?? this.vendorName,
       vendorQuoteNumber: vendorQuoteNumber ?? this.vendorQuoteNumber,
       trackingUrl: trackingUrl ?? this.trackingUrl,
+      bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
     );
   }
 
@@ -88,6 +94,7 @@ class OrderItem {
       'vendorName': vendorName,
       'vendorQuoteNumber': vendorQuoteNumber,
       'trackingUrl': trackingUrl,
+      'bammWorkOrders': bammWorkOrders,
     };
   }
 
@@ -107,6 +114,10 @@ class OrderItem {
       vendorName: json['vendorName'] as String? ?? '',
       vendorQuoteNumber: json['vendorQuoteNumber'] as String? ?? '',
       trackingUrl: json['trackingUrl'] as String? ?? '',
+      bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }

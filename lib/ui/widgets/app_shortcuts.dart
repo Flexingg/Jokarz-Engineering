@@ -29,6 +29,11 @@ class AppShortcuts extends ConsumerWidget {
         bindings.forEach((id, c) {
           if (c == comboStr) actionId = id;
         });
+        // Default / quick fallback: Ctrl+S, Ctrl+F, or Ctrl+Shift+S triggers universal search
+        if (actionId == null &&
+            (comboStr == 'ctrl+s' || comboStr == 'ctrl+f' || comboStr == 'ctrl+shift+s')) {
+          actionId = 'search';
+        }
         if (actionId == null) return KeyEventResult.ignored;
         _dispatch(ref, actionId!);
         return KeyEventResult.handled;

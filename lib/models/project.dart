@@ -55,6 +55,8 @@ class Project {
   final List<OrderItem> orders;
   final List<ProjectLog> logs;
   final List<String> photoPaths;
+  /// Assigned BAMM Work Order numbers (e.g. ['185586', '185590'])
+  final List<String> bammWorkOrders;
   final DateTime createdAt;
   final DateTime updatedAt;
   /// Tracks when the engineer last took a meaningful action on this project
@@ -92,6 +94,7 @@ class Project {
     List<OrderItem>? orders,
     List<ProjectLog>? logs,
     List<String>? photoPaths,
+    List<String>? bammWorkOrders,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.lastActionAt,
@@ -101,6 +104,7 @@ class Project {
         orders = orders ?? [],
         logs = logs ?? [],
         photoPaths = photoPaths ?? [],
+        bammWorkOrders = bammWorkOrders ?? [],
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -156,6 +160,7 @@ class Project {
     List<OrderItem>? orders,
     List<ProjectLog>? logs,
     List<String>? photoPaths,
+    List<String>? bammWorkOrders,
     DateTime? updatedAt,
     DateTime? lastActionAt,
     bool clearLastActionAt = false,
@@ -180,6 +185,7 @@ class Project {
       orders: orders ?? this.orders,
       logs: logs ?? this.logs,
       photoPaths: photoPaths ?? this.photoPaths,
+      bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       lastActionAt: clearLastActionAt ? null : (lastActionAt ?? this.lastActionAt),
@@ -205,6 +211,7 @@ class Project {
       'orders': orders.map((e) => e.toJson()).toList(),
       'logs': logs.map((e) => e.toJson()).toList(),
       'photoPaths': photoPaths,
+      'bammWorkOrders': bammWorkOrders,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastActionAt': lastActionAt?.toIso8601String(),
@@ -248,6 +255,10 @@ class Project {
               .toList() ??
           [],
       photoPaths: (json['photoPaths'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

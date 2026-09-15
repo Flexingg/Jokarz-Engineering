@@ -8,6 +8,8 @@ class TaskItem {
   final bool isCompleted;
   /// Explicit sort order for drag-and-drop reordering (0-based index)
   final int sortOrder;
+  /// Assigned BAMM Work Order numbers (e.g. ['185586'])
+  final List<String> bammWorkOrders;
 
   TaskItem({
     String? id,
@@ -16,7 +18,9 @@ class TaskItem {
     this.pendingReason = '',
     this.isCompleted = false,
     this.sortOrder = 0,
-  }) : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4();
+    List<String>? bammWorkOrders,
+  })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
+        bammWorkOrders = bammWorkOrders ?? [];
 
   TaskItem copyWith({
     String? description,
@@ -25,6 +29,7 @@ class TaskItem {
     String? pendingReason,
     bool? isCompleted,
     int? sortOrder,
+    List<String>? bammWorkOrders,
   }) {
     return TaskItem(
       id: id,
@@ -33,6 +38,7 @@ class TaskItem {
       pendingReason: pendingReason ?? this.pendingReason,
       isCompleted: isCompleted ?? this.isCompleted,
       sortOrder: sortOrder ?? this.sortOrder,
+      bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
     );
   }
 
@@ -44,6 +50,7 @@ class TaskItem {
       'pendingReason': pendingReason,
       'isCompleted': isCompleted,
       'sortOrder': sortOrder,
+      'bammWorkOrders': bammWorkOrders,
     };
   }
 
@@ -57,6 +64,10 @@ class TaskItem {
       pendingReason: json['pendingReason'] as String? ?? '',
       isCompleted: json['isCompleted'] as bool? ?? false,
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+      bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }

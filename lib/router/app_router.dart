@@ -19,6 +19,7 @@ import '../ui/screens/inbox_screen.dart';
 import '../ui/screens/vendors_screen.dart';
 import '../ui/screens/machines_screen.dart';
 import '../ui/screens/machine_detail_screen.dart';
+import '../ui/screens/bamm_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -72,7 +73,14 @@ final appRouter = GoRouter(
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
                     final tab = state.uri.queryParameters['tab'];
-                    return ProjectDetailScreen(projectId: id, initialTab: tab);
+                    final orderId = state.uri.queryParameters['orderId'];
+                    final taskId = state.uri.queryParameters['taskId'];
+                    return ProjectDetailScreen(
+                      projectId: id,
+                      initialTab: tab,
+                      targetOrderId: orderId,
+                      targetTaskId: taskId,
+                    );
                   },
                   routes: [
                     GoRoute(
@@ -95,8 +103,10 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/orders',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: OpenOrdersScreen(),
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: OpenOrdersScreen(
+                  targetOrderId: state.uri.queryParameters['orderId'],
+                ),
               ),
             ),
           ],
@@ -119,8 +129,10 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/voice-notes',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: VoiceNotesScreen(),
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: VoiceNotesScreen(
+                  targetNoteId: state.uri.queryParameters['noteId'],
+                ),
               ),
             ),
           ],
@@ -200,6 +212,16 @@ final appRouter = GoRouter(
           },
         ),
       ],
+    ),
+    GoRoute(
+      path: '/bamm',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => NoTransitionPage(
+        child: BammScreen(
+          targetWo: state.uri.queryParameters['wo'],
+          initialFilter: state.uri.queryParameters['filter'],
+        ),
+      ),
     ),
   ],
 );

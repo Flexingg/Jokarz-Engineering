@@ -1,6 +1,8 @@
 import 'project.dart';
 import 'order_item.dart';
 import 'task_item.dart';
+import 'voice_note.dart';
+import 'standalone_order.dart';
 
 /// A project matched by universal search.
 class ProjectSearchHit {
@@ -18,6 +20,9 @@ class TaskSearchHit {
 /// An order (project-attached or standalone/unlinked) matched by search.
 /// [project] is null for standalone (unlinked) orders.
 class OrderSearchHit {
+  final String? id;
+  final OrderItem? order;
+  final StandaloneOrder? standaloneOrder;
   final String description;
   final String pr;
   final String po;
@@ -28,6 +33,9 @@ class OrderSearchHit {
   final String projectTitle;
 
   const OrderSearchHit({
+    this.id,
+    this.order,
+    this.standaloneOrder,
     required this.description,
     required this.pr,
     required this.po,
@@ -40,6 +48,8 @@ class OrderSearchHit {
 
   factory OrderSearchHit.fromOrder(OrderItem order, Project project) {
     return OrderSearchHit(
+      id: order.id,
+      order: order,
       description: order.description,
       pr: order.pr,
       po: order.po,
@@ -57,6 +67,8 @@ class OrderSearchHit {
 /// A note matched by search — either a voice/written note or a project-attached
 /// note (`isProjectNote == true`).
 class NoteSearchHit {
+  final String? id;
+  final VoiceNote? voiceNote;
   final String title;
   final String content;
   final String? projectId;
@@ -64,6 +76,8 @@ class NoteSearchHit {
   final bool isProjectNote;
 
   const NoteSearchHit({
+    this.id,
+    this.voiceNote,
     required this.title,
     required this.content,
     this.projectId,

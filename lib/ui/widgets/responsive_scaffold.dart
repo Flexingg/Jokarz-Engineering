@@ -104,57 +104,74 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                         ),
                       const SizedBox(height: 16),
 
-                      // Navigation Items
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.dashboard_rounded,
-                        label: 'Dashboard',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 0,
-                        onTap: () => _onTapNav(0),
-                      ),
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.assignment_outlined,
-                        label: 'Projects',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 1,
-                        onTap: () => _onTapNav(1),
-                      ),
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.local_shipping_outlined,
-                        label: 'Open Orders',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 2,
-                        onTap: () => _onTapNav(2),
-                      ),
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.handyman_rounded,
-                        label: 'Workbench Tools',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 3,
-                        onTap: () => _onTapNav(3),
-                      ),
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.edit_note_rounded,
-                        label: 'Notes',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 4,
-                        onTap: () => _onTapNav(4),
-                      ),
-                      _buildDesktopNavItem(
-                        context,
-                        icon: Icons.settings_suggest_rounded,
-                        label: 'Settings',
-                        collapsed: _collapsed,
-                        isSelected: widget.navigationShell.currentIndex == 5,
-                        onTap: () => _onTapNav(5),
+                      // Navigation Items (scrollable if viewport height is compact)
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.dashboard_rounded,
+                                label: 'Dashboard',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 0,
+                                onTap: () => _onTapNav(0),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.assignment_outlined,
+                                label: 'Projects',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 1,
+                                onTap: () => _onTapNav(1),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.local_shipping_outlined,
+                                label: 'Open Orders',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 2,
+                                onTap: () => _onTapNav(2),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.handyman_rounded,
+                                label: 'Workbench Tools',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 3,
+                                onTap: () => _onTapNav(3),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.precision_manufacturing_rounded,
+                                label: 'BAMM Orders',
+                                collapsed: _collapsed,
+                                isSelected: false,
+                                onTap: () => context.push('/bamm'),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.edit_note_rounded,
+                                label: 'Notes',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 4,
+                                onTap: () => _onTapNav(4),
+                              ),
+                              _buildDesktopNavItem(
+                                context,
+                                icon: Icons.settings_suggest_rounded,
+                                label: 'Settings',
+                                collapsed: _collapsed,
+                                isSelected: widget.navigationShell.currentIndex == 5,
+                                onTap: () => _onTapNav(5),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
 
-                      const Spacer(),
+                      const SizedBox(height: 8),
 
                       // Quick Voice Record
                       if (_collapsed)

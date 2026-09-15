@@ -104,130 +104,315 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {},
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            // Compact Plant Summary
-            _CompactSummary(
-              activeCount: activeProjects.length,
-              maintenance: maintenanceCount,
-              kaizen: kaizenCount,
-              capital: capitalCount,
-              openPoValue: totalOpenOrderValue,
-              topProject: activeProjects.isNotEmpty ? activeProjects.first : null,
-              onTapTop: activeProjects.isNotEmpty
-                  ? () => context.push('/projects/${activeProjects.first.id}')
-                  : null,
-              onTapProjects: () => context.go('/projects'),
-              onTapOrders: () => context.go('/orders'),
-            ),
-            const SizedBox(height: 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 900;
+            if (!isDesktop) {
+              return ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  // Compact Plant Summary
+                  _CompactSummary(
+                    activeCount: activeProjects.length,
+                    maintenance: maintenanceCount,
+                    kaizen: kaizenCount,
+                    capital: capitalCount,
+                    openPoValue: totalOpenOrderValue,
+                    topProject: activeProjects.isNotEmpty ? activeProjects.first : null,
+                    onTapTop: activeProjects.isNotEmpty
+                        ? () => context.push('/projects/${activeProjects.first.id}')
+                        : null,
+                    onTapProjects: () => context.go('/projects'),
+                    onTapOrders: () => context.go('/orders'),
+                  ),
+                  const SizedBox(height: 12),
 
-            // Plant Hub Shortcuts Row
-            Row(
+                  // Plant Hub Shortcuts Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/inbox'),
+                          icon: Badge(
+                            isLabelVisible: state.unprocessedInboxCount > 0,
+                            label: Text('${state.unprocessedInboxCount}'),
+                            child: Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.of(context).amber),
+                          ),
+                          label: const Text('Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/machines'),
+                          icon: Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).primary),
+                          label: const Text('Machines', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/vendors'),
+                          icon: Icon(Icons.storefront_rounded, size: 16, color: AppTheme.of(context).emerald),
+                          label: const Text('Vendors', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/bamm'),
+                          icon: Icon(Icons.construction_rounded, size: 16, color: AppTheme.of(context).primary),
+                          label: const Text('BAMM', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  _TodayTile(
+                    today: today,
+                    taskCount: todayTaskCount,
+                    onTap: () => context.push('/calendar'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
+                    const SizedBox(width: 12),
+                    _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
+                  ]),
+                  const SizedBox(height: 20),
+
+                  // Top Priority
+                  _SectionHeader(
+                    'Top Priority',
+                    onViewAll: () => context.go('/projects'),
+                  ),
+                  const SizedBox(height: 4),
+                  if (activeProjects.isEmpty)
+                    const _EmptyHint(
+                      'No active projects. Tap ＋ to create one.',
+                    )
+                  else
+                    ...activeProjects.take(5).map((p) => _ProjectRow(
+                          p: p,
+                          onTap: () => context.push('/projects/${p.id}'),
+                        )),
+                  const SizedBox(height: 18),
+
+                  // Needs Attention (queue: not worked on recently)
+                  _SectionHeader(
+                    'Needs Attention',
+                    onViewAll: () => context.push('/projects/queue'),
+                  ),
+                  const SizedBox(height: 4),
+                  if (queue.isEmpty)
+                    const _EmptyHint('Nothing sitting untouched. Nice.')
+                  else
+                    ...queue.take(5).map((p) => _QueueRow(
+                          p: p,
+                          onTap: () => context.push('/projects/${p.id}'),
+                        )),
+                  const SizedBox(height: 18),
+
+                  // Orders Due Soon
+                  _SectionHeader(
+                    'Orders Due Soon',
+                    onViewAll: () => context.go('/orders'),
+                  ),
+                  const SizedBox(height: 4),
+                  if (dueOrders.isEmpty)
+                    const _EmptyHint('No orders due in the next 14 days.')
+                  else
+                    ...dueOrders.take(6).map((e) => _OrderRow(
+                          entry: e,
+                          onTap: () =>
+                              context.push('/projects/${e.project.id}?tab=orders&orderId=${e.order.id}'),
+                        )),
+                  const SizedBox(height: 12),
+                ],
+              );
+            }
+
+            // Desktop Command Center Layout
+            return ListView(
+              padding: const EdgeInsets.all(20.0),
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/inbox'),
-                    icon: Badge(
-                      isLabelVisible: state.unprocessedInboxCount > 0,
-                      label: Text('${state.unprocessedInboxCount}'),
-                      child: Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.of(context).amber),
+                // Top Row: Plant Status & Calendar / Metrics
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Plant Overview & Shortcuts
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        children: [
+                          _CompactSummary(
+                            activeCount: activeProjects.length,
+                            maintenance: maintenanceCount,
+                            kaizen: kaizenCount,
+                            capital: capitalCount,
+                            openPoValue: totalOpenOrderValue,
+                            topProject: activeProjects.isNotEmpty ? activeProjects.first : null,
+                            onTapTop: activeProjects.isNotEmpty
+                                ? () => context.push('/projects/${activeProjects.first.id}')
+                                : null,
+                            onTapProjects: () => context.go('/projects'),
+                            onTapOrders: () => context.go('/orders'),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/inbox'),
+                                  icon: Badge(
+                                    isLabelVisible: state.unprocessedInboxCount > 0,
+                                    label: Text('${state.unprocessedInboxCount}'),
+                                    child: Icon(Icons.flash_on_rounded, size: 16, color: AppTheme.of(context).amber),
+                                  ),
+                                  label: const Text('Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/machines'),
+                                  icon: Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).primary),
+                                  label: const Text('Machines Hub', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/vendors'),
+                                  icon: Icon(Icons.storefront_rounded, size: 16, color: AppTheme.of(context).emerald),
+                                  label: const Text('Vendors Directory', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/bamm'),
+                                  icon: Icon(Icons.construction_rounded, size: 16, color: AppTheme.of(context).primary),
+                                  label: const Text('BAMM Orders', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    label: const Text('Inbox', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    const SizedBox(width: 16),
+                    // Today's Agenda & Weekly KPIs
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        children: [
+                          _TodayTile(
+                            today: today,
+                            taskCount: todayTaskCount,
+                            onTap: () => context.push('/calendar'),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
+                              const SizedBox(width: 10),
+                              _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/machines'),
-                    icon: Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).primary),
-                    label: const Text('Machines', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                const SizedBox(height: 24),
+
+                // Main Two-Column Operations Grid
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left Column: Top Priority & Attention Queue
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeader(
+                            'Top Priority Projects',
+                            onViewAll: () => context.go('/projects'),
+                          ),
+                          const SizedBox(height: 6),
+                          if (activeProjects.isEmpty)
+                            const _EmptyHint(
+                              'No active projects. Tap ＋ to create one.',
+                            )
+                          else
+                            ...activeProjects.take(6).map((p) => _ProjectRow(
+                                  p: p,
+                                  onTap: () => context.push('/projects/${p.id}'),
+                                )),
+                          const SizedBox(height: 22),
+                          _SectionHeader(
+                            'Needs Attention (Untouched)',
+                            onViewAll: () => context.push('/projects/queue'),
+                          ),
+                          const SizedBox(height: 6),
+                          if (queue.isEmpty)
+                            const _EmptyHint('Nothing sitting untouched. Nice.')
+                          else
+                            ...queue.take(6).map((p) => _QueueRow(
+                                  p: p,
+                                  onTap: () => context.push('/projects/${p.id}'),
+                                )),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/vendors'),
-                    icon: Icon(Icons.storefront_rounded, size: 16, color: AppTheme.of(context).emerald),
-                    label: const Text('Vendors', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    const SizedBox(width: 20),
+                    // Right Column: Orders Due Soon
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeader(
+                            'Orders Due Soon (Next 14 Days)',
+                            onViewAll: () => context.go('/orders'),
+                          ),
+                          const SizedBox(height: 6),
+                          if (dueOrders.isEmpty)
+                            const _EmptyHint('No orders due in the next 14 days.')
+                          else
+                            ...dueOrders.take(8).map((e) => _OrderRow(
+                                  entry: e,
+                                  onTap: () =>
+                                      context.push('/projects/${e.project.id}?tab=orders&orderId=${e.order.id}'),
+                                )),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
+                const SizedBox(height: 20),
               ],
-            ),
-            const SizedBox(height: 14),
-
-            _TodayTile(
-              today: today,
-              taskCount: todayTaskCount,
-              onTap: () => context.push('/calendar'),
-            ),
-            const SizedBox(height: 12),
-            Row(children: [
-              _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
-              const SizedBox(width: 12),
-              _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
-            ]),
-            const SizedBox(height: 20),
-
-
-            // Top Priority
-            _SectionHeader(
-              'Top Priority',
-              onViewAll: () => context.go('/projects'),
-            ),
-            const SizedBox(height: 4),
-            if (activeProjects.isEmpty)
-              const _EmptyHint(
-                'No active projects. Tap ＋ to create one.',
-              )
-            else
-              ...activeProjects.take(5).map((p) => _ProjectRow(
-                    p: p,
-                    onTap: () => context.push('/projects/${p.id}'),
-                  )),
-            const SizedBox(height: 18),
-
-            // Needs Attention (queue: not worked on recently)
-            _SectionHeader(
-              'Needs Attention',
-              onViewAll: () => context.push('/projects/queue'),
-            ),
-            const SizedBox(height: 4),
-            if (queue.isEmpty)
-              const _EmptyHint('Nothing sitting untouched. Nice.')
-            else
-              ...queue.take(5).map((p) => _QueueRow(
-                    p: p,
-                    onTap: () => context.push('/projects/${p.id}'),
-                  )),
-            const SizedBox(height: 18),
-
-            // Orders Due Soon
-            _SectionHeader(
-              'Orders Due Soon',
-              onViewAll: () => context.go('/orders'),
-            ),
-            const SizedBox(height: 4),
-            if (dueOrders.isEmpty)
-              const _EmptyHint('No orders due in the next 14 days.')
-            else
-              ...dueOrders.take(6).map((e) => _OrderRow(
-                    entry: e,
-                    onTap: () =>
-                        context.push('/projects/${e.project.id}?tab=orders'),
-                  )),
-            const SizedBox(height: 12),
-          ],
+            );
+          },
         ),
       ),
     );

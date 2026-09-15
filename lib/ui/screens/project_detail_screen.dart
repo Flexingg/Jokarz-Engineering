@@ -15,12 +15,22 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/template_dialogs.dart';
+import '../widgets/bamm_chip.dart';
+import '../widgets/bamm_assign_dialog.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
   final String? initialTab;
+  final String? targetOrderId;
+  final String? targetTaskId;
 
-  const ProjectDetailScreen({super.key, required this.projectId, this.initialTab});
+  const ProjectDetailScreen({
+    super.key,
+    required this.projectId,
+    this.initialTab,
+    this.targetOrderId,
+    this.targetTaskId,
+  });
 
   @override
   ConsumerState<ProjectDetailScreen> createState() =>
@@ -35,11 +45,36 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   @override
   void initState() {
     super.initState();
+    int initialIdx = 0;
+    if (widget.initialTab == 'orders' || widget.targetOrderId != null) {
+      initialIdx = 1;
+    } else if (widget.initialTab == 'logs') {
+      initialIdx = 2;
+    }
     _tabController = TabController(
       length: 3,
       vsync: this,
-      initialIndex: widget.initialTab == 'orders' ? 1 : 0,
+      initialIndex: initialIdx,
     );
+
+    if (widget.targetOrderId != null || widget.targetTaskId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final p = ref.read(projectProvider).projects.where((proj) => proj.id == widget.projectId).firstOrNull;
+        if (p == null) return;
+        if (widget.targetOrderId != null) {
+          final order = p.orders.where((o) => o.id == widget.targetOrderId).firstOrNull;
+          if (order != null) {
+            _showAddOrderDialog(context, existingOrder: order);
+          }
+        } else if (widget.targetTaskId != null) {
+          final task = p.tasks.where((t) => t.id == widget.targetTaskId).firstOrNull;
+          if (task != null) {
+            _showAddTaskDialog(context, existingTask: task);
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -78,6 +113,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     final descCtrl = TextEditingController(text: existingTask?.description ?? '');
     final pendingCtrl = TextEditingController(text: existingTask?.pendingReason ?? '');
     DateTime? scheduled = existingTask?.scheduledDate;
+    List<String> taskBamms = List.from(existingTask?.bammWorkOrders ?? []);
 
     showDialog(
       context: context,
@@ -85,13 +121,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
         builder: (ctx, setDialogState) {
           final dateText = scheduled != null
               ? DateFormat('MMM d, y').format(scheduled!)
-              : 'No Date Scheduled';
+              : 'No scheduled date';
 
           return AlertDialog(
             title: Text(existingTask == null ? 'Add Project Task' : 'Edit Task'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
                     controller: descCtrl,
@@ -145,6 +182,35 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       ],
                     ),
                   ),
+                  const Divider(height: 20),
+                  // BAMM Work Orders
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Assigned BAMMs:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final res = await BammAssignDialog.show(context, currentSelections: taskBamms);
+                          if (res != null) {
+                            setDialogState(() => taskBamms = res);
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 14),
+                        label: const Text('Assign BAMM', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
+                  ),
+                  if (taskBamms.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: taskBamms.map((wo) => BammChip(
+                        worNo: wo,
+                        onDeleted: () => setDialogState(() => taskBamms.remove(wo)),
+                      )).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -162,6 +228,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       pendingReason: pendingCtrl.text.trim(),
                       scheduledDate: scheduled,
                       clearScheduledDate: scheduled == null,
+                      bammWorkOrders: taskBamms,
                     );
                     await ref
                         .read(projectProvider.notifier)
@@ -171,6 +238,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       description: descCtrl.text.trim(),
                       pendingReason: pendingCtrl.text.trim(),
                       scheduledDate: scheduled,
+                      bammWorkOrders: taskBamms,
                     );
                     await ref
                         .read(projectProvider.notifier)
@@ -197,6 +265,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           : '',
     );
     DateTime? eta = existingOrder?.eta;
+    List<String> orderBamms = List.from(existingOrder?.bammWorkOrders ?? []);
 
     showDialog(
       context: context,
@@ -211,6 +280,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -290,6 +360,35 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       ],
                     ),
                   ),
+                  const Divider(height: 20),
+                  // BAMM Work Orders
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Assigned BAMMs:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final res = await BammAssignDialog.show(context, currentSelections: orderBamms);
+                          if (res != null) {
+                            setDialogState(() => orderBamms = res);
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 14),
+                        label: const Text('Assign BAMM', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
+                  ),
+                  if (orderBamms.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: orderBamms.map((wo) => BammChip(
+                        worNo: wo,
+                        onDeleted: () => setDialogState(() => orderBamms.remove(wo)),
+                      )).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -309,6 +408,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       price: price,
                       eta: eta,
                       clearEta: eta == null,
+                      bammWorkOrders: orderBamms,
                     );
                     await ref
                         .read(projectProvider.notifier)
@@ -320,6 +420,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       description: descCtrl.text.trim(),
                       price: price,
                       eta: eta,
+                      bammWorkOrders: orderBamms,
                     );
                     await ref
                         .read(projectProvider.notifier)
@@ -973,6 +1074,47 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ),
           ],
 
+          // Assigned BAMM Work Orders
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ...project.bammWorkOrders.map((wo) => BammChip(
+                worNo: wo,
+                onDeleted: () => ref.read(projectProvider.notifier).removeBammFromProject(project.id, wo),
+              )),
+              InkWell(
+                onTap: () async {
+                  final res = await BammAssignDialog.show(context, currentSelections: project.bammWorkOrders);
+                  if (res != null) {
+                    await ref.read(projectProvider.notifier).setProjectBammWorkOrders(project.id, res);
+                  }
+                },
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 13, color: AppTheme.of(context).primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        project.bammWorkOrders.isEmpty ? '+ Assign BAMM' : '+ BAMM',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
           // Completed at indicator
           if (project.completedAt != null) ...[
             const SizedBox(height: 6),
@@ -1257,6 +1399,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                                           color: AppTheme.of(context).primary,
                                           fontSize: 10,
                                         ),
+                                      ...task.bammWorkOrders.map((wo) => BammChip(worNo: wo, isDense: true)),
                                     ],
                                   ),
                                 ],
@@ -1404,6 +1547,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                                             fontSize: 10,
                                           ),
                                         ],
+                                        ...order.bammWorkOrders.map((wo) => Padding(
+                                          padding: const EdgeInsets.only(left: 4),
+                                          child: BammChip(worNo: wo, isDense: true),
+                                        )),
                                       ],
                                     ),
                                     const SizedBox(height: 4),

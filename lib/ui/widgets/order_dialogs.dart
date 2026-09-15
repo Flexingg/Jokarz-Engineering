@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/standalone_order.dart';
 import '../../providers/project_provider.dart';
+import '../../theme/app_theme.dart';
 import 'searchable_dropdown.dart';
+import 'bamm_chip.dart';
+import 'bamm_assign_dialog.dart';
 
 /// Shared "Add Unlinked Order" dialog, used by the Open Orders screen and the
 /// universal search quick-add. [prefillDescription] is populated from search
@@ -25,6 +28,7 @@ Future<void> showStandaloneOrderDialog(
   String? selectedVendorId;
   String selectedVendorName = '';
   DateTime? eta;
+  List<String> bammWorkOrders = [];
 
   return showDialog(
     context: context,
@@ -134,6 +138,54 @@ Future<void> showStandaloneOrderDialog(
                   decoration: const InputDecoration(labelText: 'Notes'),
                   maxLines: 2,
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.build_circle_rounded, size: 16, color: AppTheme.primaryBlue),
+                    const SizedBox(width: 6),
+                    Text(
+                      'BAMM Work Orders',
+                      style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final selected = await showDialog<List<String>>(
+                          context: ctx,
+                          builder: (c) => BammAssignDialog(
+                            initialSelected: bammWorkOrders,
+                            title: 'Assign BAMM to Order',
+                          ),
+                        );
+                        if (selected != null) {
+                          setDialogState(() {
+                            bammWorkOrders = selected;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add_link_rounded, size: 16),
+                      label: const Text('Assign BAMM'),
+                    ),
+                  ],
+                ),
+                if (bammWorkOrders.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: bammWorkOrders.map((wo) {
+                        return BammChip(
+                          workOrderNo: wo,
+                          onDeleted: () {
+                            setDialogState(() {
+                              bammWorkOrders = bammWorkOrders.where((w) => w != wo).toList();
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -158,6 +210,7 @@ Future<void> showStandaloneOrderDialog(
                         vendorName: selectedVendorName,
                         vendorQuoteNumber: quoteCtrl.text.trim(),
                         trackingUrl: trackingCtrl.text.trim(),
+                        bammWorkOrders: bammWorkOrders,
                       ),
                     );
                 Navigator.pop(ctx);

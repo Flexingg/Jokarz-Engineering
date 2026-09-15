@@ -20,6 +20,8 @@ class StandaloneOrder {
   final String vendorName;
   final String vendorQuoteNumber;
   final String trackingUrl;
+  /// Assigned BAMM Work Order numbers (e.g. ['185586'])
+  final List<String> bammWorkOrders;
 
   StandaloneOrder({
     String? id,
@@ -39,7 +41,9 @@ class StandaloneOrder {
     this.vendorName = '',
     this.vendorQuoteNumber = '',
     this.trackingUrl = '',
+    List<String>? bammWorkOrders,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
+        bammWorkOrders = bammWorkOrders ?? [],
         createdAt = createdAt ?? DateTime.now();
 
   StandaloneOrder copyWith({
@@ -61,6 +65,7 @@ class StandaloneOrder {
     String? vendorName,
     String? vendorQuoteNumber,
     String? trackingUrl,
+    List<String>? bammWorkOrders,
   }) {
     return StandaloneOrder(
       id: id,
@@ -80,6 +85,7 @@ class StandaloneOrder {
       vendorName: vendorName ?? this.vendorName,
       vendorQuoteNumber: vendorQuoteNumber ?? this.vendorQuoteNumber,
       trackingUrl: trackingUrl ?? this.trackingUrl,
+      bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
     );
   }
 
@@ -102,6 +108,7 @@ class StandaloneOrder {
       'vendorName': vendorName,
       'vendorQuoteNumber': vendorQuoteNumber,
       'trackingUrl': trackingUrl,
+      'bammWorkOrders': bammWorkOrders,
     };
   }
 
@@ -126,6 +133,10 @@ class StandaloneOrder {
       vendorName: json['vendorName'] as String? ?? '',
       vendorQuoteNumber: json['vendorQuoteNumber'] as String? ?? '',
       trackingUrl: json['trackingUrl'] as String? ?? '',
+      bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }

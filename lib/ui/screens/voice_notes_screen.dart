@@ -16,7 +16,8 @@ import '../widgets/voice_memo_modal.dart';
 import '../widgets/note_dialogs.dart';
 
 class VoiceNotesScreen extends ConsumerStatefulWidget {
-  const VoiceNotesScreen({super.key});
+  final String? targetNoteId;
+  const VoiceNotesScreen({super.key, this.targetNoteId});
 
   @override
   ConsumerState<VoiceNotesScreen> createState() => _VoiceNotesScreenState();
@@ -24,6 +25,38 @@ class VoiceNotesScreen extends ConsumerStatefulWidget {
 
 class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   String _search = '';
+  bool _handledTargetNote = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.targetNoteId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleTargetNote();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant VoiceNotesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.targetNoteId != null && widget.targetNoteId != oldWidget.targetNoteId) {
+      _handledTargetNote = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleTargetNote();
+      });
+    }
+  }
+
+  void _handleTargetNote() {
+    if (!mounted || _handledTargetNote || widget.targetNoteId == null) return;
+    _handledTargetNote = true;
+    final state = ref.read(projectProvider);
+    final note = state.voiceNotes.where((n) => n.id == widget.targetNoteId).firstOrNull;
+    if (note != null) {
+      _showEditNoteDialog(context, note);
+    }
+  }
 
   void _showNewTextNoteDialog(BuildContext context) {
     showNewFieldNoteDialog(context, ref);
