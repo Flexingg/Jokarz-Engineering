@@ -125,15 +125,16 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: maintId,
+                            value: bammState.maintLookups.any((m) => m.id == maintId)
+                                ? maintId
+                                : (bammState.maintLookups.firstOrNull?.id ?? 111),
                             decoration: const InputDecoration(labelText: 'Maintenance Type', isDense: true),
-                            items: const [
-                              DropdownMenuItem(value: 107, child: Text('Corrective')),
-                              DropdownMenuItem(value: 111, child: Text('Kaizen')),
-                              DropdownMenuItem(value: 108, child: Text('Preventive (PM)')),
-                              DropdownMenuItem(value: 105, child: Text('Emergency')),
-                              DropdownMenuItem(value: 115, child: Text('Project / CapEx')),
-                            ],
+                            items: bammState.maintLookups.map((m) {
+                              return DropdownMenuItem<int>(
+                                value: m.id,
+                                child: Text(m.description, overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
                             onChanged: (val) {
                               if (val != null) setDialogState(() => maintId = val);
                             },
@@ -142,15 +143,16 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: stepId,
+                            value: bammState.stepLookups.any((s) => s.id == stepId)
+                                ? stepId
+                                : (bammState.stepLookups.firstOrNull?.id ?? 1),
                             decoration: const InputDecoration(labelText: 'Urgency / Step', isDense: true),
-                            items: const [
-                              DropdownMenuItem(value: 1, child: Text('Normal (In Prep)')),
-                              DropdownMenuItem(value: 3, child: Text('Emergency')),
-                              DropdownMenuItem(value: 5, child: Text('Scheduled / Planned')),
-                              DropdownMenuItem(value: 2, child: Text('Countermeasure')),
-                              DropdownMenuItem(value: 4, child: Text('Follow-up')),
-                            ],
+                            items: bammState.stepLookups.map((s) {
+                              return DropdownMenuItem<int>(
+                                value: s.id,
+                                child: Text(s.description, overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
                             onChanged: (val) {
                               if (val != null) setDialogState(() => stepId = val);
                             },
@@ -164,14 +166,14 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         Expanded(
                           child: TextField(
                             controller: cellCtrl,
-                            decoration: const InputDecoration(labelText: 'Cell / Area', hintText: 'Line 3 or EG1', isDense: true),
+                            decoration: const InputDecoration(labelText: 'Area', hintText: 'e.g. 100, 200, 300, Carts', isDense: true),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
                             controller: machineCtrl,
-                            decoration: const InputDecoration(labelText: 'Machine / Asset', hintText: 'Packer A', isDense: true),
+                            decoration: const InputDecoration(labelText: 'Machine (3rd level)', hintText: 'e.g. Packer A', isDense: true),
                           ),
                         ),
                       ],
@@ -421,7 +423,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     TextField(
                       controller: machCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Asset / Machine Name',
+                        labelText: 'Machine (3rd level asset description)',
                         hintText: 'e.g. Packer A, Conveyor, Filler',
                         isDense: true,
                       ),
@@ -430,15 +432,14 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedMaint,
                       decoration: const InputDecoration(labelText: 'Maintenance Type', isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: 'All', child: Text('All Maintenance Types')),
-                        DropdownMenuItem(value: 'Corrective', child: Text('Corrective')),
-                        DropdownMenuItem(value: 'Kaizen', child: Text('Kaizen')),
-                        DropdownMenuItem(value: 'Preventive', child: Text('Preventive')),
-                        DropdownMenuItem(value: 'Emergency', child: Text('Emergency')),
-                        DropdownMenuItem(value: 'Project / CapEx', child: Text('Project / CapEx')),
-                        DropdownMenuItem(value: 'Defect', child: Text('Defect')),
-                        DropdownMenuItem(value: 'Safety', child: Text('Safety')),
+                      items: [
+                        const DropdownMenuItem(value: 'All', child: Text('All Maintenance Types')),
+                        ...bammState.maintLookups.map((m) {
+                          return DropdownMenuItem(
+                            value: m.description,
+                            child: Text(m.description, overflow: TextOverflow.ellipsis),
+                          );
+                        }),
                       ],
                       onChanged: (val) {
                         if (val != null) setDialogState(() => selectedMaint = val);
@@ -448,11 +449,14 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedExec,
                       decoration: const InputDecoration(labelText: 'Machine Status / Mode', isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: 'All', child: Text('All Machine Statuses')),
-                        DropdownMenuItem(value: 'Running', child: Text('Running')),
-                        DropdownMenuItem(value: 'Stopped', child: Text('Stopped')),
-                        DropdownMenuItem(value: 'Reduced Speed', child: Text('Reduced Speed')),
+                      items: [
+                        const DropdownMenuItem(value: 'All', child: Text('All Machine Statuses')),
+                        ...bammState.execLookups.map((e) {
+                          return DropdownMenuItem(
+                            value: e.description,
+                            child: Text(e.code.isNotEmpty ? '${e.description} (${e.code})' : e.description),
+                          );
+                        }),
                       ],
                       onChanged: (val) {
                         if (val != null) setDialogState(() => selectedExec = val);
@@ -476,8 +480,10 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   notifier.setResponsibleFilter(respCtrl.text.trim());
                   notifier.setRequesterFilter(reqCtrl.text.trim());
                   notifier.setMachineFilter(machCtrl.text.trim());
-                  notifier.setMaintenanceTypeFilter(selectedMaint);
-                  notifier.setExecutionModeFilter(selectedExec);
+                  final mItem = bammState.maintLookups.where((m) => m.description == selectedMaint).firstOrNull;
+                  notifier.setMaintenanceTypeFilter(selectedMaint, mItem?.id);
+                  final eItem = bammState.execLookups.where((e) => e.description == selectedExec).firstOrNull;
+                  notifier.setExecutionModeFilter(selectedExec, eItem?.id);
                   Navigator.pop(ctx);
                 },
                 child: const Text('Apply Filters'),
@@ -696,11 +702,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
             ),
             const SizedBox(width: 8),
-            // "All" Preset
+            // "All Open" Preset (Default)
             ChoiceChip(
-              label: const Text('All (Latest 2000)', style: TextStyle(fontSize: 12)),
-              selected: active == null && bammState.criteria.isEmpty,
-              onSelected: (_) => ref.read(bammProvider.notifier).applySavedFilter(null),
+              label: const Text('All Open (Active)', style: TextStyle(fontSize: 12)),
+              selected: active == null && (bammState.criteria.isEmpty || bammState.criteria.status == null || bammState.criteria.status == 'All Open'),
+              onSelected: (_) => ref.read(bammProvider.notifier).clearFilters(),
             ),
             const SizedBox(width: 6),
             ...bammState.savedFilters.map((preset) {
@@ -730,6 +736,48 @@ class _BammScreenState extends ConsumerState<BammScreen> {
 
   Widget _buildFilterControlsRow(BammState bammState, bool isDesktop) {
     final c = bammState.criteria;
+    final statusItems = [
+      'All Open',
+      'All (Including Closed)',
+      ...bammState.statusLookups.map((s) => s.description),
+    ];
+    final stepItems = [
+      'All',
+      ...bammState.stepLookups.map((s) => s.description),
+    ];
+    final areaItems = [
+      'All',
+      ...bammState.areaLookups.map((a) => a.description),
+    ];
+
+    void onStatusChanged(String? val) {
+      if (val == null || val == 'All Open') {
+        ref.read(bammProvider.notifier).setStatusFilter('All Open');
+      } else if (val == 'All' || val == 'All (Including Closed)') {
+        ref.read(bammProvider.notifier).setStatusFilter('All');
+      } else {
+        final sItem = bammState.statusLookups.where((s) => s.description == val).firstOrNull;
+        ref.read(bammProvider.notifier).setStatusFilter(val, sItem?.id);
+      }
+    }
+
+    void onStepChanged(String? val) {
+      if (val == null || val == 'All') {
+        ref.read(bammProvider.notifier).setStepFilter(null);
+      } else {
+        final sItem = bammState.stepLookups.where((s) => s.description == val).firstOrNull;
+        ref.read(bammProvider.notifier).setStepFilter(val, sItem?.id);
+      }
+    }
+
+    void onAreaChanged(String? val) {
+      if (val == null || val == 'All') {
+        ref.read(bammProvider.notifier).setAreaFilter(null);
+      } else {
+        final aItem = bammState.areaLookups.where((a) => a.description == val).firstOrNull;
+        ref.read(bammProvider.notifier).setAreaFilter(val, aItem?.id);
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -764,19 +812,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 // Status Dropdown
                 _buildDropdownFilter(
                   label: 'Status',
-                  currentValue: c.status ?? 'All',
-                  items: const [
-                    'All',
-                    'In preparation',
-                    'Scheduled',
-                    'Ready to schedule',
-                    'In estimate',
-                    'Registered',
-                    'Completed',
-                    'Closed',
-                    'Cancelled',
-                  ],
-                  onChanged: (val) => ref.read(bammProvider.notifier).setStatusFilter(val),
+                  currentValue: (c.status == null || c.status!.isEmpty || c.status == 'All Open')
+                      ? 'All Open'
+                      : (c.status == 'All' ? 'All (Including Closed)' : c.status!),
+                  items: statusItems,
+                  onChanged: onStatusChanged,
                 ),
                 const SizedBox(width: 8),
 
@@ -784,39 +824,17 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 _buildDropdownFilter(
                   label: 'Step',
                   currentValue: c.step ?? 'All',
-                  items: const [
-                    'All',
-                    'Emergency',
-                    'Planned Work',
-                    'Countermeasure',
-                    'Follow-up',
-                    'Defect Handling',
-                  ],
-                  onChanged: (val) => ref.read(bammProvider.notifier).setStepFilter(val),
+                  items: stepItems,
+                  onChanged: onStepChanged,
                 ),
                 const SizedBox(width: 8),
 
-                // Cell / Dept Dropdown
+                // Area Dropdown
                 _buildDropdownFilter(
-                  label: 'Cell',
-                  currentValue: c.cell ?? 'All',
-                  items: const [
-                    'All',
-                    'EG1 (MX)',
-                    'EG2 (EX/CL)',
-                    'EG3 (SP)',
-                    'EG4 (TA)',
-                    'EG5 (FL/CR/FL)',
-                    'MSG1 (MX)',
-                    'MSG2 (EX/CL)',
-                    'CG1 (831)',
-                    'Line 1',
-                    'Line 2',
-                    'Line 3',
-                    'Line 4',
-                    'Line 5',
-                  ],
-                  onChanged: (val) => ref.read(bammProvider.notifier).setCellFilter(val),
+                  label: 'Area',
+                  currentValue: c.area ?? 'All',
+                  items: areaItems,
+                  onChanged: onAreaChanged,
                 ),
                 const SizedBox(width: 8),
 
@@ -856,17 +874,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     Expanded(
                       child: _buildDropdownFilter(
                         label: 'Status',
-                        currentValue: c.status ?? 'All',
-                        items: const [
-                          'All',
-                          'In preparation',
-                          'Scheduled',
-                          'Ready to schedule',
-                          'In estimate',
-                          'Registered',
-                          'Completed',
-                        ],
-                        onChanged: (val) => ref.read(bammProvider.notifier).setStatusFilter(val),
+                        currentValue: (c.status == null || c.status!.isEmpty || c.status == 'All Open')
+                            ? 'All Open'
+                            : (c.status == 'All' ? 'All (Including Closed)' : c.status!),
+                        items: statusItems,
+                        onChanged: onStatusChanged,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -874,13 +886,17 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                       child: _buildDropdownFilter(
                         label: 'Step',
                         currentValue: c.step ?? 'All',
-                        items: const [
-                          'All',
-                          'Emergency',
-                          'Planned Work',
-                          'Countermeasure',
-                        ],
-                        onChanged: (val) => ref.read(bammProvider.notifier).setStepFilter(val),
+                        items: stepItems,
+                        onChanged: onStepChanged,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildDropdownFilter(
+                        label: 'Area',
+                        currentValue: c.area ?? 'All',
+                        items: areaItems,
+                        onChanged: onAreaChanged,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -902,7 +918,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    final hasFilter = currentValue != 'All' && currentValue.isNotEmpty;
+    final bool isDefault = currentValue == 'All' || currentValue == 'All Open';
+    final hasFilter = !isDefault;
+    final effectiveValue = items.contains(currentValue)
+        ? currentValue
+        : (items.contains('All Open') ? 'All Open' : (items.contains('All') ? 'All' : items.firstOrNull ?? 'All'));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -917,7 +937,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: items.contains(currentValue) ? currentValue : 'All',
+          value: effectiveValue,
           isDense: true,
           style: TextStyle(
             fontSize: 12,
@@ -925,9 +945,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             fontWeight: hasFilter ? FontWeight.bold : FontWeight.normal,
           ),
           items: items.map((val) {
+            String display = val;
+            if (val == 'All') display = '$label: All';
+            if (val == 'All Open') display = '$label: All Open (Active)';
+            if (val == 'All (Including Closed)') display = '$label: All (Inc. Closed)';
             return DropdownMenuItem(
               value: val,
-              child: Text(val == 'All' ? '$label: All' : val),
+              child: Text(display, overflow: TextOverflow.ellipsis),
             );
           }).toList(),
           onChanged: onChanged,
@@ -949,10 +973,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         },
       ));
     }
-    if (c.status != null && c.status != 'All') {
+    if (c.status != null && c.status != 'All Open' && c.status!.isNotEmpty) {
+      final statusLabel = c.status == 'All' ? 'Status: All (Inc. Closed)' : 'Status: ${c.status}';
       chips.add(Chip(
-        label: Text('Status: ${c.status}', style: const TextStyle(fontSize: 11)),
-        onDeleted: () => ref.read(bammProvider.notifier).setStatusFilter(null),
+        label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
+        onDeleted: () => ref.read(bammProvider.notifier).setStatusFilter('All Open'),
       ));
     }
     if (c.step != null && c.step != 'All') {
@@ -967,10 +992,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         onDeleted: () => ref.read(bammProvider.notifier).setMaintenanceTypeFilter(null),
       ));
     }
-    if (c.cell != null && c.cell != 'All') {
+    final areaVal = c.area ?? c.cell;
+    if (areaVal != null && areaVal != 'All' && areaVal.isNotEmpty) {
       chips.add(Chip(
-        label: Text('Cell: ${c.cell}', style: const TextStyle(fontSize: 11)),
-        onDeleted: () => ref.read(bammProvider.notifier).setCellFilter(null),
+        label: Text('Area: $areaVal', style: const TextStyle(fontSize: 11)),
+        onDeleted: () => ref.read(bammProvider.notifier).setAreaFilter(null),
       ));
     }
     if (c.responsible != null && c.responsible!.isNotEmpty) {
@@ -1160,9 +1186,9 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                       ),
-                      if (wo.cell.isNotEmpty)
+                      if (wo.area.isNotEmpty)
                         Text(
-                          'Cell: ${wo.cell}',
+                          'Area: ${wo.area}',
                           style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                         ),
                     ],
@@ -1331,10 +1357,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (wo.machine.isNotEmpty || wo.cell.isNotEmpty)
+                      if (wo.machine.isNotEmpty || wo.area.isNotEmpty)
                         Expanded(
                           child: Text(
-                            '${wo.machine} (${wo.cell})',
+                            [
+                              if (wo.machine.isNotEmpty) wo.machine,
+                              if (wo.area.isNotEmpty) 'Area: ${wo.area}',
+                            ].join(' • '),
                             style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

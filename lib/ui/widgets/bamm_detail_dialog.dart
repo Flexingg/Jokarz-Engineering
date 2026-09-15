@@ -417,14 +417,14 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                     Expanded(
                       child: TextField(
                         controller: _cellCtrl,
-                        decoration: const InputDecoration(labelText: 'Cell / Area', isDense: true),
+                        decoration: const InputDecoration(labelText: 'Area', isDense: true),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
                         controller: _machineCtrl,
-                        decoration: const InputDecoration(labelText: 'Machine / Asset', isDense: true),
+                        decoration: const InputDecoration(labelText: 'Machine (3rd level)', isDense: true),
                       ),
                     ),
                   ],
@@ -528,7 +528,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                _buildInfoRow('Machine / Cell', '${_wo.machine.isNotEmpty ? _wo.machine : 'None'} (${_wo.cell.isNotEmpty ? _wo.cell : 'Unspecified'})'),
+                _buildInfoRow('Machine / Area', '${_wo.machine.isNotEmpty ? _wo.machine : 'None'} (${_wo.area.isNotEmpty ? _wo.area : 'Unspecified'})'),
                 _buildInfoRow('Responsible', _wo.responsible.isNotEmpty ? _wo.responsible : 'Unassigned'),
                 _buildInfoRow('Requester', _wo.requester.isNotEmpty ? _wo.requester : 'None'),
                 if (_wo.issueDate != null)

@@ -105,18 +105,21 @@ class BammService {
   /// Builds the standard BAMM authenticated request headers.
   Map<String, String> _buildHeaders({
     required String refererPath,
-    String contentType = 'application/json',
+    String? contentType = 'application/json',
   }) {
     final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-    return {
+    final headers = <String, String>{
       'Accept': 'application/json, text/plain, */*',
-      'Content-Type': contentType,
       'Access-Token': _accessToken ?? '',
       'Session-Token': _sessionToken ?? '',
       'Origin': origin,
       'Referer': refererPath.startsWith('http') ? refererPath : '$origin$refererPath',
       'Cache-Control': 'no-cache',
     };
+    if (contentType != null && contentType.isNotEmpty) {
+      headers['Content-Type'] = contentType;
+    }
+    return headers;
   }
 
   // ---------------------------------------------------------------------------
@@ -149,26 +152,9 @@ class BammService {
             contentType: 'application/json',
           );
 
-          http.Response response;
-          try {
-            response = await _client
-                .post(listUrl, headers: headers, body: jsonEncode(payload))
-                .timeout(const Duration(seconds: 9));
-          } catch (e) {
-            // Defensive: If sorting by worNoSeq failed on the server SQL engine, retry with woIssueDate
-            if (payload['listFormat'] is Map && (payload['listFormat']['orderByFields'] as List).isNotEmpty) {
-              final fallbackPayload = Map<String, dynamic>.from(payload);
-              fallbackPayload['listFormat'] = Map<String, dynamic>.from(fallbackPayload['listFormat'] as Map);
-              fallbackPayload['listFormat']['orderByFields'] = [
-                {'name': 'woIssueDate', 'ascending': false},
-              ];
-              response = await _client
-                  .post(listUrl, headers: headers, body: jsonEncode(fallbackPayload))
-                  .timeout(const Duration(seconds: 9));
-            } else {
-              rethrow;
-            }
-          }
+          final response = await _client
+              .post(listUrl, headers: headers, body: jsonEncode(payload))
+              .timeout(const Duration(seconds: 12));
 
           if (response.statusCode >= 200 && response.statusCode < 300) {
             final body = jsonDecode(response.body);
@@ -183,14 +169,18 @@ class BammService {
               }
             }
 
-            // Only cache the full initial view (unfiltered latest 2000) so a search doesn't wipe base cache
+            // Only cache the full initial view (open work orders) so a search doesn't wipe base cache
             if (!hasCriteria && customPayload == null && workOrders.isNotEmpty) {
               await saveCachedWorkOrders(workOrders);
             }
             return workOrders;
+          } else {
+            debugPrint('BAMM GetListData failed with HTTP ${response.statusCode}: ${response.body}');
+            throw HttpException('BAMM server returned HTTP ${response.statusCode}: ${response.body}');
           }
         } catch (e) {
-          debugPrint('BAMM live fetch failed ($e), falling back to local cached work orders.');
+          debugPrint('BAMM live fetch failed ($e), checking local cached work orders.');
+          if (hasCriteria) rethrow;
         }
       }
     }
@@ -205,22 +195,56 @@ class BammService {
       return _filterCachedLocally(cached, criteria);
     }
 
-    return cached;
+    return _filterCachedLocally(cached, const BammFilterCriteria());
   }
 
   /// Construct standard list format payload matching Cogep GuideTi requirements.
-  /// Major columns: WO, registered date, responsible, requester, work done, description, asset.
+  /// Major columns: WO, registered date, responsible, requester, work done, description, asset, area.
   Map<String, dynamic> _buildDefaultFilterPayload() {
     return {
-      'filters': [],
+      'filters': [
+        _buildOpenStatusFilterBlock(),
+      ],
       'listFormat': {
+        'schemaVersion': 3,
+        'programId': 1,
+        'id': config.spwId,
+        'topCount': 2000,
         'fields': _buildMajorFieldsList(),
         'orderByFields': [
-          {'name': 'worNoSeq', 'ascending': false},
+          {'name': 'woIssueDate', 'ascending': false},
         ],
-        'topCount': 2000,
       },
       'isCountOnly': false,
+    };
+  }
+
+  /// Builds the standard GuideTi filter block that restricts results to open/active work orders.
+  /// Excludes completed (3), declined (5), closed (6), and cancelled (4).
+  Map<String, dynamic> _buildOpenStatusFilterBlock() {
+    return {
+      'searchFieldKey': 'woStatusId',
+      'filterType': 8,
+      'description': 'Statuses',
+      'sourceUrl': 'GetWorkOrderStatus',
+      'categoryDescription': 'WO parameters',
+      'values': [
+        {
+          'status': 'included',
+          'comparisonType': 'contains',
+          'includeNull': false,
+          'listValues': [
+            {'id': 1, 'value': 0, 'description': 'In preparation', 'code': '', 'type': null, 'inactive': false},
+            {'id': 2, 'value': 0, 'description': 'Scheduled', 'code': '', 'type': null, 'inactive': false},
+            {'id': 7, 'value': 0, 'description': 'In estimate', 'code': '', 'type': null, 'inactive': false},
+            {'id': 8, 'value': 0, 'description': 'Registered', 'code': '', 'type': null, 'inactive': false},
+            {'id': 9, 'value': 0, 'description': 'Ready to schedule', 'code': '', 'type': null, 'inactive': false},
+          ],
+          'stringValues': [],
+        }
+      ],
+      'isExpanded': true,
+      'isVisible': true,
     };
   }
 
@@ -247,6 +271,21 @@ class BammService {
         'header': 'WO registered date',
         'isVisible': true,
         'fieldDataType': 5,
+        'format': 4,
+      },
+      {
+        'name': 'regrouping1Description',
+        'key': 'regrouping1Description',
+        'header': 'Area',
+        'isVisible': true,
+        'fieldDataType': 15,
+      },
+      {
+        'name': 'funCodeLevelNiv3Description',
+        'key': 'funCodeLevelNiv3Description',
+        'header': 'Machine',
+        'isVisible': true,
+        'fieldDataType': 15,
       },
       {
         'name': 'recipientName',
@@ -277,20 +316,6 @@ class BammService {
         'fieldDataType': 1,
       },
       {
-        'name': 'funCodeLevelNiv3Description',
-        'key': 'funCodeLevelNiv3Description',
-        'header': 'Machine',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'functionInfo2',
-        'key': 'functionInfo2',
-        'header': 'Cell',
-        'isVisible': true,
-        'fieldDataType': 1,
-      },
-      {
         'name': 'woStatusDescription',
         'key': 'woStatusDescription',
         'header': 'Status',
@@ -317,6 +342,7 @@ class BammService {
         'header': 'Required date',
         'isVisible': true,
         'fieldDataType': 5,
+        'format': 4,
       },
       {
         'name': 'worNumber3',
@@ -339,9 +365,22 @@ class BammService {
   Map<String, dynamic> buildFilterPayload(BammFilterCriteria criteria) {
     final filters = <Map<String, dynamic>>[];
 
-    // Status filter (woStatusId, filterType 8)
-    if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
-      final sId = criteria.statusId ?? _lookupStatusId(criteria.status!);
+    // Status filter:
+    // If empty/null/All Open -> filter by open work orders (exclude completed, declined, closed, cancelled)
+    // If specific status -> filter by that single status
+    // If 'All' or 'All (Including Closed)' -> do not filter by status
+    final statusStr = criteria.status?.trim() ?? '';
+    final isAllInclusive = statusStr.toLowerCase() == 'all' ||
+        statusStr.toLowerCase() == 'all (including closed)' ||
+        statusStr.toLowerCase() == 'all_inclusive';
+    final isOpenDefault = statusStr.isEmpty ||
+        statusStr.toLowerCase() == 'all open' ||
+        statusStr.toLowerCase() == 'open';
+
+    if (isOpenDefault) {
+      filters.add(_buildOpenStatusFilterBlock());
+    } else if (!isAllInclusive) {
+      final sId = criteria.statusId ?? _lookupStatusId(statusStr);
       filters.add({
         'searchFieldKey': 'woStatusId',
         'filterType': 8,
@@ -356,7 +395,7 @@ class BammService {
               {
                 'id': sId,
                 'value': 0,
-                'description': criteria.status!,
+                'description': statusStr,
                 'code': '',
                 'type': null,
                 'inactive': false,
@@ -434,10 +473,42 @@ class BammService {
       });
     }
 
-    // Cell / Area (functionInfo2, filterType 1)
-    if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
+    // Area filter (regrouping1Id, filterType 8, sourceUrl: GetGrouping1)
+    final areaVal = (criteria.area ?? criteria.cell)?.trim();
+    if (areaVal != null && areaVal.isNotEmpty && areaVal != 'All') {
+      final aId = criteria.areaId ?? _lookupAreaId(areaVal);
       filters.add({
-        'searchFieldKey': 'functionInfo2',
+        'searchFieldKey': 'regrouping1Id',
+        'filterType': 8,
+        'sourceUrl': 'GetGrouping1',
+        'categoryDescription': 'Asset parameters',
+        'values': [
+          {
+            'status': 'included',
+            'comparisonType': 'contains',
+            'includeNull': false,
+            'listValues': [
+              {
+                'id': aId,
+                'value': 0,
+                'description': areaVal,
+                'code': '',
+                'type': null,
+                'inactive': false,
+              }
+            ],
+            'stringValues': [],
+          }
+        ],
+        'isExpanded': true,
+        'isVisible': true,
+      });
+    }
+
+    // Machine filter: 3rd level asset description (funCodeLevelNiv3Description, filterType 1)
+    if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
+      filters.add({
+        'searchFieldKey': 'funCodeLevelNiv3Description',
         'filterType': 1,
         'values': [
           {
@@ -445,7 +516,7 @@ class BammService {
             'comparisonType': 'contains',
             'includeNull': false,
             'listValues': [],
-            'stringValues': [criteria.cell!],
+            'stringValues': [criteria.machine!.trim()],
           }
         ],
         'isExpanded': true,
@@ -484,25 +555,6 @@ class BammService {
             'includeNull': false,
             'listValues': [],
             'stringValues': [criteria.requester!.trim()],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
-    }
-
-    // Machine / Equipment (funCodeLevelNiv3Description, filterType 1)
-    if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
-      filters.add({
-        'searchFieldKey': 'funCodeLevelNiv3Description',
-        'filterType': 1,
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [],
-            'stringValues': [criteria.machine!.trim()],
           }
         ],
         'isExpanded': true,
@@ -568,7 +620,7 @@ class BammService {
       'listFormat': {
         'fields': _buildMajorFieldsList(),
         'orderByFields': [
-          {'name': 'worNoSeq', 'ascending': false},
+          {'name': 'woIssueDate', 'ascending': false},
         ],
         'topCount': 2000,
       },
@@ -583,7 +635,7 @@ class BammService {
         final q = criteria.searchQuery.trim().toLowerCase();
         final match = wo.worNoSeq.toLowerCase().contains(q) ||
             wo.description.toLowerCase().contains(q) ||
-            wo.cell.toLowerCase().contains(q) ||
+            wo.area.toLowerCase().contains(q) ||
             wo.machine.toLowerCase().contains(q) ||
             wo.responsible.toLowerCase().contains(q) ||
             wo.requester.toLowerCase().contains(q) ||
@@ -592,16 +644,42 @@ class BammService {
         if (!match) return false;
       }
 
-      if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
-        if (wo.status.toLowerCase() != criteria.status!.toLowerCase()) return false;
+      final status = criteria.status?.trim() ?? '';
+      if (status.isEmpty || status.toLowerCase() == 'all open' || status.toLowerCase() == 'open') {
+        // Exclude completed, closed, cancelled, declined
+        final s = wo.status.toLowerCase();
+        if (s.contains('complet') || s.contains('close') || s.contains('cancel') || s.contains('declin')) {
+          return false;
+        }
+      } else if (status.toLowerCase() != 'all' && status.toLowerCase() != 'all (including closed)') {
+        if (wo.status.toLowerCase() != status.toLowerCase()) return false;
       }
 
       if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
         if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
       }
 
-      if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
-        if (!wo.cell.toLowerCase().contains(criteria.cell!.toLowerCase())) return false;
+      final area = criteria.area ?? criteria.cell;
+      if (area != null && area.isNotEmpty && area != 'All') {
+        if (!wo.area.toLowerCase().contains(area.toLowerCase())) return false;
+      }
+
+      if (criteria.maintenanceType != null &&
+          criteria.maintenanceType!.isNotEmpty &&
+          criteria.maintenanceType != 'All') {
+        if (wo.maintenanceType.isNotEmpty &&
+            !wo.maintenanceType.toLowerCase().contains(criteria.maintenanceType!.toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (criteria.executionMode != null &&
+          criteria.executionMode!.isNotEmpty &&
+          criteria.executionMode != 'All') {
+        if (wo.executionMode.isNotEmpty &&
+            !wo.executionMode.toLowerCase().contains(criteria.executionMode!.toLowerCase())) {
+          return false;
+        }
       }
 
       if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
@@ -928,13 +1006,15 @@ class BammService {
         }
 
         final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
+        final extraParams = method == 'GetWorkOrderStep' ? '&showSecondaryStep=false' : '';
         final searchParam = search.isNotEmpty ? '&search=${Uri.encodeComponent(search)}&searchColumns=description' : '';
         final url = Uri.parse(
-          '$origin/api/WorkOrderLookup/$method?querytype=top&pageSize=200&companyId=${config.companyId}&sortColumn=description$searchParam',
+          '$origin/api/WorkOrderLookup/$method?querytype=top&pageSize=200&companyId=${config.companyId}&sortColumn=description$extraParams$searchParam',
         );
 
-        final headers = _buildHeaders(refererPath: '/');
-        final response = await _client.post(url, headers: headers).timeout(const Duration(seconds: 5));
+        // GuideTi empty-body POSTs must not have Content-Type: application/json
+        final headers = _buildHeaders(refererPath: '/', contentType: null);
+        final response = await _client.post(url, headers: headers, body: '').timeout(const Duration(seconds: 5));
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           final body = jsonDecode(response.body);
@@ -962,9 +1042,9 @@ class BammService {
     final s = status.trim().toLowerCase();
     if (s.contains('prep')) return 1; // In preparation
     if (s.contains('schedul')) return 2; // Scheduled
+    if (s.contains('ready')) return 9; // Ready to schedule
     if (s.contains('estimat')) return 7; // In estimate
     if (s.contains('regist')) return 8; // Registered
-    if (s.contains('ready')) return 9; // Ready to schedule
     if (s.contains('complet')) return 3; // Completed
     if (s.contains('close')) return 6; // Closed
     if (s.contains('cancel')) return 4; // Cancelled
@@ -974,33 +1054,51 @@ class BammService {
 
   int _lookupStepId(String step) {
     final s = step.trim().toLowerCase();
-    if (s.contains('emerg')) return 3; // Emergency
-    if (s.contains('plan')) return 5; // Planned Work
-    if (s.contains('follow')) return 4; // Follow-up
     if (s.contains('counter')) return 2; // Countermeasure
     if (s.contains('defect')) return 700000007; // Defect Handling
+    if (s.contains('emerg')) return 3; // Emergency
+    if (s.contains('follow')) return 4; // Follow-up
+    if (s.contains('plan')) return 5; // Planned Work
     return 1;
   }
 
   int _lookupMaintId(String maint) {
     final m = maint.trim().toLowerCase();
-    if (m.contains('corrective')) return 107;
-    if (m.contains('kaizen')) return 111;
-    if (m.contains('preventive') || m.contains('pm')) return 108;
-    if (m.contains('assist')) return 118;
-    if (m.contains('pitstop')) return 117;
-    if (m.contains('emerg')) return 105;
-    if (m.contains('defect')) return 700000019;
-    if (m.contains('safety')) return 700000020;
-    if (m.contains('project') || m.contains('capex')) return 115;
-    return 107;
+    final items = _getStandardFallbackLookup('GetMaintenanceType');
+    for (final item in items) {
+      if (item.description.toLowerCase().trim() == m) {
+        return item.id;
+      }
+    }
+    for (final item in items) {
+      if (item.description.toLowerCase().contains(m) || m.contains(item.description.toLowerCase())) {
+        return item.id;
+      }
+    }
+    return 111;
+  }
+
+  int _lookupAreaId(String area) {
+    final a = area.trim().toLowerCase();
+    final items = _getStandardFallbackLookup('GetGrouping1');
+    for (final item in items) {
+      if (item.description.toLowerCase().trim() == a) {
+        return item.id;
+      }
+    }
+    for (final item in items) {
+      if (item.description.toLowerCase().contains(a) || a.contains(item.description.toLowerCase())) {
+        return item.id;
+      }
+    }
+    return 700000000;
   }
 
   int _lookupExecutionModeId(String mode) {
     final m = mode.trim().toLowerCase();
-    if (m.contains('run')) return 1;
-    if (m.contains('stop')) return 2;
-    if (m.contains('reduc')) return 3;
+    if (m.contains('down')) return 1; // Down
+    if (m.contains('limp')) return 2; // Limping
+    if (m.contains('run')) return 3; // Running
     return 1;
   }
 
@@ -1020,23 +1118,63 @@ class BammService {
         ];
       case 'GetWorkOrderStep':
         return const [
-          BammLookupItem(id: 3, description: 'Emergency'),
-          BammLookupItem(id: 5, description: 'Planned Work'),
           BammLookupItem(id: 2, description: 'Countermeasure'),
-          BammLookupItem(id: 4, description: 'Follow-up'),
           BammLookupItem(id: 700000007, description: 'Defect Handling'),
+          BammLookupItem(id: 3, description: 'Emergency'),
+          BammLookupItem(id: 4, description: 'Follow-up'),
+          BammLookupItem(id: 5, description: 'Planned Work'),
         ];
       case 'GetMaintenanceType':
         return const [
-          BammLookupItem(id: 107, description: 'Corrective'),
-          BammLookupItem(id: 111, description: 'Kaizen'),
-          BammLookupItem(id: 108, description: 'Preventive'),
+          BammLookupItem(id: 700000004, description: '3m/ Active Trial'),
+          BammLookupItem(id: 103, description: 'Administrative (Training, Meeting, General)'),
+          BammLookupItem(id: 700000019, description: 'Defect '),
+          BammLookupItem(id: 700000021, description: 'Defect - Quality #5'),
+          BammLookupItem(id: 700000020, description: 'Defect - Safety #7'),
           BammLookupItem(id: 105, description: 'Emergency'),
           BammLookupItem(id: 118, description: 'Emergency - Assist'),
           BammLookupItem(id: 117, description: 'Emergency - Pitstop'),
-          BammLookupItem(id: 700000019, description: 'Defect'),
-          BammLookupItem(id: 700000020, description: 'Defect - Safety'),
-          BammLookupItem(id: 115, description: 'Project / CapEx'),
+          BammLookupItem(id: 106, description: 'Fabrication / Machining'),
+          BammLookupItem(id: 700000010, description: 'Floating activity found during PM'),
+          BammLookupItem(id: 700000011, description: 'Follow Up - Investigate (IPS,UPS or IDA)'),
+          BammLookupItem(id: 700000005, description: 'Follow Up - Order Parts'),
+          BammLookupItem(id: 700000008, description: 'Follow Up - Take/Send Oill Sample for Analysis'),
+          BammLookupItem(id: 114, description: 'Periodic Maintenance'),
+          BammLookupItem(id: 110, description: 'Planned - Audit Follow-up Task'),
+          BammLookupItem(id: 116, description: 'Planned - Calibration / Accuracy Checks'),
+          BammLookupItem(id: 111, description: 'Planned - Corrective Maint.'),
+          BammLookupItem(id: 107, description: 'Planned - Kaizen '),
+          BammLookupItem(id: 108, description: 'Planned - Modification / Upgrade'),
+          BammLookupItem(id: 113, description: 'Planned - Predictive Maint.'),
+          BammLookupItem(id: 115, description: 'Planned - Size Change / Setup'),
+          BammLookupItem(id: 700000014, description: 'Planned - Thermography Action'),
+          BammLookupItem(id: 700000013, description: 'Planned - Vibration/MCE Action'),
+          BammLookupItem(id: 700000002, description: 'Shutdown Item'),
+          BammLookupItem(id: 112, description: 'x_Planned - MEMO Task'),
+        ];
+      case 'GetGrouping1':
+        return const [
+          BammLookupItem(id: 700000000, description: '100'),
+          BammLookupItem(id: 700000001, description: '150'),
+          BammLookupItem(id: 700000002, description: '200'),
+          BammLookupItem(id: 700000003, description: '300'),
+          BammLookupItem(id: 700000004, description: '350'),
+          BammLookupItem(id: 700000005, description: '400'),
+          BammLookupItem(id: 700000014, description: '500'),
+          BammLookupItem(id: 700000006, description: '700'),
+          BammLookupItem(id: 700000008, description: '720'),
+          BammLookupItem(id: 700000009, description: '736'),
+          BammLookupItem(id: 700000010, description: '900'),
+          BammLookupItem(id: 700000011, description: '930'),
+          BammLookupItem(id: 700000012, description: 'Carts'),
+          BammLookupItem(id: 700000015, description: 'Cell 1'),
+          BammLookupItem(id: 700000013, description: 'Mobile Power'),
+        ];
+      case 'GetExecutionMode':
+        return const [
+          BammLookupItem(id: 1, description: 'Down', code: '2.00'),
+          BammLookupItem(id: 2, description: 'Limping', code: '1.50'),
+          BammLookupItem(id: 3, description: 'Running', code: '1.00'),
         ];
       case 'GetDepartment':
         return const [
@@ -1056,12 +1194,6 @@ class BammService {
           BammLookupItem(id: 3, description: 'Line 3'),
           BammLookupItem(id: 4, description: 'Line 4'),
           BammLookupItem(id: 5, description: 'Line 5'),
-        ];
-      case 'GetExecutionMode':
-        return const [
-          BammLookupItem(id: 1, description: 'Running'),
-          BammLookupItem(id: 2, description: 'Stopped'),
-          BammLookupItem(id: 3, description: 'Reduced Speed'),
         ];
       default:
         return const [];

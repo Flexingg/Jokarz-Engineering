@@ -20,7 +20,7 @@ class BammState {
   final List<BammLookupItem> statusLookups;
   final List<BammLookupItem> stepLookups;
   final List<BammLookupItem> maintLookups;
-  final List<BammLookupItem> cellLookups;
+  final List<BammLookupItem> areaLookups;
   final List<BammLookupItem> execLookups;
   final bool isLoading;
   final String? errorMessage;
@@ -37,16 +37,18 @@ class BammState {
     this.statusLookups = const [],
     this.stepLookups = const [],
     this.maintLookups = const [],
-    this.cellLookups = const [],
+    this.areaLookups = const [],
     this.execLookups = const [],
     this.isLoading = false,
     this.errorMessage,
   });
 
   // Backwards compatibility getters
+  List<BammLookupItem> get cellLookups => areaLookups;
   String get searchQuery => criteria.searchQuery;
   String? get statusFilter => criteria.status;
   String? get stepFilter => criteria.step;
+  String? get areaFilter => criteria.area;
   String? get cellFilter => criteria.cell;
 
   BammState copyWith({
@@ -62,6 +64,7 @@ class BammState {
     List<BammLookupItem>? statusLookups,
     List<BammLookupItem>? stepLookups,
     List<BammLookupItem>? maintLookups,
+    List<BammLookupItem>? areaLookups,
     List<BammLookupItem>? cellLookups,
     List<BammLookupItem>? execLookups,
     bool? isLoading,
@@ -80,7 +83,7 @@ class BammState {
       statusLookups: statusLookups ?? this.statusLookups,
       stepLookups: stepLookups ?? this.stepLookups,
       maintLookups: maintLookups ?? this.maintLookups,
-      cellLookups: cellLookups ?? this.cellLookups,
+      areaLookups: areaLookups ?? cellLookups ?? this.areaLookups,
       execLookups: execLookups ?? this.execLookups,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
@@ -88,17 +91,19 @@ class BammState {
   }
 
   /// List of work orders matching current query.
-  /// Server queries apply the filters directly. If offline, local in-memory fallback applies.
+  /// When online, server queries execute filters directly against all 196k+ work orders.
+  /// Local in-memory fallback applies only when offline.
   List<BammWorkOrder> get filteredWorkOrders {
     if (criteria.isEmpty) return workOrders;
+    if (isOnline) return workOrders; // Server already filtered the results!
 
-    // In case workOrders is not already filtered (e.g. offline cache)
+    // Fallback offline filter
     return workOrders.where((wo) {
       if (criteria.searchQuery.trim().isNotEmpty) {
         final q = criteria.searchQuery.trim().toLowerCase();
         final match = wo.worNoSeq.toLowerCase().contains(q) ||
             wo.description.toLowerCase().contains(q) ||
-            wo.cell.toLowerCase().contains(q) ||
+            wo.area.toLowerCase().contains(q) ||
             wo.machine.toLowerCase().contains(q) ||
             wo.responsible.toLowerCase().contains(q) ||
             wo.requester.toLowerCase().contains(q) ||
@@ -107,16 +112,41 @@ class BammState {
         if (!match) return false;
       }
 
-      if (criteria.status != null && criteria.status!.isNotEmpty && criteria.status != 'All') {
-        if (wo.status.toLowerCase() != criteria.status!.toLowerCase()) return false;
+      final status = criteria.status?.trim() ?? '';
+      if (status.isEmpty || status.toLowerCase() == 'all open' || status.toLowerCase() == 'open') {
+        final s = wo.status.toLowerCase();
+        if (s.contains('complet') || s.contains('close') || s.contains('cancel') || s.contains('declin')) {
+          return false;
+        }
+      } else if (status.toLowerCase() != 'all' && status.toLowerCase() != 'all (including closed)') {
+        if (wo.status.toLowerCase() != status.toLowerCase()) return false;
       }
 
       if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
         if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
       }
 
-      if (criteria.cell != null && criteria.cell!.isNotEmpty && criteria.cell != 'All') {
-        if (!wo.cell.toLowerCase().contains(criteria.cell!.toLowerCase())) return false;
+      final area = criteria.area ?? criteria.cell;
+      if (area != null && area.isNotEmpty && area != 'All') {
+        if (!wo.area.toLowerCase().contains(area.toLowerCase())) return false;
+      }
+
+      if (criteria.maintenanceType != null &&
+          criteria.maintenanceType!.isNotEmpty &&
+          criteria.maintenanceType != 'All') {
+        if (wo.maintenanceType.isNotEmpty &&
+            !wo.maintenanceType.toLowerCase().contains(criteria.maintenanceType!.toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (criteria.executionMode != null &&
+          criteria.executionMode!.isNotEmpty &&
+          criteria.executionMode != 'All') {
+        if (wo.executionMode.isNotEmpty &&
+            !wo.executionMode.toLowerCase().contains(criteria.executionMode!.toLowerCase())) {
+          return false;
+        }
       }
 
       if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
@@ -136,7 +166,10 @@ class BammState {
   }
 
   int get emergencyCount => workOrders.where((w) => w.step.toLowerCase().contains('emerg')).length;
-  int get openCount => workOrders.where((w) => !w.status.toLowerCase().contains('complet') && !w.status.toLowerCase().contains('clos')).length;
+  int get openCount => workOrders.where((w) {
+    final s = w.status.toLowerCase();
+    return !s.contains('complet') && !s.contains('clos') && !s.contains('cancel') && !s.contains('declin');
+  }).length;
 }
 
 class BammNotifier extends StateNotifier<BammState> {
@@ -197,20 +230,20 @@ class BammNotifier extends StateNotifier<BammState> {
     return online;
   }
 
-  /// Loads lookup lists for dropdowns (statuses, steps, maintenance types, cells, execution modes)
+  /// Loads lookup lists for dropdowns (statuses, steps, maintenance types, areas, execution modes)
   Future<void> loadLookups() async {
     try {
       final statuses = await _service.fetchLookup('GetWorkOrderStatus');
       final steps = await _service.fetchLookup('GetWorkOrderStep');
       final maints = await _service.fetchLookup('GetMaintenanceType');
-      final cells = await _service.fetchLookup('GetDepartment');
+      final areas = await _service.fetchLookup('GetGrouping1');
       final execs = await _service.fetchLookup('GetExecutionMode');
 
       state = state.copyWith(
         statusLookups: statuses,
         stepLookups: steps,
         maintLookups: maints,
-        cellLookups: cells,
+        areaLookups: areas,
         execLookups: execs,
       );
     } catch (e) {
@@ -258,7 +291,7 @@ class BammNotifier extends StateNotifier<BammState> {
 
   /// Filter by Status dropdown
   void setStatusFilter(String? status, [int? statusId]) {
-    final clear = status == null || status.isEmpty || status == 'All';
+    final clear = status == null || status.isEmpty;
     state = state.copyWith(
       criteria: state.criteria.copyWith(
         status: status,
@@ -295,17 +328,21 @@ class BammNotifier extends StateNotifier<BammState> {
     refreshWorkOrders();
   }
 
-  /// Filter by Cell / Area
-  void setCellFilter(String? cell) {
-    final clear = cell == null || cell.isEmpty || cell == 'All';
+  /// Filter by Area (replaces old cell filter)
+  void setAreaFilter(String? area, [int? areaId]) {
+    final clear = area == null || area.isEmpty || area == 'All';
     state = state.copyWith(
       criteria: state.criteria.copyWith(
-        cell: cell,
-        clearCell: clear,
+        area: area,
+        areaId: areaId,
+        clearArea: clear,
       ),
     );
     refreshWorkOrders();
   }
+
+  /// Backwards-compatible alias for setAreaFilter
+  void setCellFilter(String? cell) => setAreaFilter(cell);
 
   /// Filter by Responsible Person
   void setResponsibleFilter(String? resp) {

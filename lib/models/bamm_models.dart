@@ -9,7 +9,7 @@ class BammWorkOrder {
   final int? statusId;
   final String step;
   final int? stepId;
-  final String cell;
+  final String area;
   final String machine;
   final String assetId;
   final String priority;
@@ -20,10 +20,12 @@ class BammWorkOrder {
   final DateTime? requiredDate;
   final double? laborHours;
   final int? requiredEmployees;
+  final String maintenanceType;
+  final int? maintenanceTypeId;
   final String executionMode;
   final Map<String, dynamic>? rawDto;
 
-  const BammWorkOrder({
+  BammWorkOrder({
     required this.worId,
     required this.worNoSeq,
     required this.description,
@@ -31,7 +33,8 @@ class BammWorkOrder {
     this.statusId,
     this.step = 'Normal',
     this.stepId,
-    this.cell = '',
+    String area = '',
+    String cell = '',
     this.machine = '',
     this.assetId = '',
     this.priority = '',
@@ -42,9 +45,14 @@ class BammWorkOrder {
     this.requiredDate,
     this.laborHours,
     this.requiredEmployees,
+    this.maintenanceType = '',
+    this.maintenanceTypeId,
     this.executionMode = '',
     this.rawDto,
-  });
+  }) : area = area.isNotEmpty ? area : cell;
+
+  /// Backwards-compatible alias for area.
+  String get cell => area;
 
   /// Short display title, e.g. "BAMM #185586 - Motor Replacement"
   String get displayTitle => 'BAMM #$worNoSeq${description.isNotEmpty ? ' - $description' : ''}';
@@ -77,6 +85,7 @@ class BammWorkOrder {
     int? statusId,
     String? step,
     int? stepId,
+    String? area,
     String? cell,
     String? machine,
     String? assetId,
@@ -88,6 +97,8 @@ class BammWorkOrder {
     DateTime? requiredDate,
     double? laborHours,
     int? requiredEmployees,
+    String? maintenanceType,
+    int? maintenanceTypeId,
     String? executionMode,
     Map<String, dynamic>? rawDto,
   }) {
@@ -99,7 +110,7 @@ class BammWorkOrder {
       statusId: statusId ?? this.statusId,
       step: step ?? this.step,
       stepId: stepId ?? this.stepId,
-      cell: cell ?? this.cell,
+      area: area ?? cell ?? this.area,
       machine: machine ?? this.machine,
       assetId: assetId ?? this.assetId,
       priority: priority ?? this.priority,
@@ -110,6 +121,8 @@ class BammWorkOrder {
       requiredDate: requiredDate ?? this.requiredDate,
       laborHours: laborHours ?? this.laborHours,
       requiredEmployees: requiredEmployees ?? this.requiredEmployees,
+      maintenanceType: maintenanceType ?? this.maintenanceType,
+      maintenanceTypeId: maintenanceTypeId ?? this.maintenanceTypeId,
       executionMode: executionMode ?? this.executionMode,
       rawDto: rawDto ?? this.rawDto,
     );
@@ -124,7 +137,8 @@ class BammWorkOrder {
       'statusId': statusId,
       'step': step,
       'stepId': stepId,
-      'cell': cell,
+      'area': area,
+      'cell': area,
       'machine': machine,
       'assetId': assetId,
       'priority': priority,
@@ -135,6 +149,8 @@ class BammWorkOrder {
       'requiredDate': requiredDate?.toIso8601String(),
       'laborHours': laborHours,
       'requiredEmployees': requiredEmployees,
+      'maintenanceType': maintenanceType,
+      'maintenanceTypeId': maintenanceTypeId,
       'executionMode': executionMode,
       'rawDto': rawDto,
     };
@@ -160,7 +176,7 @@ class BammWorkOrder {
       statusId: (json['statusId'] as num?)?.toInt(),
       step: json['step']?.toString() ?? 'Normal',
       stepId: (json['stepId'] as num?)?.toInt(),
-      cell: json['cell']?.toString() ?? '',
+      area: json['area']?.toString() ?? json['cell']?.toString() ?? '',
       machine: json['machine']?.toString() ?? '',
       assetId: json['assetId']?.toString() ?? '',
       priority: json['priority']?.toString() ?? '',
@@ -171,6 +187,8 @@ class BammWorkOrder {
       requiredDate: parseDate(json['requiredDate']),
       laborHours: (json['laborHours'] as num?)?.toDouble(),
       requiredEmployees: (json['requiredEmployees'] as num?)?.toInt(),
+      maintenanceType: json['maintenanceType']?.toString() ?? '',
+      maintenanceTypeId: (json['maintenanceTypeId'] as num?)?.toInt(),
       executionMode: json['executionMode']?.toString() ?? '',
       rawDto: json['rawDto'] as Map<String, dynamic>?,
     );
@@ -196,6 +214,7 @@ class BammWorkOrder {
     final idVal = p['workOrderId'] ?? p['WOR_ID'] ?? p['worId'];
     final worId = (idVal is num) ? idVal.toInt() : (int.tryParse(idVal?.toString() ?? '') ?? 0);
     final worNo = (p['worNoSeq'] ?? p['WOR_NO_SEQ'] ?? p['WOR_NO'] ?? p['worNo'] ?? '').toString();
+    final areaVal = (p['regrouping1Description'] ?? p['area'] ?? p['functionInfo2'] ?? p['WOR_DEPARTMENT_CODE'] ?? p['cell'] ?? '').toString();
 
     return BammWorkOrder(
       worId: worId,
@@ -205,7 +224,7 @@ class BammWorkOrder {
       statusId: (p['woStatusId'] ?? p['WOR_STATUS_ID'] as num?)?.toInt(),
       step: (p['woStepDescription'] ?? p['WOR_STEP_DESC'] ?? p['step'] ?? 'Normal').toString(),
       stepId: (p['woStepId'] ?? p['WOR_STEP_ID'] as num?)?.toInt(),
-      cell: (p['functionInfo2'] ?? p['WOR_DEPARTMENT_CODE'] ?? p['cell'] ?? '').toString(),
+      area: areaVal,
       machine: (p['funCodeLevelNiv3Description'] ?? p['WOR_EQUIPMENT_CODE'] ?? p['machine'] ?? '').toString(),
       assetId: (p['functionCode'] ?? p['FUN_ID'] ?? p['assetId'] ?? '').toString(),
       priority: (p['worNumber3'] ?? p['WOR_PRIORITY_DESC'] ?? p['PRI_ID'] ?? '').toString(),
@@ -216,6 +235,8 @@ class BammWorkOrder {
       requiredDate: parseDate(p['woRequiredDate'] ?? p['WOR_REQUIRED_DATE']),
       laborHours: (p['worEstLaborTime'] ?? p['WOR_EST_LABOR_HOURS'] as num?)?.toDouble(),
       requiredEmployees: (p['worEstNbEmployee'] ?? p['WOR_EST_NB_EMPLOYEE'] as num?)?.toInt(),
+      maintenanceType: (p['maintenanceTypeDescription'] ?? p['WOR_MAINT_TYPE_DESC'] ?? p['maintenanceType'] ?? '').toString(),
+      maintenanceTypeId: (p['maintenanceTypeId'] ?? p['MNT_ID'] as num?)?.toInt(),
       executionMode: (p['executionModeDescription'] ?? '').toString(),
       rawDto: raw,
     );
@@ -277,8 +298,8 @@ class BammWorkOrder {
       statusId: int.tryParse(getProp('WOR_STATUS_ID', '')),
       step: getProp('WOR_STEP_DESC', 'Normal'),
       stepId: int.tryParse(getProp('WSP_ID', '')),
-      cell: getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2')),
-      machine: getProp('WOR_EQUIPMENT_CODE', getProp('funCodeLevelNiv3Description')),
+      area: getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell')))),
+      machine: getProp('funCodeLevelNiv3Description', getProp('WOR_EQUIPMENT_CODE', getProp('machine'))),
       assetId: getProp('FUN_ID'),
       priority: getProp('WOR_PRIORITY_DESC', getProp('WOR_NB_3')),
       responsible: getProp('WOR_RESPONSIBLE_NAME', getProp('recipientName')),
@@ -287,6 +308,8 @@ class BammWorkOrder {
       issueDate: parseEpochOrDate(getProp('WOR_ISSUE_DATE')),
       requiredDate: parseEpochOrDate(getProp('WOR_REQUI_DATE')),
       laborHours: double.tryParse(getProp('WOR_EST_LABOR_HOURS', '')),
+      maintenanceType: getProp('WOR_MAINT_TYPE_DESC', getProp('maintenanceTypeDescription')),
+      maintenanceTypeId: int.tryParse(getProp('MNT_ID', '')),
       rawDto: dto,
     );
   }
@@ -328,7 +351,8 @@ class BammFilterCriteria {
   final int? stepId;
   final String? maintenanceType;
   final int? maintenanceTypeId;
-  final String? cell;
+  final String? area;
+  final int? areaId;
   final String? responsible;
   final String? requester;
   final String? machine;
@@ -343,20 +367,25 @@ class BammFilterCriteria {
     this.stepId,
     this.maintenanceType,
     this.maintenanceTypeId,
-    this.cell,
+    String? area,
+    String? cell,
+    this.areaId,
     this.responsible,
     this.requester,
     this.machine,
     this.executionMode,
     this.executionModeId,
-  });
+  }) : area = area ?? cell;
+
+  /// Backwards-compatible alias for area.
+  String? get cell => area;
 
   bool get isEmpty =>
       searchQuery.trim().isEmpty &&
-      (status == null || status == 'All' || status!.isEmpty) &&
+      (status == null || status!.isEmpty || status == 'Open' || status == 'All Open') &&
       (step == null || step == 'All' || step!.isEmpty) &&
       (maintenanceType == null || maintenanceType == 'All' || maintenanceType!.isEmpty) &&
-      (cell == null || cell == 'All' || cell!.isEmpty) &&
+      (area == null || area == 'All' || area!.isEmpty) &&
       (responsible == null || responsible!.trim().isEmpty) &&
       (requester == null || requester!.trim().isEmpty) &&
       (machine == null || machine!.trim().isEmpty) &&
@@ -365,10 +394,10 @@ class BammFilterCriteria {
   int get activeFilterCount {
     int count = 0;
     if (searchQuery.trim().isNotEmpty) count++;
-    if (status != null && status != 'All' && status!.isNotEmpty) count++;
+    if (status != null && status!.isNotEmpty && status != 'Open' && status != 'All Open' && status != 'All') count++;
     if (step != null && step != 'All' && step!.isNotEmpty) count++;
     if (maintenanceType != null && maintenanceType != 'All' && maintenanceType!.isNotEmpty) count++;
-    if (cell != null && cell != 'All' && cell!.isNotEmpty) count++;
+    if (area != null && area != 'All' && area!.isNotEmpty) count++;
     if (responsible != null && responsible!.trim().isNotEmpty) count++;
     if (requester != null && requester!.trim().isNotEmpty) count++;
     if (machine != null && machine!.trim().isNotEmpty) count++;
@@ -387,8 +416,11 @@ class BammFilterCriteria {
     String? maintenanceType,
     bool clearMaintenanceType = false,
     int? maintenanceTypeId,
+    String? area,
     String? cell,
+    bool clearArea = false,
     bool clearCell = false,
+    int? areaId,
     String? responsible,
     bool clearResponsible = false,
     String? requester,
@@ -407,7 +439,8 @@ class BammFilterCriteria {
       stepId: clearStep ? null : (stepId ?? this.stepId),
       maintenanceType: clearMaintenanceType ? null : (maintenanceType ?? this.maintenanceType),
       maintenanceTypeId: clearMaintenanceType ? null : (maintenanceTypeId ?? this.maintenanceTypeId),
-      cell: clearCell ? null : (cell ?? this.cell),
+      area: (clearArea || clearCell) ? null : (area ?? cell ?? this.area),
+      areaId: (clearArea || clearCell) ? null : (areaId ?? this.areaId),
       responsible: clearResponsible ? null : (responsible ?? this.responsible),
       requester: clearRequester ? null : (requester ?? this.requester),
       machine: clearMachine ? null : (machine ?? this.machine),
@@ -428,7 +461,8 @@ class BammSavedFilter {
   final int? stepId;
   final String? maintenanceType;
   final int? maintenanceTypeId;
-  final String? cell;
+  final String? area;
+  final int? areaId;
   final String? responsible;
   final String? requester;
   final String? machine;
@@ -444,12 +478,16 @@ class BammSavedFilter {
     this.stepId,
     this.maintenanceType,
     this.maintenanceTypeId,
-    this.cell,
+    String? area,
+    String? cell,
+    this.areaId,
     this.responsible,
     this.requester,
     this.machine,
     this.executionMode,
-  });
+  }) : area = area ?? cell;
+
+  String? get cell => area;
 
   BammFilterCriteria toCriteria() {
     return BammFilterCriteria(
@@ -460,7 +498,8 @@ class BammSavedFilter {
       stepId: stepId,
       maintenanceType: maintenanceType,
       maintenanceTypeId: maintenanceTypeId,
-      cell: cell,
+      area: area,
+      areaId: areaId,
       responsible: responsible,
       requester: requester,
       machine: machine,
@@ -483,7 +522,8 @@ class BammSavedFilter {
       stepId: criteria.stepId,
       maintenanceType: criteria.maintenanceType,
       maintenanceTypeId: criteria.maintenanceTypeId,
-      cell: criteria.cell,
+      area: criteria.area,
+      areaId: criteria.areaId,
       responsible: criteria.responsible,
       requester: criteria.requester,
       machine: criteria.machine,
@@ -502,7 +542,9 @@ class BammSavedFilter {
       'stepId': stepId,
       'maintenanceType': maintenanceType,
       'maintenanceTypeId': maintenanceTypeId,
-      'cell': cell,
+      'area': area,
+      'cell': area,
+      'areaId': areaId,
       'responsible': responsible,
       'requester': requester,
       'machine': machine,
@@ -521,7 +563,8 @@ class BammSavedFilter {
       stepId: (json['stepId'] as num?)?.toInt(),
       maintenanceType: json['maintenanceType'] as String?,
       maintenanceTypeId: (json['maintenanceTypeId'] as num?)?.toInt(),
-      cell: json['cell'] as String?,
+      area: json['area'] as String? ?? json['cell'] as String?,
+      areaId: (json['areaId'] as num?)?.toInt(),
       responsible: json['responsible'] as String?,
       requester: json['requester'] as String?,
       machine: json['machine'] as String?,

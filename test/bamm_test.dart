@@ -224,30 +224,30 @@ void main() {
       expect(fromJson.password, 'secret');
     });
 
-    test('BammService.buildFilterPayload creates correct GuideTi query structure', () {
+    test('BammService.buildFilterPayload creates correct GuideTi query structure with woIssueDate descending', () {
       final service = BammService();
       final criteria = const BammFilterCriteria(
-        status: 'In Progress',
-        step: 'Work in progress',
-        cell: 'CELL-A',
-        maintenanceType: 'Corrective',
+        status: 'In preparation',
+        step: 'Emergency',
+        area: '100',
+        maintenanceType: 'Planned - Corrective Maint.',
         responsible: 'John Tech',
         requester: 'Operator Dan',
         machine: 'PRESS-01',
-        executionMode: 'Stopped',
+        executionMode: 'Down',
         searchQuery: '198440',
       );
 
       final payload = service.buildFilterPayload(criteria);
 
-      // Verify server-side sorting: latest 2000 descending by worNoSeq
+      // Verify server-side sorting: latest 2000 descending by woIssueDate
       final listFormat = payload['listFormat'] as Map<String, dynamic>;
       expect(listFormat['topCount'], 2000);
       final orderBy = (listFormat['orderByFields'] as List).first as Map<String, dynamic>;
-      expect(orderBy['name'], 'worNoSeq');
+      expect(orderBy['name'], 'woIssueDate');
       expect(orderBy['ascending'], isFalse);
 
-      // Verify major fields requested
+      // Verify major fields requested including Area (regrouping1Description)
       final fields = (listFormat['fields'] as List).map((f) => f['name']).toList();
       expect(fields, containsAll([
         'worNoSeq',
@@ -256,8 +256,8 @@ void main() {
         'requesterName',
         'woTask',
         'woDescription',
+        'regrouping1Description',
         'funCodeLevelNiv3Description',
-        'functionInfo2',
         'woStatusDescription',
         'woStepDescription',
       ]));
@@ -267,12 +267,42 @@ void main() {
       expect(filters.any((f) => f['searchFieldKey'] == 'woStatusId'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'woStepId'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'maintenanceTypeId'), isTrue);
-      expect(filters.any((f) => f['searchFieldKey'] == 'functionInfo2'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'regrouping1Id'), isTrue); // Area filter
       expect(filters.any((f) => f['searchFieldKey'] == 'recipientName'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'requesterName'), isTrue);
-      expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv3Description'), isTrue);
+      expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv3Description'), isTrue); // Machine filter
       expect(filters.any((f) => f['searchFieldKey'] == 'executionModeId'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
+    });
+
+    test('BammService defaults to open statuses filter (excluding completed, closed, cancelled, declined)', () {
+      final service = BammService();
+      // When criteria is empty or status is 'All Open'
+      final defaultPayload = service.buildFilterPayload(const BammFilterCriteria());
+      final filters = defaultPayload['filters'] as List;
+      final statusFilter = filters.firstWhere((f) => f['searchFieldKey'] == 'woStatusId');
+      final values = (statusFilter['values'] as List).first;
+      final listValues = (values['listValues'] as List).map((v) => v['id']).toList();
+      // Should include open statuses: 1, 2, 7, 8, 9
+      expect(listValues, containsAll([1, 2, 7, 8, 9]));
+      expect(listValues, isNot(contains(3))); // Completed excluded
+      expect(listValues, isNot(contains(4))); // Cancelled excluded
+      expect(listValues, isNot(contains(5))); // Declined excluded
+      expect(listValues, isNot(contains(6))); // Closed excluded
+    });
+
+    test('BammService standard lookups have pure API options (25 maint types, 3 exec modes, 15 areas)', () async {
+      final service = BammService();
+      final maint = await service.fetchLookup('GetMaintenanceType');
+      expect(maint.length, 25);
+
+      final exec = await service.fetchLookup('GetExecutionMode');
+      expect(exec.length, 3);
+      expect(exec.map((e) => e.description), containsAll(['Down', 'Limping', 'Running']));
+
+      final areas = await service.fetchLookup('GetGrouping1');
+      expect(areas.length, 15);
+      expect(areas.map((a) => a.description), containsAll(['100', '200', 'Carts', 'Cell 1', 'Mobile Power']));
     });
 
     test('Zero dummy data guarantee: offline returns empty list when no cache', () async {
