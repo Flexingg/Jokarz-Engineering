@@ -538,6 +538,16 @@ class BammNotifier extends StateNotifier<BammState> {
     DateTime? requiredDate,
     DateTime? installStart,
     DateTime? installEnd,
+    String? classificationId,
+    String? skillId,
+    String? classificationTableId,
+    String? crewShiftId,
+    int? requiredEmployees,
+    String? stepId,
+    String? maintenanceTypeId,
+    String? executionModeId,
+    double? priorityEm,
+    String? assetId,
   }) async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
     try {
@@ -549,8 +559,45 @@ class BammNotifier extends StateNotifier<BammState> {
         requiredDate: requiredDate,
         installStart: installStart,
         installEnd: installEnd,
+        classificationId: classificationId,
+        skillId: skillId,
+        classificationTableId: classificationTableId,
+        crewShiftId: crewShiftId,
+        requiredEmployees: requiredEmployees,
+        stepId: stepId,
+        maintenanceTypeId: maintenanceTypeId,
+        executionModeId: executionModeId,
+        priorityEm: priorityEm,
+        assetId: assetId,
       );
 
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? outcome.workOrder : w).toList();
+      state = state.copyWith(workOrders: updatedList, isLoading: false);
+      return outcome;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<BammAddActivityLineOutcome> addActivityLine({
+    required int worId,
+    required String activityId,
+    required String subActivityId,
+    String? description,
+    double? hours,
+    String? memo,
+  }) async {
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    try {
+      final outcome = await _service.addActivityLine(
+        worId: worId,
+        activityId: activityId,
+        subActivityId: subActivityId,
+        description: description,
+        hours: hours,
+        memo: memo,
+      );
       final updatedList = state.workOrders.map((w) => w.worId == worId ? outcome.workOrder : w).toList();
       state = state.copyWith(workOrders: updatedList, isLoading: false);
       return outcome;

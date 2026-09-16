@@ -336,6 +336,30 @@ class BammLookupItem {
   };
 }
 
+/// One `WO_DETAIL` activity line, as read from a `GetById` model's
+/// `WO_DETAIL` child set. BAMM's DynamicDTO carries `ACY_ID`/`SAC_ID` as bare
+/// ids with no sibling description property (same limitation as the header
+/// lookup fields), so [activityId]/[subActivityId] are shown as raw ids in
+/// the UI unless resolved against a fetched `GetActivities`/`GetSubActivities`
+/// list.
+class BammActivityLine {
+  final String id;
+  final String description;
+  final String activityId;
+  final String subActivityId;
+  final double? hours;
+  final String memo;
+
+  const BammActivityLine({
+    required this.id,
+    required this.description,
+    required this.activityId,
+    required this.subActivityId,
+    this.hours,
+    this.memo = '',
+  });
+}
+
 /// Comprehensive filter criteria for server-side and client-side querying.
 class BammFilterCriteria {
   final String searchQuery;

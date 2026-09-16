@@ -142,5 +142,23 @@ void main() {
       final transport = await _loggedInTransport(client);
       await BammLookupsClient(transport, const BammConfig(usercode: 'mock')).responsible(search: 'jane');
     });
+
+    test('classificationTables() hits GetWorkOrderRegrouping6', () async {
+      final client = _clientFor((request) async {
+        expect(request.url.path, '/api/WorkOrderLookup/GetWorkOrderRegrouping6');
+        return http.Response(jsonEncode({'total': 0, 'value': []}), 200);
+      });
+      final transport = await _loggedInTransport(client);
+      await BammLookupsClient(transport, const BammConfig(usercode: 'mock')).classificationTables();
+    });
+
+    test('crewShifts() hits GetWorkOrderRegrouping7', () async {
+      final client = _clientFor((request) async {
+        expect(request.url.path, '/api/WorkOrderLookup/GetWorkOrderRegrouping7');
+        return http.Response(jsonEncode({'total': 0, 'value': []}), 200);
+      });
+      final transport = await _loggedInTransport(client);
+      await BammLookupsClient(transport, const BammConfig(usercode: 'mock')).crewShifts();
+    });
   });
 }

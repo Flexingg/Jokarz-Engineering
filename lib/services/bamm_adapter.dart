@@ -7,6 +7,7 @@
 /// fix.
 library;
 
+import '../bamm/mutations/model_ops.dart' show childItems, propertyValue;
 import '../bamm/schema/lookups.dart';
 import '../models/bamm_models.dart';
 
@@ -34,3 +35,20 @@ BammLookupItem bammLookupItemFromOption(LookupOption option) => BammLookupItem(
 
 List<BammLookupItem> bammLookupItemsFromOptions(Iterable<LookupOption> options) =>
     options.map(bammLookupItemFromOption).toList();
+
+/// The `WO_DETAIL` child set of a full `GetById`/`GetNew`/`Save` model into
+/// display-ready [BammActivityLine]s - display + add only (no edit/delete),
+/// per the batch's scope.
+List<BammActivityLine> bammActivityLinesFromModel(Map<String, dynamic> model) {
+  return childItems(model, 'WO_DETAIL').map((item) {
+    final hoursRaw = propertyValue(item, 'WOD_ACT_LINE_HOUR_NB');
+    return BammActivityLine(
+      id: propertyValue(item, 'WOD_ID') ?? '',
+      description: propertyValue(item, 'WOD_DESCR') ?? '',
+      activityId: propertyValue(item, 'ACY_ID') ?? '',
+      subActivityId: propertyValue(item, 'SAC_ID') ?? '',
+      hours: hoursRaw == null ? null : double.tryParse(hoursRaw),
+      memo: propertyValue(item, 'WOD_MEMO') ?? '',
+    );
+  }).where((line) => line.id.isNotEmpty && line.id != '-1').toList();
+}

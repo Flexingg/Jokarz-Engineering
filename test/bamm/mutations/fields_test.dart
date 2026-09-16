@@ -48,6 +48,9 @@ class _FakeBammServer {
           {'name': 'WOR_REQUI_DATE', 'type': 28, 'value': stored['WOR_REQUI_DATE'], 'state': 1},
           {'name': 'WOR_PLAN_DATE', 'type': 28, 'value': stored['WOR_PLAN_DATE'], 'state': 1},
           {'name': 'WOR_END_PLAN_DATE', 'type': 28, 'value': stored['WOR_END_PLAN_DATE'], 'state': 1},
+          {'name': 'CTG_ID', 'type': 4, 'value': stored['CTG_ID'], 'state': 1},
+          {'name': 'WOR_NB_3', 'type': 15, 'value': stored['WOR_NB_3'], 'state': 1},
+          {'name': 'FUN_ID', 'type': 4, 'value': stored['FUN_ID'], 'state': 1},
           {'name': 'Status', 'type': 18, 'value': '8', 'state': 1},
         ],
         'childSets': <dynamic>[],
@@ -95,10 +98,32 @@ Future<WhitelistedFieldWriter> _writerFor(_FakeBammServer server) async {
 
 void main() {
   group('BammWritableField (structural whitelist)', () {
-    test('is exactly the six approved BAMM properties, nothing more', () {
+    test('is exactly the sixteen approved BAMM properties, nothing more', () {
+      // Expanded from the original six (Batch A) to the fields/lookups batch's
+      // requested set - see fields.dart's doc comment and
+      // ~/repos/BAMM/docs/06-field-reference.md for the property types backing
+      // each addition. Still a closed enum: this test is the structural proof
+      // that adding a sixteenth requires touching this list too.
       expect(
         BammWritableField.values.map((f) => f.bammProperty).toSet(),
-        {'WOR_DESCR', 'WOR_TASK', 'RCP_ID', 'WOR_REQUI_DATE', 'WOR_PLAN_DATE', 'WOR_END_PLAN_DATE'},
+        {
+          'WOR_DESCR',
+          'WOR_TASK',
+          'RCP_ID',
+          'WOR_REQUI_DATE',
+          'WOR_PLAN_DATE',
+          'WOR_END_PLAN_DATE',
+          'CTG_ID',
+          'SKI_ID',
+          'WG6_ID',
+          'WG7_ID',
+          'WOR_EST_NB_EMP',
+          'WSP_ID',
+          'MNT_ID',
+          'EXM_ID',
+          'WOR_NB_3',
+          'FUN_ID',
+        },
       );
     });
 
@@ -225,6 +250,32 @@ void main() {
       final responsible = result.fields.single;
       expect(responsible.status, BammFieldReadBackStatus.returnedDifferent);
       expect(responsible.returnedValue, '999');
+    });
+
+    test('a newly-whitelisted lookup field (classification/CTG_ID) round-trips like the original six', () async {
+      final server = _FakeBammServer();
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.classification, '4123'),
+        const BammFieldEdit(BammWritableField.priorityEm, '12.5'),
+      ]);
+
+      expect(result.isSuccess, isTrue);
+      expect(server.stored['CTG_ID'], '4123');
+      expect(server.stored['WOR_NB_3'], '12.5');
+    });
+
+    test('a newly-whitelisted lookup field BAMM silently drops is reported, not swallowed - proves the read-back guard has teeth on the new fields too', () async {
+      final server = _FakeBammServer(dropFields: {'CTG_ID'});
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.classification, '4123'),
+      ]);
+
+      expect(result.isSuccess, isFalse);
+      expect(result.fields.single.status, BammFieldReadBackStatus.silentlyDropped);
     });
 
     test('BAMM reporting the work order as not modifiable is refused before any write', () async {

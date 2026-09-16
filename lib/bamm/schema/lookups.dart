@@ -150,6 +150,12 @@ class BammLookupsClient {
   Future<LookupResult> groupings(int type) =>
       fetch('GetMultiGrouping', extraParams: {'type': type.toString()});
 
+  /// `WG6_ID` options - "Classification Table".
+  Future<LookupResult> classificationTables() => fetch('GetWorkOrderRegrouping6');
+
+  /// `WG7_ID` options - "Crew/Shift".
+  Future<LookupResult> crewShifts() => fetch('GetWorkOrderRegrouping7');
+
   /// `ACY_ID` options for an activity line - scoped by step + asset.
   Future<LookupResult> activities({String? stepId, String? assetId, String? componentTypeId}) => fetch(
         'GetActivities',

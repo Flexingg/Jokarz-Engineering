@@ -6,7 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../bamm/bamm_config.dart';
 import '../bamm/mutations/fields.dart';
+import '../bamm/mutations/model_ops.dart' show childItems;
 import '../bamm/mutations/writer.dart';
+import '../bamm/queries/asset_tree.dart';
 import '../bamm/queries/list_query.dart';
 import '../bamm/schema/lookups.dart';
 import '../bamm/transport/http_transport.dart';
@@ -21,6 +23,16 @@ class BammUpdateOutcome {
   final BammWorkOrder workOrder;
   final BammWriteResult writeResult;
   const BammUpdateOutcome({required this.workOrder, required this.writeResult});
+}
+
+/// The honest result of [BammService.addActivityLine]: whether the
+/// `WO_DETAIL` count actually grew after `Save` + read-back, not merely
+/// whether the HTTP calls returned 200 - the same "don't trust a 200,
+/// re-read and compare" discipline as [BammUpdateOutcome].
+class BammAddActivityLineOutcome {
+  final BammWorkOrder workOrder;
+  final bool added;
+  const BammAddActivityLineOutcome({required this.workOrder, required this.added});
 }
 
 /// App-facing BAMM service: owns persisted app state (connection config,
@@ -373,6 +385,16 @@ class BammService {
     DateTime? requiredDate,
     DateTime? installStart,
     DateTime? installEnd,
+    String? classificationId,
+    String? skillId,
+    String? classificationTableId,
+    String? crewShiftId,
+    int? requiredEmployees,
+    String? stepId,
+    String? maintenanceTypeId,
+    String? executionModeId,
+    double? priorityEm,
+    String? assetId,
   }) async {
     final online = await quickPollNetwork();
     if (!online || worId <= 0) {
@@ -390,6 +412,16 @@ class BammService {
       if (requiredDate != null) BammFieldEdit(BammWritableField.requiredDate, _dateOnly(requiredDate)),
       if (installStart != null) BammFieldEdit(BammWritableField.installStart, _dateOnly(installStart)),
       if (installEnd != null) BammFieldEdit(BammWritableField.installEnd, _dateOnly(installEnd)),
+      if (classificationId != null) BammFieldEdit(BammWritableField.classification, classificationId),
+      if (skillId != null) BammFieldEdit(BammWritableField.skill, skillId),
+      if (classificationTableId != null) BammFieldEdit(BammWritableField.classificationTable, classificationTableId),
+      if (crewShiftId != null) BammFieldEdit(BammWritableField.crewShift, crewShiftId),
+      if (requiredEmployees != null) BammFieldEdit(BammWritableField.requiredEmployees, requiredEmployees.toString()),
+      if (stepId != null) BammFieldEdit(BammWritableField.step, stepId),
+      if (maintenanceTypeId != null) BammFieldEdit(BammWritableField.maintenanceType, maintenanceTypeId),
+      if (executionModeId != null) BammFieldEdit(BammWritableField.executionMode, executionModeId),
+      if (priorityEm != null) BammFieldEdit(BammWritableField.priorityEm, priorityEm.toString()),
+      if (assetId != null) BammFieldEdit(BammWritableField.asset, assetId),
     ];
 
     final writeResult = await WhitelistedFieldWriter(writer).write(worId, edits);
@@ -397,6 +429,63 @@ class BammService {
 
     return BammUpdateOutcome(workOrder: bammWorkOrderFromModel(refreshed), writeResult: writeResult);
   }
+
+  /// Adds one `WO_DETAIL` activity line to an existing work order:
+  /// `GetById -> Lock -> AddActivityLine(model) -> Save -> read-back`.
+  /// Display + add only, per the batch's scope (no edit/delete of existing
+  /// lines). [activityId]/[subActivityId] are required by BAMM
+  /// (`~/repos/BAMM/docs/10-lookups-and-activity-lines.md`); the rest are
+  /// optional line detail. [BammAddActivityLineOutcome.added] is computed by
+  /// comparing the `WO_DETAIL` count before and after the read-back, not by
+  /// trusting a 200 from `Save` - the same discipline as [updateWorkOrder].
+  Future<BammAddActivityLineOutcome> addActivityLine({
+    required int worId,
+    required String activityId,
+    required String subActivityId,
+    String? description,
+    double? hours,
+    String? memo,
+  }) async {
+    final online = await quickPollNetwork();
+    if (!online || worId <= 0) {
+      throw HttpException(
+        'Cannot add an activity line to work order #$worId while disconnected from BAMM (${config.origin}). '
+        'Please ensure device is connected to the plant Wi-Fi / VPN.',
+      );
+    }
+    if (activityId.trim().isEmpty || subActivityId.trim().isEmpty) {
+      throw const FormatException('Activity and sub-activity are both required to add a line');
+    }
+
+    final writer = BammWorkOrderWriter(_transport, _bammConfig);
+    final model = await writer.getById(worId);
+    final before = childItems(model, 'WO_DETAIL').length;
+
+    await writer.lockWorkOrder(worId);
+    await writer.addActivityLine(model, fields: {
+      'ACY_ID': activityId,
+      'SAC_ID': subActivityId,
+      if (description != null && description.trim().isNotEmpty) 'WOD_DESCR': description.trim(),
+      if (hours != null) 'WOD_ACT_LINE_HOUR_NB': hours.toString(),
+      if (memo != null && memo.trim().isNotEmpty) 'WOD_MEMO': memo.trim(),
+    });
+    await writer.save(model, worId);
+
+    final refreshed = await writer.getById(worId);
+    final after = childItems(refreshed, 'WO_DETAIL').length;
+    return BammAddActivityLineOutcome(workOrder: bammWorkOrderFromModel(refreshed), added: after > before);
+  }
+
+  /// Direct access to the live lookup client for callers (searchable
+  /// pickers) that need the raw [LookupOption]/[LookupResult] shape - total
+  /// count, `inactive`, `code` - rather than [fetchLookup]'s simplified,
+  /// offline-fallback-capable [BammLookupItem] list.
+  BammLookupsClient get lookups => BammLookupsClient(_transport, _bammConfig);
+
+  /// Direct access to the live 5-level asset-tree client for the machine
+  /// picker (`bamm_asset_tree_picker.dart`) - one level per call, never a
+  /// bundled/cached tree.
+  BammAssetTreeClient get assetTree => BammAssetTreeClient(_transport, _bammConfig);
 
   /// Fetches complete Work Order detail on demand from BAMM using GetById.
   Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async {

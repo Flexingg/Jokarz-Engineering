@@ -103,6 +103,16 @@ class _MixedVerdictBammNotifier extends BammNotifier {
     DateTime? requiredDate,
     DateTime? installStart,
     DateTime? installEnd,
+    String? classificationId,
+    String? skillId,
+    String? classificationTableId,
+    String? crewShiftId,
+    int? requiredEmployees,
+    String? stepId,
+    String? maintenanceTypeId,
+    String? executionModeId,
+    double? priorityEm,
+    String? assetId,
   }) async {
     final updated = _testWorkOrder().copyWith(description: description);
     return BammUpdateOutcome(
@@ -150,9 +160,14 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    // Enter edit mode and save.
+    // Enter edit mode and save. The edit form now has enough fields (the
+    // fields/lookups batch added nine pickers/number inputs) that "Save to
+    // BAMM" can sit below the dialog's initial scroll position - scroll it
+    // into view rather than assume it is already visible.
     await tester.tap(find.byTooltip('Edit Work Order'));
     await tester.pump();
+    await tester.ensureVisible(find.text('Save to BAMM'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save to BAMM'));
     await tester.pump(); // start the save
     await tester.pumpAndSettle();

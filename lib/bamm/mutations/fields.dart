@@ -30,7 +30,17 @@ enum BammWritableField {
   responsible('RCP_ID'),
   requiredDate('WOR_REQUI_DATE'),
   installStart('WOR_PLAN_DATE'),
-  installEnd('WOR_END_PLAN_DATE');
+  installEnd('WOR_END_PLAN_DATE'),
+  classification('CTG_ID'),
+  skill('SKI_ID'),
+  classificationTable('WG6_ID'),
+  crewShift('WG7_ID'),
+  requiredEmployees('WOR_EST_NB_EMP'),
+  step('WSP_ID'),
+  maintenanceType('MNT_ID'),
+  executionMode('EXM_ID'),
+  priorityEm('WOR_NB_3'),
+  asset('FUN_ID');
 
   final String bammProperty;
   const BammWritableField(this.bammProperty);
@@ -44,14 +54,28 @@ enum BammWritableField {
   /// whitelist is closed. Knowing it statically (rather than reading it off
   /// a live model, as the generic Python reference must) is what lets
   /// [WhitelistedFieldWriter.write] validate every value before any network
-  /// call at all - not merely before `Save`.
+  /// call at all - not merely before `Save`. Types are taken from
+  /// `~/repos/BAMM/docs/06-field-reference.md`'s full property catalogue,
+  /// not guessed: `CTG_ID/SKI_ID/WG6_ID/WG7_ID/WOR_EST_NB_EMP/WSP_ID/MNT_ID/
+  /// EXM_ID` are all type 4 (lookup id), `WOR_NB_3` is type 15 (decimal).
   int get _propertyType {
     switch (this) {
       case BammWritableField.description:
       case BammWritableField.workDone:
         return 9; // text
       case BammWritableField.responsible:
+      case BammWritableField.classification:
+      case BammWritableField.skill:
+      case BammWritableField.classificationTable:
+      case BammWritableField.crewShift:
+      case BammWritableField.requiredEmployees:
+      case BammWritableField.step:
+      case BammWritableField.maintenanceType:
+      case BammWritableField.executionMode:
+      case BammWritableField.asset:
         return 4; // ID / lookup key
+      case BammWritableField.priorityEm:
+        return 15; // decimal
       case BammWritableField.requiredDate:
       case BammWritableField.installStart:
       case BammWritableField.installEnd:
