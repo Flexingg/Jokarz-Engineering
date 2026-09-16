@@ -348,7 +348,13 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         title: Row(children: [
           Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).primary),
           const SizedBox(width: 8),
-          const Text('Purchase Orders & Parts', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Flexible(
+            child: Text(
+              'Purchase Orders & Parts',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
         ]),
         actions: [
           if (isDesktop)
@@ -402,16 +408,21 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
                 children: [
-                  SegmentedButton<int>(
-                    segments: [
-                      ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 2, label: Text('All (${allEntries.length})', style: const TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 3, label: Text('Pending ($pendingCount)', style: const TextStyle(fontSize: 12)), icon: const Icon(Icons.hourglass_empty_rounded, size: 14)),
-                      ButtonSegment(value: 4, label: Text('Unlinked (${standalone.length})', style: const TextStyle(fontSize: 12)), icon: const Icon(Icons.link_off_rounded, size: 14)),
-                    ],
-                    selected: {_filterTab},
-                    onSelectionChanged: (val) => setState(() => _filterTab = val.first),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SegmentedButton<int>(
+                        segments: [
+                          ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
+                          ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
+                          ButtonSegment(value: 2, label: Text('All (${allEntries.length})', style: const TextStyle(fontSize: 12))),
+                          ButtonSegment(value: 3, label: Text('Pending ($pendingCount)', style: const TextStyle(fontSize: 12)), icon: const Icon(Icons.hourglass_empty_rounded, size: 14)),
+                          ButtonSegment(value: 4, label: Text('Unlinked (${standalone.length})', style: const TextStyle(fontSize: 12)), icon: const Icon(Icons.link_off_rounded, size: 14)),
+                        ],
+                        selected: {_filterTab},
+                        onSelectionChanged: (val) => setState(() => _filterTab = val.first),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

@@ -169,7 +169,7 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => context.push('/bamm'),
+                          onPressed: () => context.go('/bamm'),
                           icon: Icon(Icons.construction_rounded, size: 16, color: AppTheme.of(context).primary),
                           label: const Text('BAMM', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           style: OutlinedButton.styleFrom(
@@ -307,7 +307,7 @@ class DashboardScreen extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => context.push('/bamm'),
+                                  onPressed: () => context.go('/bamm'),
                                   icon: Icon(Icons.construction_rounded, size: 16, color: AppTheme.of(context).primary),
                                   label: const Text('BAMM Orders', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 11)),
@@ -646,9 +646,12 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        Expanded(
+          child: Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
         ),
         if (onViewAll != null)
           TextButton(

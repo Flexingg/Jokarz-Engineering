@@ -13,6 +13,16 @@ import '../bamm/transport/http_transport.dart';
 import '../models/bamm_models.dart';
 import 'bamm_adapter.dart';
 
+/// The honest result of [BammService.updateWorkOrder]: the work order as
+/// BAMM's own read-back returned it, plus the per-field verdict for exactly
+/// what was sent. Callers must not report success without checking
+/// [writeResult].
+class BammUpdateOutcome {
+  final BammWorkOrder workOrder;
+  final BammWriteResult writeResult;
+  const BammUpdateOutcome({required this.workOrder, required this.writeResult});
+}
+
 /// App-facing BAMM service: owns persisted app state (connection config,
 /// saved filters) and the network reachability probe, and translates between
 /// this app's view models (`BammWorkOrder`, `BammFilterCriteria`, ...) and
@@ -25,6 +35,7 @@ import 'bamm_adapter.dart';
 class BammService {
   static const String _filtersFileName = 'jokarz_bamm_filters.json';
   static const String _configFileName = 'jokarz_bamm_config.json';
+  static const String _columnLayoutFileName = 'jokarz_bamm_columns.json';
 
   BammConnectionConfig _config = const BammConnectionConfig();
   BammHttpTransport _transport = BammHttpTransport(_toBammConfig(const BammConnectionConfig()));
@@ -233,7 +244,9 @@ class BammService {
 
     return ListQueryRequest(
       fields: _majorColumns,
-      orderByFields: const [ListOrderBy('woIssueDate', ascending: false)],
+      orderByFields: [
+        ListOrderBy(criteria.sortField ?? 'woIssueDate', ascending: criteria.sortField == null ? false : criteria.sortAscending),
+      ],
       filters: filters,
       topCount: 2000,
     );
@@ -345,27 +358,21 @@ class BammService {
   // ---------------------------------------------------------------------------
 
   /// Updates an existing Work Order through the six-field write whitelist
-  /// (`WhitelistedFieldWriter`): lock -> save -> read back, with the read
-  /// back proving whether the save actually took, rather than trusting a 2xx
-  /// alone. Only `description` and `requiredDate` are on that whitelist;
-  /// `status`/`step`/`priority`/`area`/`machine`/`responsible` are not
-  /// BAMM-writable through this path (the previous implementation captured
-  /// them for display only too - it built its save payload by hand and only
-  /// ever actually sent `WOR_DESCR`, `WOR_NB_3`, and `WOR_REQUI_DATE`, of
-  /// which `WOR_NB_3` (priority) is not one of the six whitelisted
-  /// properties). They are still carried on the returned view model so the
-  /// UI's optimistic display is unchanged.
-  Future<BammWorkOrder> updateWorkOrder({
+  /// (`WhitelistedFieldWriter`): lock -> save -> read back. The returned
+  /// [BammUpdateOutcome.writeResult] is the read-back verdict for every field
+  /// that was actually sent - a 2xx from Save is never treated as proof on
+  /// its own. `status`/`step`/`priority`/`area`/`machine`/`laborHours` are
+  /// not on the whitelist and are never sent; [BammUpdateOutcome.workOrder]
+  /// reflects only what BAMM's own read-back returned, never a local guess,
+  /// so the UI cannot show an edit as saved when it was not.
+  Future<BammUpdateOutcome> updateWorkOrder({
     required int worId,
     required String description,
-    String? status,
-    String? step,
-    String? priority,
-    DateTime? requiredDate,
-    String? area,
-    String? machine,
+    String? workDone,
     String? responsible,
-    double? laborHours,
+    DateTime? requiredDate,
+    DateTime? installStart,
+    DateTime? installEnd,
   }) async {
     final online = await quickPollNetwork();
     if (!online || worId <= 0) {
@@ -378,21 +385,17 @@ class BammService {
     final writer = BammWorkOrderWriter(_transport, _bammConfig);
     final edits = <BammFieldEdit>[
       BammFieldEdit(BammWritableField.description, description),
+      if (workDone != null) BammFieldEdit(BammWritableField.workDone, workDone),
+      if (responsible != null) BammFieldEdit(BammWritableField.responsible, responsible),
       if (requiredDate != null) BammFieldEdit(BammWritableField.requiredDate, _dateOnly(requiredDate)),
+      if (installStart != null) BammFieldEdit(BammWritableField.installStart, _dateOnly(installStart)),
+      if (installEnd != null) BammFieldEdit(BammWritableField.installEnd, _dateOnly(installEnd)),
     ];
 
-    await WhitelistedFieldWriter(writer).write(worId, edits);
+    final writeResult = await WhitelistedFieldWriter(writer).write(worId, edits);
     final refreshed = await writer.getById(worId);
 
-    return bammWorkOrderFromModel(refreshed).copyWith(
-      status: status,
-      step: step,
-      priority: priority,
-      area: area,
-      machine: machine,
-      responsible: responsible,
-      laborHours: laborHours,
-    );
+    return BammUpdateOutcome(workOrder: bammWorkOrderFromModel(refreshed), writeResult: writeResult);
   }
 
   /// Fetches complete Work Order detail on demand from BAMM using GetById.
@@ -643,6 +646,30 @@ class BammService {
       await _atomicWrite(file, jsonStr);
     } catch (e) {
       debugPrint('Error saving BAMM filters: $e');
+    }
+  }
+
+  /// The user's BAMM table column order/visibility, or an empty layout
+  /// (caller falls back to defaults) if nothing has been saved yet.
+  Future<BammColumnLayout> loadColumnLayout() async {
+    try {
+      final file = await _getFile(_columnLayoutFileName);
+      if (!await file.exists()) return const BammColumnLayout();
+      final text = await file.readAsString();
+      if (text.trim().isEmpty) return const BammColumnLayout();
+      return BammColumnLayout.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('Error loading BAMM column layout: $e');
+      return const BammColumnLayout();
+    }
+  }
+
+  Future<void> saveColumnLayout(BammColumnLayout layout) async {
+    try {
+      final file = await _getFile(_columnLayoutFileName);
+      await _atomicWrite(file, jsonEncode(layout.toJson()));
+    } catch (e) {
+      debugPrint('Error saving BAMM column layout: $e');
     }
   }
 

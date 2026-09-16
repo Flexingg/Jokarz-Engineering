@@ -149,6 +149,23 @@ final appRouter = GoRouter(
             ),
           ],
         ),
+
+        // Branch 6: BAMM Orders
+        // Lives INSIDE the shell on purpose: as a root-navigator route it rendered
+        // without shell chrome, which is why the sidebar disappeared on this screen.
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/bamm',
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: BammScreen(
+                  targetWo: state.uri.queryParameters['wo'],
+                  initialFilter: state.uri.queryParameters['filter'],
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     ),
     GoRoute(
@@ -212,16 +229,6 @@ final appRouter = GoRouter(
           },
         ),
       ],
-    ),
-    GoRoute(
-      path: '/bamm',
-      parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => NoTransitionPage(
-        child: BammScreen(
-          targetWo: state.uri.queryParameters['wo'],
-          initialFilter: state.uri.queryParameters['filter'],
-        ),
-      ),
     ),
   ],
 );

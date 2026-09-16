@@ -27,14 +27,9 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   late BammWorkOrder _wo;
   bool _isEditing = false;
   late final TextEditingController _descCtrl;
-  late final TextEditingController _priorityCtrl;
-  late final TextEditingController _areaCtrl;
-  late final TextEditingController _machineCtrl;
   late final TextEditingController _respCtrl;
   late final TextEditingController _workDoneCtrl;
   DateTime? _requiredDate;
-  String _selectedStatus = '';
-  String _selectedStep = '';
   bool _isSaving = false;
   bool _isLoadingDetail = false;
 
@@ -43,14 +38,9 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     super.initState();
     _wo = widget.workOrder;
     _descCtrl = TextEditingController(text: _wo.description);
-    _priorityCtrl = TextEditingController(text: _wo.priority);
-    _areaCtrl = TextEditingController(text: _wo.area);
-    _machineCtrl = TextEditingController(text: _wo.machine);
     _respCtrl = TextEditingController(text: _wo.responsible);
     _workDoneCtrl = TextEditingController(text: _wo.workDone);
     _requiredDate = _wo.requiredDate;
-    _selectedStatus = _wo.status;
-    _selectedStep = _wo.step;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchFullDetail();
@@ -66,14 +56,9 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         setState(() {
           _wo = detail;
           _descCtrl.text = detail.description;
-          _priorityCtrl.text = detail.priority;
-          _areaCtrl.text = detail.area;
-          _machineCtrl.text = detail.machine;
           _respCtrl.text = detail.responsible;
           _workDoneCtrl.text = detail.workDone;
           _requiredDate = detail.requiredDate;
-          _selectedStatus = detail.status;
-          _selectedStep = detail.step;
           _isLoadingDetail = false;
         });
       } else if (mounted) {
@@ -87,9 +72,6 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   @override
   void dispose() {
     _descCtrl.dispose();
-    _priorityCtrl.dispose();
-    _areaCtrl.dispose();
-    _machineCtrl.dispose();
     _respCtrl.dispose();
     _workDoneCtrl.dispose();
     super.dispose();
@@ -98,25 +80,33 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   Future<void> _saveChanges() async {
     setState(() => _isSaving = true);
     try {
-      final updated = await ref.read(bammProvider.notifier).updateWorkOrder(
+      final outcome = await ref.read(bammProvider.notifier).updateWorkOrder(
         worId: _wo.worId,
         description: _descCtrl.text.trim(),
-        status: _selectedStatus,
-        step: _selectedStep,
-        priority: _priorityCtrl.text.trim(),
-        requiredDate: _requiredDate,
-        area: _areaCtrl.text.trim(),
-        machine: _machineCtrl.text.trim(),
+        workDone: _workDoneCtrl.text.trim(),
         responsible: _respCtrl.text.trim(),
+        requiredDate: _requiredDate,
       );
       setState(() {
-        _wo = updated;
+        _wo = outcome.workOrder;
+        _descCtrl.text = outcome.workOrder.description;
+        _respCtrl.text = outcome.workOrder.responsible;
+        _workDoneCtrl.text = outcome.workOrder.workDone;
+        _requiredDate = outcome.workOrder.requiredDate;
         _isEditing = false;
         _isSaving = false;
       });
       if (mounted) {
+        final result = outcome.writeResult;
+        final verdict = result.fields.map((f) => f.describe()).join('\n');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('BAMM Work Order updated successfully!')),
+          SnackBar(
+            content: Text(
+              result.isSuccess ? 'Saved to BAMM:\n$verdict' : 'BAMM save incomplete:\n$verdict',
+            ),
+            backgroundColor: result.isSuccess ? null : Theme.of(context).colorScheme.errorContainer,
+            duration: Duration(seconds: result.isSuccess ? 4 : 8),
+          ),
         );
       }
     } catch (e) {
@@ -360,7 +350,10 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
               const SizedBox(height: 16),
 
               if (_isEditing) ...[
-                // Edit Form
+                // Edit Form - only fields BAMM will actually accept
+                // (BammWritableField) get an input; everything else is
+                // read-only here too, so nothing is ever shown as editable
+                // without a way to save it.
                 TextField(
                   controller: _descCtrl,
                   decoration: const InputDecoration(
@@ -370,82 +363,44 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: ['Registered', 'In preparation', 'Scheduled', 'Ready to schedule', 'Completed'].contains(_selectedStatus)
-                            ? _selectedStatus
-                            : 'Registered',
-                        decoration: const InputDecoration(labelText: 'Status', isDense: true),
-                        items: const [
-                          DropdownMenuItem(value: 'Registered', child: Text('Registered')),
-                          DropdownMenuItem(value: 'In preparation', child: Text('In preparation')),
-                          DropdownMenuItem(value: 'Scheduled', child: Text('Scheduled')),
-                          DropdownMenuItem(value: 'Ready to schedule', child: Text('Ready to schedule')),
-                          DropdownMenuItem(value: 'Completed', child: Text('Completed')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _selectedStatus = val);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: ['Normal', 'Emergency', 'Corrective', 'Kaizen', 'Preventive'].contains(_selectedStep)
-                            ? _selectedStep
-                            : 'Normal',
-                        decoration: const InputDecoration(labelText: 'Step / Type', isDense: true),
-                        items: const [
-                          DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                          DropdownMenuItem(value: 'Emergency', child: Text('Emergency')),
-                          DropdownMenuItem(value: 'Corrective', child: Text('Corrective')),
-                          DropdownMenuItem(value: 'Kaizen', child: Text('Kaizen')),
-                          DropdownMenuItem(value: 'Preventive', child: Text('Preventive')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _selectedStep = val);
-                        },
-                      ),
-                    ),
-                  ],
+                TextField(
+                  controller: _workDoneCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Work Done',
+                    isDense: true,
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 4,
+                  minLines: 2,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _areaCtrl,
-                        decoration: const InputDecoration(labelText: 'Area', isDense: true),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _machineCtrl,
-                        decoration: const InputDecoration(labelText: 'Machine (3rd level)', isDense: true),
-                      ),
-                    ),
-                  ],
+                TextField(
+                  controller: _respCtrl,
+                  decoration: const InputDecoration(labelText: 'Responsible Person', isDense: true),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _priorityCtrl,
-                        decoration: const InputDecoration(labelText: 'EM Priority (0-25)', isDense: true),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Not editable from this app yet',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _respCtrl,
-                        decoration: const InputDecoration(labelText: 'Responsible Person', isDense: true),
-                      ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      _buildInfoRow('Status', _wo.status.isNotEmpty ? _wo.status : 'Unknown'),
+                      _buildInfoRow('Step', _wo.step.isNotEmpty ? _wo.step : 'Unknown'),
+                      _buildInfoRow('Priority', _wo.priority.isNotEmpty ? _wo.priority : 'None'),
+                      _buildInfoRow('Machine / Area', '${_wo.machine.isNotEmpty ? _wo.machine : 'None'} (${_wo.area.isNotEmpty ? _wo.area : 'Unspecified'})'),
+                      if (_wo.laborHours != null) _buildInfoRow('Est. Labor Hours', '${_wo.laborHours} hrs'),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(

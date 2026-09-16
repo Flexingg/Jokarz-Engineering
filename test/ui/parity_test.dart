@@ -287,13 +287,41 @@ void main() {
         expect(find.textContaining(label), findsWidgets, reason: '"$label" missing at desktop width');
       }
       expect(find.textContaining('Dave M'), findsWidgets, reason: 'Responsible missing at desktop width');
-      expect(find.textContaining('Alex R'), findsWidgets, reason: 'Requester missing at desktop width');
       expect(find.textContaining('HPU-02'), findsWidgets, reason: 'Machine missing at desktop width');
       expect(find.textContaining('HYDRAULICS'), findsWidgets, reason: 'Area missing at desktop width');
+      // The requester is deliberately NOT asserted against the desktop ROW: the row is now driven by
+      // the user's column layout and "Requester" is not one of the default visible columns (it stays
+      // available in the column chooser). Asserting it on the row would pin the test to a default
+      // instead of to the guarantee that matters - that the information is reachable at this width,
+      // which the dialog assertions below cover.
 
       await tester.tap(find.textContaining('#190022').first);
       await tester.pumpAndSettle();
       expect(find.textContaining('BAMM Work Order #190022'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsWidgets, reason: 'Status missing in desktop detail dialog');
+      expect(find.textContaining('Awaiting Parts'), findsWidgets, reason: 'Step missing in desktop detail dialog');
+      expect(find.textContaining('Dave M'), findsWidgets, reason: 'Responsible missing in desktop detail dialog');
+      expect(find.textContaining('Alex R'), findsWidgets, reason: 'Requester missing in desktop detail dialog');
+      expect(find.textContaining('HPU-02'), findsWidgets, reason: 'Machine missing in desktop detail dialog');
+      expect(find.textContaining('HYDRAULICS'), findsWidgets, reason: 'Area missing in desktop detail dialog');
+    });
+
+    // Regression tests for the table's RenderFlex overflow. [_tableWidth] accounts for the 12px
+    // padding inside the header/row containers and nothing else, so any extra horizontal padding on
+    // the list itself leaves every row short of the width its children sum to - which threw a 34px
+    // overflow at 1400px with the default column set. The framework throws on overflow, so a clean
+    // takeException() is a real assertion. Both widths are covered because the bug only appeared at
+    // the wide one.
+    testWidgets('desktop (1400x900) table has no layout overflow', (tester) async {
+      await _pumpAt(tester, const BammScreen(), _expanded,
+          overrides: _bammOverrides(_testWorkOrder()));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('phone (400x800) table has no layout overflow', (tester) async {
+      await _pumpAt(tester, const BammScreen(), _compact,
+          overrides: _bammOverrides(_testWorkOrder()));
+      expect(tester.takeException(), isNull);
     });
   });
 

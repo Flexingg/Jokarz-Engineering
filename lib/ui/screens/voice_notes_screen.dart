@@ -328,15 +328,16 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 8,
                           children: [
                             ElevatedButton.icon(
                               onPressed: () => _showNewTextNoteDialog(context),
                               icon: const Icon(Icons.edit_outlined),
                               label: const Text('Write Note'),
                             ),
-                            const SizedBox(width: 12),
                             OutlinedButton.icon(
                               onPressed: () => VoiceMemoModal.show(context),
                               icon: Icon(Icons.mic, color: AppTheme.of(context).amber),

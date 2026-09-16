@@ -153,8 +153,8 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
                                 icon: Icons.precision_manufacturing_rounded,
                                 label: 'BAMM Orders',
                                 collapsed: _collapsed,
-                                isSelected: false,
-                                onTap: () => context.push('/bamm'),
+                                isSelected: widget.navigationShell.currentIndex == 6,
+                                onTap: () => _onTapNav(6),
                               ),
                               _buildDesktopNavItem(
                                 context,
@@ -273,6 +273,13 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
                 icon: Icon(Icons.settings_outlined),
                 selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.of(context).primary),
                 label: 'Settings',
+              ),
+              // Keep this list in branch order: selectedIndex IS the branch index.
+              NavigationDestination(
+                icon: Icon(Icons.precision_manufacturing_outlined),
+                selectedIcon:
+                    Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary),
+                label: 'BAMM',
               ),
             ],
           ),

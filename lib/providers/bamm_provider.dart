@@ -22,6 +22,7 @@ class BammState {
   final List<BammLookupItem> maintLookups;
   final List<BammLookupItem> areaLookups;
   final List<BammLookupItem> execLookups;
+  final BammColumnLayout columnLayout;
   final bool isLoading;
   final String? errorMessage;
 
@@ -39,6 +40,7 @@ class BammState {
     this.maintLookups = const [],
     this.areaLookups = const [],
     this.execLookups = const [],
+    this.columnLayout = const BammColumnLayout(),
     this.isLoading = false,
     this.errorMessage,
   });
@@ -64,6 +66,7 @@ class BammState {
     List<BammLookupItem>? maintLookups,
     List<BammLookupItem>? areaLookups,
     List<BammLookupItem>? execLookups,
+    BammColumnLayout? columnLayout,
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -82,6 +85,7 @@ class BammState {
       maintLookups: maintLookups ?? this.maintLookups,
       areaLookups: areaLookups ?? this.areaLookups,
       execLookups: execLookups ?? this.execLookups,
+      columnLayout: columnLayout ?? this.columnLayout,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
@@ -182,10 +186,12 @@ class BammNotifier extends StateNotifier<BammState> {
     state = state.copyWith(isLoading: true);
     final loadedConfig = await _service.loadConfig();
     final savedFilters = await _service.loadSavedFilters();
+    final columnLayout = await _service.loadColumnLayout();
 
     state = state.copyWith(
       config: loadedConfig,
       savedFilters: savedFilters,
+      columnLayout: columnLayout,
     );
 
     // Initial quick poll & load lookup dropdown options
@@ -385,6 +391,45 @@ class BammNotifier extends StateNotifier<BammState> {
     refreshWorkOrders();
   }
 
+  /// Cycles the sort on [columnKey]: unsorted -> ascending -> descending ->
+  /// back to unsorted (the server default, `woIssueDate desc`). Sorting is
+  /// always server-side (`orderByFields`), matching every other BAMM list
+  /// query in this app - there is no client-side fallback to keep in sync
+  /// with the server's ordering.
+  void setSort(String columnKey) {
+    final current = state.criteria;
+    String? nextField;
+    bool nextAscending = true;
+    if (current.sortField != columnKey) {
+      nextField = columnKey;
+      nextAscending = true;
+    } else if (current.sortAscending) {
+      nextField = columnKey;
+      nextAscending = false;
+    } else {
+      nextField = null;
+      nextAscending = true;
+    }
+    state = state.copyWith(
+      criteria: current.copyWith(sortField: nextField, clearSort: nextField == null, sortAscending: nextAscending),
+    );
+    refreshWorkOrders();
+  }
+
+  /// Sets the sort explicitly (used by the header context menu's "Sort
+  /// ascending"/"Sort descending", which must not depend on the current
+  /// state the way [setSort]'s click-to-cycle does).
+  void setSortField(String columnKey, {required bool ascending}) {
+    state = state.copyWith(criteria: state.criteria.copyWith(sortField: columnKey, sortAscending: ascending));
+    refreshWorkOrders();
+  }
+
+  /// Persists the given column order/visibility and applies it immediately.
+  Future<void> setColumnLayout(BammColumnLayout layout) async {
+    state = state.copyWith(columnLayout: layout);
+    await _service.saveColumnLayout(layout);
+  }
+
   /// Clears all active filters and queries the latest 2000 records.
   void clearFilters() {
     state = state.copyWith(
@@ -482,37 +527,33 @@ class BammNotifier extends StateNotifier<BammState> {
     }
   }
 
-  /// Updates an existing Work Order
-  Future<BammWorkOrder> updateWorkOrder({
+  /// Updates an existing Work Order. Returns the honest outcome - the caller
+  /// must check `writeResult` rather than assuming a returned value means
+  /// every field landed (see `BammUpdateOutcome`).
+  Future<BammUpdateOutcome> updateWorkOrder({
     required int worId,
     required String description,
-    String? status,
-    String? step,
-    String? priority,
-    DateTime? requiredDate,
-    String? area,
-    String? machine,
+    String? workDone,
     String? responsible,
-    double? laborHours,
+    DateTime? requiredDate,
+    DateTime? installStart,
+    DateTime? installEnd,
   }) async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
     try {
-      final updated = await _service.updateWorkOrder(
+      final outcome = await _service.updateWorkOrder(
         worId: worId,
         description: description,
-        status: status,
-        step: step,
-        priority: priority,
-        requiredDate: requiredDate,
-        area: area,
-        machine: machine,
+        workDone: workDone,
         responsible: responsible,
-        laborHours: laborHours,
+        requiredDate: requiredDate,
+        installStart: installStart,
+        installEnd: installEnd,
       );
 
-      final updatedList = state.workOrders.map((w) => w.worId == worId ? updated : w).toList();
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? outcome.workOrder : w).toList();
       state = state.copyWith(workOrders: updatedList, isLoading: false);
-      return updated;
+      return outcome;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
       rethrow;

@@ -353,6 +353,12 @@ class BammFilterCriteria {
   final String? executionMode;
   final int? executionModeId;
 
+  /// Server-side sort column (a BAMM list-query field key, e.g.
+  /// `woIssueDate`). `null` means "use the default sort"
+  /// (`woIssueDate desc`) - see `BammService._buildListQueryRequest`.
+  final String? sortField;
+  final bool sortAscending;
+
   const BammFilterCriteria({
     this.searchQuery = '',
     this.status,
@@ -368,6 +374,8 @@ class BammFilterCriteria {
     this.machine,
     this.executionMode,
     this.executionModeId,
+    this.sortField,
+    this.sortAscending = true,
   });
 
   bool get isEmpty =>
@@ -418,6 +426,9 @@ class BammFilterCriteria {
     String? executionMode,
     bool clearExecutionMode = false,
     int? executionModeId,
+    String? sortField,
+    bool clearSort = false,
+    bool? sortAscending,
   }) {
     return BammFilterCriteria(
       searchQuery: searchQuery ?? this.searchQuery,
@@ -434,7 +445,30 @@ class BammFilterCriteria {
       machine: clearMachine ? null : (machine ?? this.machine),
       executionMode: clearExecutionMode ? null : (executionMode ?? this.executionMode),
       executionModeId: clearExecutionMode ? null : (executionModeId ?? this.executionModeId),
+      sortField: clearSort ? null : (sortField ?? this.sortField),
+      sortAscending: clearSort ? true : (sortAscending ?? this.sortAscending),
     );
+  }
+}
+
+/// Which BAMM table columns are shown, in what order - persisted the same
+/// way as saved filters (`BammService.loadColumnLayout`/`saveColumnLayout`).
+/// `hidden` holds column keys the user removed from the default visible set;
+/// `order` holds every known column key (visible and hidden) in display
+/// order, so a newly-added default-visible column not yet in a saved layout
+/// still has somewhere to go (appended at the end by the caller).
+class BammColumnLayout {
+  final List<String> order;
+  final Set<String> hidden;
+
+  const BammColumnLayout({this.order = const [], this.hidden = const {}});
+
+  Map<String, dynamic> toJson() => {'order': order, 'hidden': hidden.toList()};
+
+  factory BammColumnLayout.fromJson(Map<String, dynamic> json) {
+    final order = (json['order'] as List<dynamic>? ?? const []).map((e) => e.toString()).toList();
+    final hidden = (json['hidden'] as List<dynamic>? ?? const []).map((e) => e.toString()).toSet();
+    return BammColumnLayout(order: order, hidden: hidden);
   }
 }
 

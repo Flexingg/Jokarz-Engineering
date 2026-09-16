@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/bamm_models.dart';
@@ -7,6 +6,7 @@ import '../../providers/bamm_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/bamm_detail_dialog.dart';
+import '../widgets/bamm_table_columns.dart';
 
 class BammScreen extends ConsumerStatefulWidget {
   final String? targetWo;
@@ -1065,209 +1065,388 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     );
   }
 
-  /// Desktop Table with major columns:
-  /// WO, Registered Date, Responsible, Requester, Work Done, Description, Asset
-  Widget _buildDesktopTable(List<BammWorkOrder> orders) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: orders.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (ctx, idx) {
-        final wo = orders[idx];
-        final linkedItems = ref.read(projectProvider.notifier).findItemsLinkedToBamm(wo.worNoSeq);
+  static const double _trailingColumnsWidth = 170;
+  static const double _columnGap = 12;
 
-        return InkWell(
-          onTap: () => BammDetailDialog.show(context, wo),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: AppTheme.of(context).surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.of(context).border),
-            ),
+  /// The BAMM table columns this app can render, ordered/filtered per the
+  /// user's saved layout (`BammState.columnLayout`) - see
+  /// `bamm_table_columns.dart` for why this is not the full live BAMM
+  /// column catalogue.
+  List<BammColumnDef> _allColumns(BammColumnLayout layout) => applyColumnLayout(buildBammColumns(), layout);
+
+  List<BammColumnDef> _visibleColumns(List<BammColumnDef> all, BammColumnLayout layout) =>
+      all.where((c) => isColumnVisible(c, layout)).toList();
+
+  /// Total width of the table's content: each visible column plus its trailing gap, the fixed
+  /// trailing cells, and the container chrome around a row - 12px horizontal padding plus 1px of
+  /// border on BOTH sides (see [_tableChromeWidth]). The header and the rows apply the same padding
+  /// so their content lines up, and the row `ListView` itself carries no horizontal padding - the
+  /// 16px page inset lives outside the horizontal scroller instead. Undercounting this by even 2px
+  /// throws a RenderFlex overflow, because every cell is laid out at its own fixed width in that Row.
+  double _tableWidth(List<BammColumnDef> visible) =>
+      visible.fold<double>(0, (sum, c) => sum + c.width + _columnGap) +
+      _trailingColumnsWidth +
+      _tableChromeWidth;
+
+  /// 12px padding + 1px border, on each side of the header/row containers.
+  static const double _tableChromeWidth = 26.0;
+
+  /// Rebuilds the saved layout so [visibleKeysInOrder] becomes the new
+  /// visible order, keeping every hidden column's relative order untouched.
+  BammColumnLayout _layoutWithVisibleOrder(BammColumnLayout current, List<String> visibleKeysInOrder) {
+    final hiddenInOrder = _allColumns(current).map((c) => c.key).where((k) => current.hidden.contains(k)).toList();
+    return BammColumnLayout(order: [...visibleKeysInOrder, ...hiddenInOrder], hidden: current.hidden);
+  }
+
+  void _reorderColumn(String draggedKey, String targetKey, List<BammColumnDef> visibleColumns) {
+    if (draggedKey == targetKey) return;
+    final keys = visibleColumns.map((c) => c.key).toList();
+    final oldIndex = keys.indexOf(draggedKey);
+    final newIndex = keys.indexOf(targetKey);
+    if (oldIndex == -1 || newIndex == -1) return;
+    keys.removeAt(oldIndex);
+    keys.insert(newIndex, draggedKey);
+    final layout = ref.read(bammProvider).columnLayout;
+    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, keys));
+  }
+
+  void _moveColumn(String key, int delta, List<BammColumnDef> visibleColumns) {
+    final keys = visibleColumns.map((c) => c.key).toList();
+    final index = keys.indexOf(key);
+    final target = index + delta;
+    if (index == -1 || target < 0 || target >= keys.length) return;
+    keys.removeAt(index);
+    keys.insert(target, key);
+    final layout = ref.read(bammProvider).columnLayout;
+    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, keys));
+  }
+
+  void _hideColumn(String key) {
+    final layout = ref.read(bammProvider).columnLayout;
+    ref.read(bammProvider.notifier).setColumnLayout(BammColumnLayout(order: layout.order, hidden: {...layout.hidden, key}));
+  }
+
+  void _showColumn(String key) {
+    final layout = ref.read(bammProvider).columnLayout;
+    // A column that isn't default-visible (e.g. Requester) and has never
+    // been explicitly ordered is invisible purely because `isColumnVisible`
+    // falls through to `defaultVisible == false` - removing it from
+    // `hidden` alone is a no-op for that case, since it was never in
+    // `hidden` to begin with. Adding it to `order` makes `isColumnVisible`
+    // return true regardless of its default.
+    final order = layout.order.contains(key) ? layout.order : [...layout.order, key];
+    ref.read(bammProvider.notifier).setColumnLayout(
+          BammColumnLayout(order: order, hidden: layout.hidden.where((k) => k != key).toSet()),
+        );
+  }
+
+  /// Applies the existing quick-filter setter for [column] when BAMM has
+  /// one (mirrors the toolbar dropdowns); falls back to the free-text
+  /// search field for columns with no dedicated filter (description, work
+  /// done, priority, labor hours, dates).
+  void _applyColumnFilter(BammColumnDef column, String value) {
+    final notifier = ref.read(bammProvider.notifier);
+    switch (column.key) {
+      case 'woStatusDescription':
+        notifier.setStatusFilter(value.isEmpty ? null : value);
+      case 'woStepDescription':
+        notifier.setStepFilter(value.isEmpty ? null : value);
+      case 'regrouping1Description':
+        notifier.setAreaFilter(value.isEmpty ? null : value);
+      case 'recipientName':
+        notifier.setResponsibleFilter(value.isEmpty ? null : value);
+      case 'requesterName':
+        notifier.setRequesterFilter(value.isEmpty ? null : value);
+      case 'funCodeLevelNiv3Description':
+        notifier.setMachineFilter(value.isEmpty ? null : value);
+      case 'executionModeDescription':
+        notifier.setExecutionModeFilter(value.isEmpty ? null : value);
+      default:
+        _searchCtrl.text = value;
+        notifier.setSearchQuery(value);
+    }
+  }
+
+  Future<String?> _promptFilterValue(BammColumnDef column) {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Filter by ${column.header}'),
+        content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(hintText: 'Value')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Apply')),
+        ],
+      ),
+    );
+  }
+
+  /// The header/cell right-click (desktop) or long-press (mobile) menu:
+  /// filter by value, sort asc/desc, hide column, move left/right.
+  /// [prefillValue] is set when triggered from a data cell (so "Filter by
+  /// this value" applies immediately); null when triggered from the header
+  /// itself (prompts for a value instead).
+  Future<void> _showColumnMenu(
+    Offset globalPosition,
+    BammColumnDef column,
+    List<BammColumnDef> visibleColumns, {
+    String? prefillValue,
+  }) async {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final index = visibleColumns.indexWhere((c) => c.key == column.key);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(globalPosition & const Size(1, 1), Offset.zero & overlay.size),
+      items: [
+        PopupMenuItem(
+          value: 'filter',
+          child: Text(prefillValue != null && prefillValue.isNotEmpty ? 'Filter by this value' : 'Filter by value...'),
+        ),
+        const PopupMenuItem(value: 'sort_asc', child: Text('Sort ascending')),
+        const PopupMenuItem(value: 'sort_desc', child: Text('Sort descending')),
+        if (column.hideable) const PopupMenuItem(value: 'hide', child: Text('Hide column')),
+        PopupMenuItem(value: 'move_left', enabled: index > 0, child: const Text('Move left')),
+        PopupMenuItem(value: 'move_right', enabled: index != -1 && index < visibleColumns.length - 1, child: const Text('Move right')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    final notifier = ref.read(bammProvider.notifier);
+    switch (selected) {
+      case 'filter':
+        final value = prefillValue ?? await _promptFilterValue(column);
+        if (value != null && mounted) _applyColumnFilter(column, value);
+      case 'sort_asc':
+        notifier.setSortField(column.key, ascending: true);
+      case 'sort_desc':
+        notifier.setSortField(column.key, ascending: false);
+      case 'hide':
+        _hideColumn(column.key);
+      case 'move_left':
+        _moveColumn(column.key, -1, visibleColumns);
+      case 'move_right':
+        _moveColumn(column.key, 1, visibleColumns);
+    }
+  }
+
+  Widget _headerCell(BammColumnDef column, List<BammColumnDef> visibleColumns) {
+    final criteria = ref.watch(bammProvider).criteria;
+    final sortedAsc = criteria.sortField == column.key && criteria.sortAscending;
+    final sortedDesc = criteria.sortField == column.key && !criteria.sortAscending;
+
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => details.data != column.key,
+      onAcceptWithDetails: (details) => _reorderColumn(details.data, column.key, visibleColumns),
+      builder: (context, candidateData, rejectedData) {
+        return Container(
+          width: column.width,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: candidateData.isNotEmpty
+              ? BoxDecoration(border: Border(left: BorderSide(color: AppTheme.of(context).primary, width: 2)))
+              : null,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => ref.read(bammProvider.notifier).setSort(column.key),
+            onSecondaryTapDown: (d) => _showColumnMenu(d.globalPosition, column, visibleColumns),
+            onLongPressStart: (d) => _showColumnMenu(d.globalPosition, column, visibleColumns),
             child: Row(
               children: [
-                // 1. WO Number Pill + copy
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.of(context).primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '#${wo.worNoSeq}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.of(context).primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      InkWell(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: wo.worNoSeq));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Copied WO #${wo.worNoSeq}'), duration: const Duration(seconds: 1)),
-                          );
-                        },
-                        child: Icon(Icons.copy_rounded, size: 12, color: AppTheme.of(context).primary),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // 2. Registered Date
-                SizedBox(
-                  width: 90,
-                  child: Text(
-                    wo.issueDate != null ? DateFormat('MMM d, y').format(wo.issueDate!) : '-',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // 3. Status & Step Badges
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: wo.statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    wo.status,
-                    style: TextStyle(color: wo.statusColor, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: wo.stepColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    wo.step,
-                    style: TextStyle(color: wo.stepColor, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(width: 14),
-
-                // 4. WO Description & Work Done
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        wo.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                      if (wo.workDone.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            'Done: ${wo.workDone}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // 5. Machine / Asset & Cell
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        wo.machine.isNotEmpty ? wo.machine : (wo.assetId.isNotEmpty ? wo.assetId : '-'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                      if (wo.area.isNotEmpty)
-                        Text(
-                          'Area: ${wo.area}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // 6. Responsible & Requester
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (wo.responsible.isNotEmpty)
-                        Text(
-                          wo.responsible,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        )
-                      else
-                        Text('Unassigned', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                      if (wo.requester.isNotEmpty)
-                        Text(
-                          'Req: ${wo.requester}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // 7. Linked Items Badge
-                if (linkedItems.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.of(context).emerald.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.of(context).emerald.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.link_rounded, size: 12, color: AppTheme.of(context).emerald),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${linkedItems.length} linked',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).emerald),
-                        ),
-                      ],
+                Draggable<String>(
+                  data: column.key,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: AppTheme.of(context).surface, borderRadius: BorderRadius.circular(4), border: Border.all(color: AppTheme.of(context).border)),
+                      child: Text(column.header, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-
-                // 8. Open details arrow
-                IconButton(
-                  tooltip: 'View Work Order Details',
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  onPressed: () => BammDetailDialog.show(context, wo),
+                  child: Icon(Icons.drag_indicator, size: 14, color: Colors.grey.shade400),
                 ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Text(
+                    column.header,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                if (sortedAsc) const Icon(Icons.arrow_upward_rounded, size: 12),
+                if (sortedDesc) const Icon(Icons.arrow_downward_rounded, size: 12),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildTableHeader(List<BammColumnDef> visibleColumns) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.grey.shade100,
+      child: Row(
+        children: [
+          for (final column in visibleColumns) ...[
+            _headerCell(column, visibleColumns),
+            const SizedBox(width: _columnGap),
+          ],
+          SizedBox(
+            width: _trailingColumnsWidth,
+            child: Row(
+              children: [
+                const Expanded(child: Text('Linked', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                IconButton(
+                  tooltip: 'Choose columns',
+                  icon: const Icon(Icons.view_column_outlined, size: 18),
+                  onPressed: _showColumnChooser,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showColumnChooser() {
+    final layout = ref.read(bammProvider).columnLayout;
+    final all = _allColumns(layout);
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Columns', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              for (final column in all)
+                CheckboxListTile(
+                  title: Text(column.header),
+                  value: isColumnVisible(column, ref.read(bammProvider).columnLayout),
+                  onChanged: column.hideable
+                      ? (checked) {
+                          if (checked == true) {
+                            _showColumn(column.key);
+                          } else {
+                            _hideColumn(column.key);
+                          }
+                          setSheetState(() {});
+                        }
+                      : null,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableRow(BammWorkOrder wo, List<BammColumnDef> visibleColumns) {
+    final linkedItems = ref.read(projectProvider.notifier).findItemsLinkedToBamm(wo.worNoSeq);
+
+    return InkWell(
+      onTap: () => BammDetailDialog.show(context, wo),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppTheme.of(context).surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.of(context).border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final column in visibleColumns) ...[
+              SizedBox(
+                width: column.width,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onSecondaryTapDown: (d) => _showColumnMenu(d.globalPosition, column, visibleColumns, prefillValue: column.textOf(wo)),
+                  onLongPressStart: (d) => _showColumnMenu(d.globalPosition, column, visibleColumns, prefillValue: column.textOf(wo)),
+                  child: column.buildCell(context, wo),
+                ),
+              ),
+              const SizedBox(width: _columnGap),
+            ],
+            SizedBox(
+              width: _trailingColumnsWidth,
+              child: Row(
+                children: [
+                  if (linkedItems.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.of(context).emerald.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.of(context).emerald.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.link_rounded, size: 12, color: AppTheme.of(context).emerald),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${linkedItems.length} linked',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).emerald),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'View Work Order Details',
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                    onPressed: () => BammDetailDialog.show(context, wo),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Desktop table: a real header row (sort / right-click filter menu / drag
+  /// to reorder / hide) above the data rows, both driven by the same
+  /// ordered column list so they always line up.
+  Widget _buildDesktopTable(List<BammWorkOrder> orders) {
+    final layout = ref.watch(bammProvider).columnLayout;
+    final visibleColumns = _visibleColumns(_allColumns(layout), layout);
+    final width = _tableWidth(visibleColumns);
+
+    // The 16px inset lives OUTSIDE the horizontal scroller on purpose. [_tableWidth] already
+    // accounts for the 12px horizontal padding inside the header/row containers and nothing else,
+    // so padding the list as well would leave every row 32px short of the width its children sum
+    // to - which is exactly the RenderFlex overflow this used to throw at 1400px.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            children: [
+              _buildTableHeader(visibleColumns),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: orders.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (ctx, idx) => _buildTableRow(orders[idx], visibleColumns),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1364,11 +1543,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   if (wo.workDone.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
-                      'Done: ${wo.workDone}',
-                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
+                      'Work done',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
                     ),
+                    const SizedBox(height: 2),
+                    Text(wo.workDone, style: const TextStyle(fontSize: 12)),
                   ],
                   const SizedBox(height: 8),
                   Row(

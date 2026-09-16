@@ -41,7 +41,27 @@ sealed class BammException implements Exception {
 class BammHttpException extends BammException {
   final int? statusCode;
   final String? body;
-  const BammHttpException(super.message, {this.statusCode, this.body});
+  final String? requestMethod;
+  final String? requestUrl;
+  const BammHttpException(
+    super.message, {
+    this.statusCode,
+    this.body,
+    this.requestMethod,
+    this.requestUrl,
+  });
+
+  /// [message] plus the raw request/response, so a failure is diagnosable
+  /// from the surfaced error alone - method, full URL as sent (including the
+  /// query string), status code, and response body.
+  @override
+  String toString() {
+    final buf = StringBuffer(message);
+    if (requestMethod != null && requestUrl != null) buf.write('\n$requestMethod $requestUrl');
+    if (statusCode != null) buf.write('\nStatus: $statusCode');
+    if (body != null && body!.trim().isNotEmpty) buf.write('\nResponse: $body');
+    return buf.toString();
+  }
 }
 
 /// BAMM's HTTP 599 - an application-level error with a message in the body
@@ -51,7 +71,25 @@ class BammHttpException extends BammException {
 class BammApplicationException extends BammException {
   final int statusCode;
   final String? body;
-  const BammApplicationException(super.message, {required this.statusCode, this.body});
+  final String? requestMethod;
+  final String? requestUrl;
+  const BammApplicationException(
+    super.message, {
+    required this.statusCode,
+    this.body,
+    this.requestMethod,
+    this.requestUrl,
+  });
+
+  /// See [BammHttpException.toString] - same rationale.
+  @override
+  String toString() {
+    final buf = StringBuffer(message);
+    if (requestMethod != null && requestUrl != null) buf.write('\n$requestMethod $requestUrl');
+    buf.write('\nStatus: $statusCode');
+    if (body != null && body!.trim().isNotEmpty) buf.write('\nResponse: $body');
+    return buf.toString();
+  }
 }
 
 /// A 2xx response whose body was not the JSON the caller expected.
@@ -66,6 +104,17 @@ class BammAuthException extends BammException {
   final int? statusCode;
   const BammAuthException(super.message, {this.statusCode});
 }
+
+/// Renders a query string with every key followed by `=`, even when the
+/// value is empty - unlike `Uri.replace(queryParameters: ...)`, which drops
+/// the `=` for an empty value (`Uri.replace(queryParameters: {'k': ''})` ->
+/// `?k`, verified against the Dart SDK). BAMM's captured browser requests
+/// always send `duplicateQuestionSettingsJson=` (trailing `=`, empty value)
+/// on every `WorkOrder/Save` - a bare `?duplicateQuestionSettingsJson` is a
+/// different request the server has never been shown to accept.
+String _buildQueryString(Map<String, String> params) => params.entries
+    .map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+    .join('&');
 
 /// Owns one HTTP client and one token pair for the BAMM API.
 class BammHttpTransport {
@@ -221,7 +270,7 @@ class BammHttpTransport {
         ? Uri.parse(path)
         : Uri.parse('${config.normalizedOrigin}$path');
     if (params != null && params.isNotEmpty) {
-      uri = uri.replace(queryParameters: {...uri.queryParameters, ...params});
+      uri = uri.replace(query: _buildQueryString({...uri.queryParameters, ...params}));
     }
     final body = jsonBody != null ? jsonEncode(jsonBody) : null;
 
@@ -254,6 +303,8 @@ class BammHttpTransport {
           _extractApplicationMessage(response.body),
           statusCode: 599,
           body: response.body,
+          requestMethod: method,
+          requestUrl: uri.toString(),
         );
       }
 
@@ -279,6 +330,8 @@ class BammHttpTransport {
         '$operation failed with HTTP ${response.statusCode}',
         statusCode: response.statusCode,
         body: response.body,
+        requestMethod: method,
+        requestUrl: uri.toString(),
       );
       if (kBammAuthRetryStatus.contains(response.statusCode) && attempt < maxAttempts) {
         reset();

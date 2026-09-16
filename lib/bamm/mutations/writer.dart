@@ -15,6 +15,18 @@ import '../transport/http_transport.dart';
 import 'exceptions.dart';
 import 'model_ops.dart'; // also re-exports protectedFields, stateNew, ... from dto/dynamic_dto.dart
 
+/// Referer sent on `Save` for an *existing* work order (an edit, not a
+/// create). Every capture in `~/repos/BAMM/captures/*.har` and
+/// `samples/wo_save_update_request.json` is a **create** flow (`GetNew`, no
+/// prior `GetById` of a real id) and its Save always uses
+/// `/workorder/detail/0` - there is no captured *edit* Save to verify an
+/// update referer against. Kept as `/workorder/detail/<id>` (consistent with
+/// how the app addresses that work order elsewhere in the same edit, e.g.
+/// `getById`/`lockWorkOrder`) rather than changed on guesswork. Flip this to
+/// `false` if a real edit capture ever shows BAMM expects `detail/0` there
+/// too.
+const bool kUpdateSaveRefererUsesWorkOrderId = true;
+
 class BammWorkOrderWriter {
   final BammHttpTransport transport;
   final BammConfig config;
@@ -244,7 +256,7 @@ class BammWorkOrderWriter {
       '/api/WorkOrder/Save',
       jsonBody: body,
       params: {'duplicateQuestionSettingsJson': ''},
-      referer: '/workorder/detail/$workOrderId',
+      referer: kUpdateSaveRefererUsesWorkOrderId ? '/workorder/detail/$workOrderId' : '/workorder/detail/0',
       contentType: kBammContentTypeDto,
       operation: 'Work-order save request for $workOrderId',
       allowNonJson: true,

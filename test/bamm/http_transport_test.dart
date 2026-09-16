@@ -201,5 +201,75 @@ void main() {
         throwsA(isA<BammAuthException>()),
       );
     });
+
+    test('an empty-value query param renders with a trailing = like the BAMM capture', () async {
+      // Every known-good Save capture sends
+      // `?duplicateQuestionSettingsJson=` (empty value, WITH the `=`). A test
+      // that only inspected `request.url.queryParameters` (a decoded map)
+      // would pass even if the `=` were dropped, since Dart's map-based
+      // query-parameter decoding treats `?k` and `?k=` as the same empty
+      // string - so this asserts on the literal rendered request line.
+      String? capturedUrl;
+      final client = MockClient((request) async {
+        if (request.method == 'PUT') {
+          return http.Response(
+            jsonEncode({
+              'value': {'token': 't', 'sessionToken': 's'}
+            }),
+            200,
+          );
+        }
+        capturedUrl = request.url.toString();
+        return http.Response(jsonEncode({'value': null}), 200);
+      });
+      final transport = await loggedIn(client);
+
+      await transport.post(
+        '/api/WorkOrder/Save',
+        jsonBody: const {},
+        params: const {'duplicateQuestionSettingsJson': ''},
+        operation: 'save',
+      );
+
+      expect(capturedUrl, isNotNull);
+      expect(capturedUrl, contains('duplicateQuestionSettingsJson='));
+      expect(capturedUrl, isNot(endsWith('duplicateQuestionSettingsJson')));
+    });
+
+    test('a 599 failure carries the request method, url, status and body for diagnostics', () async {
+      final client = MockClient((request) async {
+        if (request.method == 'PUT') {
+          return http.Response(
+            jsonEncode({
+              'value': {'token': 't', 'sessionToken': 's'}
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({'exceptionMessage': "'x.json' parameter not found in \"x.json\""}),
+          599,
+        );
+      });
+      final transport = await loggedIn(client);
+
+      try {
+        await transport.post(
+          '/api/WorkOrder/Save',
+          jsonBody: const {},
+          params: const {'duplicateQuestionSettingsJson': ''},
+          operation: 'save',
+        );
+        fail('expected a BammApplicationException');
+      } on BammApplicationException catch (e) {
+        expect(e.requestMethod, 'POST');
+        expect(e.requestUrl, contains('/api/WorkOrder/Save?duplicateQuestionSettingsJson='));
+        final rendered = e.toString();
+        expect(rendered, contains('POST'));
+        expect(rendered, contains('/api/WorkOrder/Save?duplicateQuestionSettingsJson='));
+        expect(rendered, contains('Status: 599'));
+        expect(rendered, contains('exceptionMessage'));
+      }
+    });
   });
 }
