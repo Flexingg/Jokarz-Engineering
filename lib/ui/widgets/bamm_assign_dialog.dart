@@ -81,7 +81,7 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
       final q = _searchQuery.toLowerCase();
       return wo.worNoSeq.toLowerCase().contains(q) ||
           wo.description.toLowerCase().contains(q) ||
-          wo.cell.toLowerCase().contains(q) ||
+          wo.area.toLowerCase().contains(q) ||
           wo.machine.toLowerCase().contains(q);
     }).toList();
 
@@ -193,10 +193,10 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
                                   style: TextStyle(color: wo.statusColor, fontSize: 10, fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              if (wo.cell.isNotEmpty) ...[
+                              if (wo.area.isNotEmpty) ...[
                                 const SizedBox(width: 6),
                                 Text(
-                                  wo.cell,
+                                  wo.area,
                                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                 ),
                               ],

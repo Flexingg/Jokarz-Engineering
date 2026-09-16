@@ -1283,10 +1283,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Tasks (${project.completedTasksCount} of ${project.tasks.length} Complete)',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              Expanded(
+                child: Text(
+                  'Tasks (${project.completedTasksCount} of ${project.tasks.length} Complete)',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _showAddTaskDialog(context),
                 icon: const Icon(Icons.add_task_rounded, size: 16),

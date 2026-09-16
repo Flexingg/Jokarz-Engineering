@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../ui/widgets/responsive_scaffold.dart';
+import '../ui/adaptive/nav_shell.dart';
 import '../ui/screens/dashboard_screen.dart';
 import '../ui/screens/projects_screen.dart';
 import '../ui/screens/project_detail_screen.dart';
@@ -29,7 +29,7 @@ final appRouter = GoRouter(
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return ResponsiveScaffold(navigationShell: navigationShell);
+        return AdaptiveNavShell(navigationShell: navigationShell);
       },
       branches: [
         // Branch 0: Dashboard

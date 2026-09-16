@@ -28,7 +28,7 @@ void main() {
         statusId: 2,
         step: 'Work in progress',
         stepId: 4,
-        cell: 'LINE 4',
+        area: 'LINE 4',
         machine: 'MILL-04',
         assetId: 'AST-401',
         priority: 'High',
@@ -46,16 +46,39 @@ void main() {
       expect(json['worNoSeq'], '185586');
       expect(json['description'], 'Overhaul feed roll bearings on Line 4');
       expect(json['laborHours'], 4.5);
+      expect(json['area'], 'LINE 4');
+      // Only the new key is ever written - no duplicate legacy 'cell' key.
+      expect(json.containsKey('cell'), isFalse);
 
       final restored = BammWorkOrder.fromJson(json);
       expect(restored.worId, wo.worId);
       expect(restored.worNoSeq, wo.worNoSeq);
       expect(restored.description, wo.description);
       expect(restored.status, wo.status);
-      expect(restored.cell, wo.cell);
+      expect(restored.area, wo.area);
       expect(restored.machine, wo.machine);
       expect(restored.priority, wo.priority);
       expect(restored.laborHours, wo.laborHours);
+    });
+
+    test('BammWorkOrder.fromJson still reads legacy "cell"-keyed save files', () {
+      // Older app versions persisted the area under the key "cell". Files
+      // already on disk must keep loading correctly even though the app
+      // itself never writes that key anymore.
+      final legacyJson = {
+        'worId': 2002,
+        'worNoSeq': '190100',
+        'description': 'Legacy save file replay',
+        'cell': 'OLD-LINE-9',
+      };
+
+      final restored = BammWorkOrder.fromJson(legacyJson);
+      expect(restored.area, 'OLD-LINE-9');
+
+      // Re-saving must migrate the record to the new key only.
+      final rewritten = restored.toJson();
+      expect(rewritten['area'], 'OLD-LINE-9');
+      expect(rewritten.containsKey('cell'), isFalse);
     });
 
     test('BammWorkOrder.fromPropertyList unwraps Cogep GuideTi wrapped structure', () {
@@ -87,7 +110,7 @@ void main() {
       expect(wo.status, 'Approved');
       expect(wo.step, 'Awaiting Parts');
       expect(wo.machine, 'HPU-02');
-      expect(wo.cell, 'HYDRAULICS');
+      expect(wo.area, 'HYDRAULICS');
       expect(wo.priority, 'Urgent');
       expect(wo.responsible, 'Dave M');
       expect(wo.laborHours, 8.0);
@@ -100,7 +123,7 @@ void main() {
         searchQuery: 'cylinder',
         status: 'Approved',
         step: 'Work in progress',
-        cell: 'Line 4',
+        area: 'Line 4',
         responsible: 'John',
         requester: 'Jane',
         machine: 'MILL-04',
@@ -109,6 +132,8 @@ void main() {
       );
 
       final json = filter.toJson();
+      // Only the new key is ever written - no duplicate legacy 'cell' key.
+      expect(json.containsKey('cell'), isFalse);
       final restored = BammSavedFilter.fromJson(json);
 
       expect(restored.id, 'f-1');
@@ -116,7 +141,7 @@ void main() {
       expect(restored.searchQuery, 'cylinder');
       expect(restored.status, 'Approved');
       expect(restored.step, 'Work in progress');
-      expect(restored.cell, 'Line 4');
+      expect(restored.area, 'Line 4');
       expect(restored.responsible, 'John');
       expect(restored.requester, 'Jane');
       expect(restored.machine, 'MILL-04');
@@ -126,7 +151,7 @@ void main() {
       final criteria = restored.toCriteria();
       expect(criteria.searchQuery, 'cylinder');
       expect(criteria.status, 'Approved');
-      expect(criteria.cell, 'Line 4');
+      expect(criteria.area, 'Line 4');
       expect(criteria.responsible, 'John');
 
       final backToFilter = BammSavedFilter.fromCriteria(id: 'f-2', name: 'Rebuilt', criteria: criteria);
@@ -134,6 +159,21 @@ void main() {
       expect(backToFilter.name, 'Rebuilt');
       expect(backToFilter.status, 'Approved');
       expect(backToFilter.responsible, 'John');
+    });
+
+    test('BammSavedFilter.fromJson still reads legacy "cell"-keyed save files', () {
+      final legacyJson = {
+        'id': 'f-legacy',
+        'name': 'Old preset',
+        'cell': 'OLD-CELL-3',
+      };
+
+      final restored = BammSavedFilter.fromJson(legacyJson);
+      expect(restored.area, 'OLD-CELL-3');
+
+      final rewritten = restored.toJson();
+      expect(rewritten['area'], 'OLD-CELL-3');
+      expect(rewritten.containsKey('cell'), isFalse);
     });
 
     test('BammWorkOrder handles workDone field and DynamicDTO parsing', () {
@@ -178,7 +218,7 @@ void main() {
       expect(parsed.step, 'Completed');
       expect(parsed.responsible, 'Maint Tech');
       expect(parsed.requester, 'Supervisor');
-      expect(parsed.cell, 'PACK-LINE-2');
+      expect(parsed.area, 'PACK-LINE-2');
       expect(parsed.machine, 'CONV-MOTOR-01');
       expect(parsed.laborHours, 2.5);
 
@@ -196,7 +236,7 @@ void main() {
       final criteria = const BammFilterCriteria().copyWith(
         searchQuery: 'leak',
         status: 'In Progress',
-        cell: 'CELL-1',
+        area: 'CELL-1',
       );
       expect(criteria.isEmpty, isFalse);
       expect(criteria.activeFilterCount, 3);

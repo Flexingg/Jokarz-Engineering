@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../models/key_bindings.dart';
 import '../../providers/theme_provider.dart';
@@ -13,6 +14,8 @@ import '../widgets/expressive_badge.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/auth_account_modal.dart';
 import '../widgets/key_bind_recorder.dart';
+import '../adaptive/breakpoints.dart';
+import '../adaptive/dialog_to_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -32,9 +35,37 @@ class SettingsScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20.0),
-        children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final expanded = Breakpoints.isExpanded(constraints.maxWidth);
+          final list = ListView(
+            padding: const EdgeInsets.all(20.0),
+            children: _settingsSections(context, ref, themeFamily, themeNotifier, state, user, isDark),
+          );
+          if (!expanded) return list;
+          // Expanded (desktop): center the settings column instead of
+          // stretching every card edge-to-edge across the window.
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: list,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _settingsSections(
+    BuildContext context,
+    WidgetRef ref,
+    AppThemeFamily themeFamily,
+    ThemeNotifier themeNotifier,
+    EngineeringState state,
+    User? user,
+    bool isDark,
+  ) {
+    return [
           // Google Account & Cloud Sync Section
           const Text(
             'Google Account & Cloud Synchronization',
@@ -48,44 +79,51 @@ class SettingsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppTheme.of(context).primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.cloud_sync_rounded,
-                            color: AppTheme.of(context).primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user != null
-                                  ? (user.displayName ?? 'Google User')
-                                  : 'Cross-Device Cloud Sync',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.of(context).primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            Text(
-                              user != null
-                                  ? user.email!
-                                  : 'Sync Android ⇄ Windows in real time',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? AppTheme.of(context).textSecondary
-                                    : AppTheme.of(context).textSecondary,
-                              ),
+                            child: Icon(
+                              Icons.cloud_sync_rounded,
+                              color: AppTheme.of(context).primary,
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user != null
+                                      ? (user.displayName ?? 'Google User')
+                                      : 'Cross-Device Cloud Sync',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  user != null
+                                      ? user.email!
+                                      : 'Sync Android ⇄ Windows in real time',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? AppTheme.of(context).textSecondary
+                                        : AppTheme.of(context).textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     const SyncStatusBadge(),
                   ],
                 ),
@@ -233,7 +271,7 @@ class SettingsScreen extends ConsumerWidget {
                     };
                     final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
 
-                    showDialog(
+                    showAdaptiveDialogOrSheet(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Engineering JSON Database Export'),
@@ -265,7 +303,7 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     final jsonCtrl = TextEditingController();
-                    showDialog(
+                    showAdaptiveDialogOrSheet(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Import JSON Database'),
@@ -343,7 +381,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    showDialog(
+                    showAdaptiveDialogOrSheet(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Clear All Engineering Data?'),
@@ -424,7 +462,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Jokarz Engineering',
+                  'BATO Engineering',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -448,9 +486,7 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
+        ];
   }
 
   void _showJsonGuideDialog(BuildContext context) {
@@ -502,7 +538,7 @@ class SettingsScreen extends ConsumerWidget {
   ]
 }''';
 
-    showDialog(
+    showAdaptiveDialogOrSheet(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(

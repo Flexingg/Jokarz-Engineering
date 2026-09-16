@@ -440,11 +440,16 @@ class _KpiCard extends StatelessWidget {
         child: Row(children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('$value',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
-            Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          ]),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('$value',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+              Text(label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ]),
+          ),
         ]),
       ),
     );

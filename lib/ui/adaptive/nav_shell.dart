@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
-import 'voice_memo_modal.dart';
+import '../widgets/voice_memo_modal.dart';
+import 'breakpoints.dart';
 
-class ResponsiveScaffold extends ConsumerStatefulWidget {
+/// The app's single adaptive navigation shell: a collapsible navigation
+/// rail on [WindowSizeClass.expanded] windows (desktop), a bottom
+/// [NavigationBar] on [WindowSizeClass.compact]/[WindowSizeClass.medium]
+/// windows (mobile). Every top-level branch route is wrapped in this one
+/// shell so the choice of rail vs. bottom nav lives in exactly one place.
+class AdaptiveNavShell extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
-  const ResponsiveScaffold({super.key, required this.navigationShell});
+  const AdaptiveNavShell({super.key, required this.navigationShell});
 
   @override
-  ConsumerState<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
+  ConsumerState<AdaptiveNavShell> createState() => _AdaptiveNavShellState();
 }
 
-class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
+class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
   bool _collapsed = false;
 
   void _onTapNav(int index) {
@@ -30,7 +36,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 800;
+        final isDesktop = Breakpoints.isExpanded(constraints.maxWidth);
 
         if (isDesktop) {
           final railWidth = _collapsed ? 68.0 : 230.0;

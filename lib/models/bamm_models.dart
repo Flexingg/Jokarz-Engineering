@@ -33,8 +33,7 @@ class BammWorkOrder {
     this.statusId,
     this.step = 'Normal',
     this.stepId,
-    String area = '',
-    String cell = '',
+    this.area = '',
     this.machine = '',
     this.assetId = '',
     this.priority = '',
@@ -49,10 +48,7 @@ class BammWorkOrder {
     this.maintenanceTypeId,
     this.executionMode = '',
     this.rawDto,
-  }) : area = area.isNotEmpty ? area : cell;
-
-  /// Backwards-compatible alias for area.
-  String get cell => area;
+  });
 
   /// Short display title, e.g. "BAMM #185586 - Motor Replacement"
   String get displayTitle => 'BAMM #$worNoSeq${description.isNotEmpty ? ' - $description' : ''}';
@@ -86,7 +82,6 @@ class BammWorkOrder {
     String? step,
     int? stepId,
     String? area,
-    String? cell,
     String? machine,
     String? assetId,
     String? priority,
@@ -110,7 +105,7 @@ class BammWorkOrder {
       statusId: statusId ?? this.statusId,
       step: step ?? this.step,
       stepId: stepId ?? this.stepId,
-      area: area ?? cell ?? this.area,
+      area: area ?? this.area,
       machine: machine ?? this.machine,
       assetId: assetId ?? this.assetId,
       priority: priority ?? this.priority,
@@ -138,7 +133,6 @@ class BammWorkOrder {
       'step': step,
       'stepId': stepId,
       'area': area,
-      'cell': area,
       'machine': machine,
       'assetId': assetId,
       'priority': priority,
@@ -367,18 +361,14 @@ class BammFilterCriteria {
     this.stepId,
     this.maintenanceType,
     this.maintenanceTypeId,
-    String? area,
-    String? cell,
+    this.area,
     this.areaId,
     this.responsible,
     this.requester,
     this.machine,
     this.executionMode,
     this.executionModeId,
-  }) : area = area ?? cell;
-
-  /// Backwards-compatible alias for area.
-  String? get cell => area;
+  });
 
   bool get isEmpty =>
       searchQuery.trim().isEmpty &&
@@ -417,9 +407,7 @@ class BammFilterCriteria {
     bool clearMaintenanceType = false,
     int? maintenanceTypeId,
     String? area,
-    String? cell,
     bool clearArea = false,
-    bool clearCell = false,
     int? areaId,
     String? responsible,
     bool clearResponsible = false,
@@ -439,8 +427,8 @@ class BammFilterCriteria {
       stepId: clearStep ? null : (stepId ?? this.stepId),
       maintenanceType: clearMaintenanceType ? null : (maintenanceType ?? this.maintenanceType),
       maintenanceTypeId: clearMaintenanceType ? null : (maintenanceTypeId ?? this.maintenanceTypeId),
-      area: (clearArea || clearCell) ? null : (area ?? cell ?? this.area),
-      areaId: (clearArea || clearCell) ? null : (areaId ?? this.areaId),
+      area: clearArea ? null : (area ?? this.area),
+      areaId: clearArea ? null : (areaId ?? this.areaId),
       responsible: clearResponsible ? null : (responsible ?? this.responsible),
       requester: clearRequester ? null : (requester ?? this.requester),
       machine: clearMachine ? null : (machine ?? this.machine),
@@ -478,16 +466,13 @@ class BammSavedFilter {
     this.stepId,
     this.maintenanceType,
     this.maintenanceTypeId,
-    String? area,
-    String? cell,
+    this.area,
     this.areaId,
     this.responsible,
     this.requester,
     this.machine,
     this.executionMode,
-  }) : area = area ?? cell;
-
-  String? get cell => area;
+  });
 
   BammFilterCriteria toCriteria() {
     return BammFilterCriteria(
@@ -543,7 +528,6 @@ class BammSavedFilter {
       'maintenanceType': maintenanceType,
       'maintenanceTypeId': maintenanceTypeId,
       'area': area,
-      'cell': area,
       'areaId': areaId,
       'responsible': responsible,
       'requester': requester,

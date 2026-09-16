@@ -28,7 +28,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   bool _isEditing = false;
   late final TextEditingController _descCtrl;
   late final TextEditingController _priorityCtrl;
-  late final TextEditingController _cellCtrl;
+  late final TextEditingController _areaCtrl;
   late final TextEditingController _machineCtrl;
   late final TextEditingController _respCtrl;
   late final TextEditingController _workDoneCtrl;
@@ -44,7 +44,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _wo = widget.workOrder;
     _descCtrl = TextEditingController(text: _wo.description);
     _priorityCtrl = TextEditingController(text: _wo.priority);
-    _cellCtrl = TextEditingController(text: _wo.cell);
+    _areaCtrl = TextEditingController(text: _wo.area);
     _machineCtrl = TextEditingController(text: _wo.machine);
     _respCtrl = TextEditingController(text: _wo.responsible);
     _workDoneCtrl = TextEditingController(text: _wo.workDone);
@@ -67,7 +67,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
           _wo = detail;
           _descCtrl.text = detail.description;
           _priorityCtrl.text = detail.priority;
-          _cellCtrl.text = detail.cell;
+          _areaCtrl.text = detail.area;
           _machineCtrl.text = detail.machine;
           _respCtrl.text = detail.responsible;
           _workDoneCtrl.text = detail.workDone;
@@ -88,7 +88,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   void dispose() {
     _descCtrl.dispose();
     _priorityCtrl.dispose();
-    _cellCtrl.dispose();
+    _areaCtrl.dispose();
     _machineCtrl.dispose();
     _respCtrl.dispose();
     _workDoneCtrl.dispose();
@@ -105,7 +105,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         step: _selectedStep,
         priority: _priorityCtrl.text.trim(),
         requiredDate: _requiredDate,
-        cell: _cellCtrl.text.trim(),
+        area: _areaCtrl.text.trim(),
         machine: _machineCtrl.text.trim(),
         responsible: _respCtrl.text.trim(),
       );
@@ -314,7 +314,10 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Status & Step Badges
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -328,7 +331,6 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                       style: TextStyle(color: _wo.statusColor, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -341,8 +343,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                       style: TextStyle(color: _wo.stepColor, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  if (_wo.priority.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                  if (_wo.priority.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -354,7 +355,6 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -416,7 +416,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   children: [
                     Expanded(
                       child: TextField(
-                        controller: _cellCtrl,
+                        controller: _areaCtrl,
                         decoration: const InputDecoration(labelText: 'Area', isDense: true),
                       ),
                     ),
@@ -541,13 +541,16 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
 
               const Divider(height: 28),
 
-              // Linked Items in Jokarz Engineering
+              // Linked Items in AOR Engineering
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Linked in Jokarz Engineering:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  const Flexible(
+                    child: Text(
+                      'Linked in AOR Engineering:',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _showAssignToItemModal,

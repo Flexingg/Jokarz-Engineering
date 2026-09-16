@@ -60,7 +60,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
   void _showNewWorkOrderDialog() {
     final bammState = ref.read(bammProvider);
     final descCtrl = TextEditingController();
-    final cellCtrl = TextEditingController();
+    final areaCtrl = TextEditingController();
     final machineCtrl = TextEditingController();
     final priorityCtrl = TextEditingController(text: '1.0');
     final respCtrl = TextEditingController();
@@ -165,7 +165,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                       children: [
                         Expanded(
                           child: TextField(
-                            controller: cellCtrl,
+                            controller: areaCtrl,
                             decoration: const InputDecoration(labelText: 'Area', hintText: 'e.g. 100, 200, 300, Carts', isDense: true),
                           ),
                         ),
@@ -242,7 +242,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   try {
                     final created = await ref.read(bammProvider.notifier).createWorkOrder(
                       description: descCtrl.text.trim(),
-                      cell: cellCtrl.text.trim(),
+                      area: areaCtrl.text.trim(),
                       machine: machineCtrl.text.trim(),
                       maintenanceTypeId: maintId,
                       stepId: stepId,
@@ -514,9 +514,12 @@ class _BammScreenState extends ConsumerState<BammScreen> {
               child: Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary, size: 20),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'BAMM Work Orders',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            const Flexible(
+              child: Text(
+                'BAMM Work Orders',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -617,7 +620,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Not connected to plant network (${bammState.config.origin}). Showing cached records. Queries and updates require plant Wi-Fi / VPN.',
+                      'Not connected to plant network (${bammState.config.origin}). Queries and updates require plant Wi-Fi / VPN.',
                       style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
                     ),
                   ),
@@ -654,7 +657,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                             const SizedBox(height: 12),
                             Text(
                               bammState.criteria.isEmpty
-                                  ? (bammState.isOnline ? 'No BAMM work orders found on server.' : 'No cached work orders. Connect to plant network to load data.')
+                                  ? (bammState.isOnline ? 'No BAMM work orders found on server.' : 'Not connected to plant network. Connect to load work orders.')
                                   : 'No BAMM work orders match your active filters.',
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                             ),
@@ -810,31 +813,37 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 const SizedBox(width: 10),
 
                 // Status Dropdown
-                _buildDropdownFilter(
-                  label: 'Status',
-                  currentValue: (c.status == null || c.status!.isEmpty || c.status == 'All Open')
-                      ? 'All Open'
-                      : (c.status == 'All' ? 'All (Including Closed)' : c.status!),
-                  items: statusItems,
-                  onChanged: onStatusChanged,
+                Flexible(
+                  child: _buildDropdownFilter(
+                    label: 'Status',
+                    currentValue: (c.status == null || c.status!.isEmpty || c.status == 'All Open')
+                        ? 'All Open'
+                        : (c.status == 'All' ? 'All (Including Closed)' : c.status!),
+                    items: statusItems,
+                    onChanged: onStatusChanged,
+                  ),
                 ),
                 const SizedBox(width: 8),
 
                 // Step / Urgency Dropdown
-                _buildDropdownFilter(
-                  label: 'Step',
-                  currentValue: c.step ?? 'All',
-                  items: stepItems,
-                  onChanged: onStepChanged,
+                Flexible(
+                  child: _buildDropdownFilter(
+                    label: 'Step',
+                    currentValue: c.step ?? 'All',
+                    items: stepItems,
+                    onChanged: onStepChanged,
+                  ),
                 ),
                 const SizedBox(width: 8),
 
                 // Area Dropdown
-                _buildDropdownFilter(
-                  label: 'Area',
-                  currentValue: c.area ?? 'All',
-                  items: areaItems,
-                  onChanged: onAreaChanged,
+                Flexible(
+                  child: _buildDropdownFilter(
+                    label: 'Area',
+                    currentValue: c.area ?? 'All',
+                    items: areaItems,
+                    onChanged: onAreaChanged,
+                  ),
                 ),
                 const SizedBox(width: 8),
 
@@ -939,6 +948,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         child: DropdownButton<String>(
           value: effectiveValue,
           isDense: true,
+          isExpanded: true,
           style: TextStyle(
             fontSize: 12,
             color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -992,7 +1002,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         onDeleted: () => ref.read(bammProvider.notifier).setMaintenanceTypeFilter(null),
       ));
     }
-    final areaVal = c.area ?? c.cell;
+    final areaVal = c.area;
     if (areaVal != null && areaVal != 'All' && areaVal.isNotEmpty) {
       chips.add(Chip(
         label: Text('Area: $areaVal', style: const TextStyle(fontSize: 11)),
@@ -1281,63 +1291,69 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppTheme.of(context).primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '#${wo.worNoSeq}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.of(context).primary,
-                          ),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppTheme.of(context).primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '#${wo.worNoSeq}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.of(context).primary,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: wo.statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                wo.status,
+                                style: TextStyle(color: wo.statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: wo.stepColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                wo.step,
+                                style: TextStyle(color: wo.stepColor, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            if (linkedItems.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.of(context).emerald.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${linkedItems.length} linked',
+                                  style: TextStyle(color: AppTheme.of(context).emerald, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: wo.statusColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          wo.status,
-                          style: TextStyle(color: wo.statusColor, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: wo.stepColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          wo.step,
-                          style: TextStyle(color: wo.stepColor, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (wo.issueDate != null)
+                      if (wo.issueDate != null) ...[
+                        const SizedBox(width: 6),
                         Text(
                           DateFormat('MMM d').format(wo.issueDate!),
                           style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                      if (linkedItems.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.of(context).emerald.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${linkedItems.length} linked',
-                            style: TextStyle(color: AppTheme.of(context).emerald, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
                         ),
                       ],
                     ],
@@ -1373,6 +1389,14 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         Text(
                           'Resp: ${wo.responsible}',
                           style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      if (wo.requester.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Text(
+                            'Req: ${wo.requester}',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          ),
                         ),
                     ],
                   ),

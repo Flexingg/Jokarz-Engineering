@@ -240,7 +240,7 @@ class AuthService {
             <html>
             <head>
               <meta charset="utf-8">
-              <title>Jokarz Engineering Sign-In</title>
+              <title>AOR Engineering Sign-In</title>
               <style>
                 body {
                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -270,7 +270,7 @@ class AuthService {
               <div class="card">
                 <div class="icon">⚙️</div>
                 <h1>Sign-In Successful!</h1>
-                <p>You have signed in to <strong>Jokarz Engineering</strong>.<br>You can close this tab and return to the desktop application.</p>
+                <p>You have signed in to <strong>AOR Engineering</strong>.<br>You can close this tab and return to the desktop application.</p>
               </div>
             </body>
             </html>

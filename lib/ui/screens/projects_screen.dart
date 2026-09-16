@@ -8,6 +8,9 @@ import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/bamm_chip.dart';
+import '../adaptive/breakpoints.dart';
+import '../adaptive/master_detail.dart';
+import 'project_detail_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -17,7 +20,7 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
-  bool _denseView = true;
+  String? _selectedProjectId;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +29,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 800;
+    final isDesktop = Breakpoints.isExpanded(screenWidth);
 
     final projects = state.filteredProjects;
 
@@ -36,7 +39,13 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
         state.selectedPhase != null ||
         state.selectedMachine != null;
 
-    final showDense = isDesktop && _denseView;
+    void selectProject(String id) {
+      if (isDesktop) {
+        setState(() => _selectedProjectId = id);
+      } else {
+        context.push('/projects/$id');
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -45,15 +54,6 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          if (isDesktop)
-            IconButton(
-              icon: Icon(
-                _denseView ? Icons.view_agenda_outlined : Icons.table_rows_rounded,
-                color: AppTheme.of(context).primary,
-              ),
-              tooltip: _denseView ? 'Switch to Card View' : 'Switch to Compact Desktop Rows',
-              onPressed: () => setState(() => _denseView = !_denseView),
-            ),
           IconButton(
             icon: Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Maintenance Task Calendar',
@@ -72,7 +72,9 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: AdaptiveMasterDetail(
+        masterWidth: 420,
+        list: Column(
         children: [
           // Search & Filter Header
           Padding(
@@ -198,16 +200,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                     ? ListView.builder(
                         padding: const EdgeInsets.all(16.0),
                         itemCount: projects.length,
-                        itemBuilder: (context, index) => showDense
-                            ? _DesktopProjectRow(
+                        itemBuilder: (context, index) => _ProjectCard(
                                 key: ValueKey(projects[index].id),
                                 project: projects[index],
-                                index: index,
-                                canReorder: false,
-                              )
-                            : _ProjectCard(
-                                key: ValueKey(projects[index].id),
-                                project: projects[index],
+                                onTap: () => selectProject(projects[index].id),
                               ),
                       )
                     : ReorderableListView.builder(
@@ -216,20 +212,22 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                         onReorder: (oldIndex, newIndex) {
                           notifier.reorderProjects(oldIndex, newIndex);
                         },
-                        itemBuilder: (context, index) => showDense
-                            ? _DesktopProjectRow(
+                        itemBuilder: (context, index) => _ProjectCard(
                                 key: ValueKey(projects[index].id),
                                 project: projects[index],
-                                index: index,
-                                canReorder: true,
-                              )
-                            : _ProjectCard(
-                                key: ValueKey(projects[index].id),
-                                project: projects[index],
+                                onTap: () => selectProject(projects[index].id),
                               ),
                       )),
           ),
         ],
+        ),
+        detailBuilder: (ctx) {
+          final effectiveId = _selectedProjectId ?? (projects.isNotEmpty ? projects.first.id : null);
+          if (effectiveId == null) {
+            return const Center(child: Text('Select a project to view details'));
+          }
+          return ProjectDetailScreen(projectId: effectiveId);
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/projects/new'),
@@ -362,289 +360,11 @@ class _EditablePhaseBadge extends ConsumerWidget {
   }
 }
 
-/// Optimized Desktop Row: Shows 12-15 projects at once with next action easily visible,
-/// editable status, drag-and-drop handle, and detailed engineering stats.
-class _DesktopProjectRow extends ConsumerWidget {
-  final Project project;
-  final int index;
-  final bool canReorder;
-
-  const _DesktopProjectRow({
-    super.key,
-    required this.project,
-    required this.index,
-    required this.canReorder,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final isTerminal = project.isCompletedOrCancelled;
-    final nextTask = project.nextPendingTask;
-
-    return ExpressiveCard(
-      key: ValueKey(project.id),
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      onTap: () => context.push('/projects/${project.id}'),
-      child: Row(
-        children: [
-          // Drag Grip Handle (re-prioritization)
-          if (canReorder)
-            ReorderableDragStartListener(
-              index: index,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.drag_indicator_rounded,
-                    size: 20,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 4),
-
-          // Priority Badge
-          if (isTerminal)
-            const ExpressiveBadge(
-              label: 'Done',
-              color: Colors.grey,
-              fontSize: 10,
-            )
-          else
-            ExpressiveBadge(
-              label: '#${project.priority}',
-              color: project.priority == 1
-                  ? AppTheme.of(context).coral
-                  : (project.priority <= 3
-                      ? AppTheme.of(context).amber
-                      : AppTheme.of(context).primary),
-              fontSize: 11,
-            ),
-          const SizedBox(width: 10),
-
-          // Project Title & Machine/SubAssembly (Flexible width)
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        project.title,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isTerminal ? Colors.grey : null,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    ExpressiveBadge(
-                      label: project.category.label,
-                      color: AppTheme.of(context).primary,
-                      fontSize: 9,
-                    ),
-                    if (project.bammWorkOrders.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      ...project.bammWorkOrders.take(2).map((wo) => Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: BammChip(worNo: wo, isDense: true),
-                          )),
-                      if (project.bammWorkOrders.length > 2)
-                        Text(
-                          '+${project.bammWorkOrders.length - 2}',
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                        ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    if (project.machine.isNotEmpty) ...[
-                      Icon(Icons.precision_manufacturing_outlined, size: 12, color: Colors.grey.shade500),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          project.machine,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                    if (project.subAssembly.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Text('•', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          project.subAssembly,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // NEXT ACTION SECTION (Prominently visible!)
-          Expanded(
-            flex: 5,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: (nextTask != null && !isTerminal)
-                    ? AppTheme.of(context).amber.withValues(alpha: 0.12)
-                    : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03)),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                border: Border.all(
-                  color: (nextTask != null && !isTerminal)
-                      ? AppTheme.of(context).amber.withValues(alpha: 0.35)
-                      : Colors.transparent,
-                  width: 0.8,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    (nextTask != null && !isTerminal)
-                        ? Icons.pending_actions_rounded
-                        : (isTerminal ? Icons.check_circle_outline_rounded : Icons.task_alt_rounded),
-                    size: 14,
-                    color: (nextTask != null && !isTerminal)
-                        ? AppTheme.of(context).amber
-                        : Colors.grey,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      isTerminal
-                          ? 'Project Complete / Closed'
-                          : (nextTask != null
-                              ? 'Next: ${nextTask.description}'
-                              : 'No pending actions'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: (nextTask != null && !isTerminal)
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: (nextTask != null && !isTerminal)
-                            ? (isDark ? Colors.amber.shade200 : Colors.amber.shade900)
-                            : Colors.grey,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (nextTask != null && nextTask.pendingReason.isNotEmpty && !isTerminal) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppTheme.of(context).coral.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '⏳ ${nextTask.pendingReason}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.of(context).coral,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Stats: Tasks & Orders
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
-              const SizedBox(width: 4),
-              Text(
-                '${project.completedTasksCount}/${project.tasks.length}',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (project.orders.isNotEmpty) ...[
-                Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
-                const SizedBox(width: 4),
-                Text(
-                  '${project.orders.length}${project.undeliveredOrdersCount > 0 ? " (${project.undeliveredOrdersCount} open)" : ""}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: project.undeliveredOrdersCount > 0
-                        ? AppTheme.of(context).amber
-                        : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ],
-          ),
-
-          // Total Project Cost
-          if (project.totalProjectCost > 0) ...[
-            SizedBox(
-              width: 75,
-              child: Text(
-                currency.format(project.totalProjectCost),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ] else ...[
-            const SizedBox(width: 12),
-          ],
-
-          // EDITABLE STATUS BADGE
-          _EditablePhaseBadge(project: project),
-          const SizedBox(width: 6),
-
-          // Navigate Arrow
-          Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey.shade400),
-        ],
-      ),
-    );
-  }
-}
-
 /// A single project list card (used on mobile and when expanded card view is toggled).
 class _ProjectCard extends ConsumerWidget {
   final Project project;
-  const _ProjectCard({super.key, required this.project});
+  final VoidCallback onTap;
+  const _ProjectCard({super.key, required this.project, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -658,39 +378,46 @@ class _ProjectCard extends ConsumerWidget {
     return ExpressiveCard(
       key: ValueKey(project.id),
       margin: const EdgeInsets.only(bottom: 12),
-      onTap: () => context.push('/projects/${project.id}'),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top Row: Priority & Category & Editable Phase
           Row(
             children: [
-              if (isTerminal)
-                ExpressiveBadge(
-                  label: 'Prev #${project.priority}',
-                  color: Colors.grey,
-                  fontSize: 10,
-                )
-              else
-                ExpressiveBadge(
-                  label: '#${project.priority}',
-                  color: project.priority == 1
-                      ? AppTheme.of(context).coral
-                      : (project.priority <= 3
-                          ? AppTheme.of(context).amber
-                          : AppTheme.of(context).primary),
-                  fontSize: 11,
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (isTerminal)
+                      ExpressiveBadge(
+                        label: 'Prev #${project.priority}',
+                        color: Colors.grey,
+                        fontSize: 10,
+                      )
+                    else
+                      ExpressiveBadge(
+                        label: '#${project.priority}',
+                        color: project.priority == 1
+                            ? AppTheme.of(context).coral
+                            : (project.priority <= 3
+                                ? AppTheme.of(context).amber
+                                : AppTheme.of(context).primary),
+                        fontSize: 11,
+                      ),
+                    ExpressiveBadge(
+                      label: project.category.label,
+                      color: AppTheme.of(context).primary,
+                      fontSize: 10,
+                    ),
+                    _EditablePhaseBadge(project: project),
+                  ],
                 ),
-              const SizedBox(width: 6),
-              ExpressiveBadge(
-                label: project.category.label,
-                color: AppTheme.of(context).primary,
-                fontSize: 10,
               ),
-              const SizedBox(width: 6),
-              _EditablePhaseBadge(project: project),
-              const Spacer(),
-              if (project.totalProjectCost > 0)
+              if (project.totalProjectCost > 0) ...[
+                const SizedBox(width: 6),
                 Text(
                   currency.format(project.totalProjectCost),
                   style: const TextStyle(
@@ -698,6 +425,7 @@ class _ProjectCard extends ConsumerWidget {
                     fontSize: 13,
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
@@ -823,33 +551,36 @@ class _ProjectCard extends ConsumerWidget {
           // Footer: Tasks count, Orders count, CompletedAt
           Row(
             children: [
-              Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
-              const SizedBox(width: 4),
-              Text(
-                '${project.completedTasksCount}/${project.tasks.length} Tasks',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+              Expanded(
+                child: Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
+                    Text(
+                      '${project.completedTasksCount}/${project.tasks.length} Tasks',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                      ),
+                    ),
+                    if (project.orders.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
+                      Text(
+                        '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(width: 14),
-
-              if (project.orders.isNotEmpty) ...[
-                Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
-                const SizedBox(width: 4),
-                Text(
-                  '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-              ],
-
-              const Spacer(),
-
-              if (project.completedAt != null)
+              if (project.completedAt != null) ...[
+                const SizedBox(width: 8),
                 Text(
                   'Closed ${dateFormat.format(project.completedAt!)}',
                   style: TextStyle(
@@ -858,6 +589,7 @@ class _ProjectCard extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ],
             ],
           ),
         ],

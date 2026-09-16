@@ -1,0 +1,122 @@
+{
+ "typeName": "Cogep.BusinessLogic.WORK_ORDER, Cogep.BusinessLogic, Version=6.9.4.12, Culture=neutral, PublicKeyToken=null",
+ "state": 3,
+ "guid": "6285b36a-e38b-4628-9f4c-b2a5f871915c",
+ "properties": [
+  {
+   "name": "AllowExpenseOnClosedWO",
+   "type": 12,
+   "value": "false"
+  },
+  {
+   "name": "InterventionID",
+   "type": 3,
+   "value": "1"
+  },
+  {
+   "name": "InterventionComment",
+   "type": 9
+  },
+  {
+   "name": "Status",
+   "type": 18,
+   "value": "8"
+  },
+  {
+   "name": "IsInitialized",
+   "type": 12,
+   "value": "true"
+  },
+  {
+   "name": "WOR_ID",
+   "type": 3,
+   "value": "0"
+  },
+  {
+   "name": "WOR_NO",
+   "type": 4
+  },
+  {
+   "name": "WOR_MODIF_DATE",
+   "type": 28,
+   "value": "1789125335852",
+   "isVisible": false,
+   "isReadOnly": true,
+   "display": "Last modification date",
+   "programFieldId": 2,
+   "controlType": 3
+  },
+  {
+   "name": "WOR_PLAN_DATE",
+   "type": 28,
+   "display": "Scheduling start date",
+   "programFieldId": 3,
+   "controlType": 3
+  },
+  {
+   "name": "WOR_PRINT_DATE",
+   "type": 28,
+   "isReadOnly": true,
+   "display": "Print date",
+   "programFieldId": 4,
+   "controlType": 3
+  },
+  {
+   "name": "WOR_CLOSE_DATE",
+   "type": 28,
+   "isReadOnly": true,
+   "display": "Completed date",
+   "programFieldId": 5,
+   "controlType": 3
+  },
+  {
+   "name": "WOR_REQUI_DATE",
+   "type": 28,
+   "display": "Required date",
+   "programFieldId": 6,
+   "controlType": 3
+  }
+ ],
+ "childSets": [
+  {
+   "originProperty": "WO_DETAIL",
+   "itemKeyProperty": "WOD_ID",
+   "itemPrototype": {
+    "typeName": "Cogep.BusinessLogic.WO_DETAIL, Cogep.BusinessLogic, Version=6.9.4.12, Culture=neutral, PublicKeyToken=null",
+    "properties": [
+     {
+      "name": "IsInitialized",
+      "type": 12,
+      "value": "false"
+     },
+     {
+      "name": "OriginModelLineId",
+      "type": 4
+     },
+     {
+      "name": "Status",
+      "type": 19
+     },
+     {
+      "name": "Sequence",
+      "type": 3,
+      "value": "0"
+     },
+     {
+      "name": "WOD_ID",
+      "type": 3,
+      "value": "0",
+      "display": "Activity line",
+      "length": 19,
+      "decimal": 0
+     }
+    ]
+   },
+   "items": [],
+   "deletedItems": []
+  }
+ ],
+ "childs": [],
+ "lookupItems": [],
+ "asyncViews": []
+}

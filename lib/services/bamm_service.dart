@@ -4,18 +4,53 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import '../bamm/bamm_config.dart';
+import '../bamm/mutations/fields.dart';
+import '../bamm/mutations/writer.dart';
+import '../bamm/queries/list_query.dart';
+import '../bamm/schema/lookups.dart';
+import '../bamm/transport/http_transport.dart';
 import '../models/bamm_models.dart';
+import 'bamm_adapter.dart';
 
+/// App-facing BAMM service: owns persisted app state (connection config,
+/// saved filters) and the network reachability probe, and translates between
+/// this app's view models (`BammWorkOrder`, `BammFilterCriteria`, ...) and
+/// the modular BAMM protocol layer in `lib/bamm/`, which owns login,
+/// request/payload shape, and DynamicDTO handling.
+///
+/// Deliberately live-only: a failed or unreachable fetch is reported as a
+/// failure to the caller. There is no local cache of work-order data to fall
+/// back to - a cache decorator with a visible timestamp is a later batch.
 class BammService {
-  static const String _cacheFileName = 'jokarz_bamm_cache.json';
   static const String _filtersFileName = 'jokarz_bamm_filters.json';
   static const String _configFileName = 'jokarz_bamm_config.json';
 
-  BammConnectionConfig config = const BammConnectionConfig();
+  BammConnectionConfig _config = const BammConnectionConfig();
+  BammHttpTransport _transport = BammHttpTransport(_toBammConfig(const BammConnectionConfig()));
 
-  String? _accessToken;
-  String? _sessionToken;
-  DateTime? _tokenExpiresAt;
+  BammConnectionConfig get config => _config;
+
+  /// Replacing the config also replaces the transport (and with it, any
+  /// cached tokens): a token issued for one host/user must never be reused
+  /// against another after the user repoints the app at a different BAMM.
+  set config(BammConnectionConfig value) {
+    _config = value;
+    _transport.close();
+    _transport = BammHttpTransport(_toBammConfig(value));
+  }
+
+  BammConfig get _bammConfig => _transport.config;
+
+  static BammConfig _toBammConfig(BammConnectionConfig config) => BammConfig(
+        origin: config.origin,
+        usercode: config.usercode,
+        password: config.password,
+        companyId: config.companyId,
+        spwId: config.spwId,
+        loginTimeout: const Duration(seconds: 6),
+        apiTimeout: const Duration(seconds: 12),
+      );
 
   bool isOnline = false;
   bool isPolling = false;
@@ -57,313 +92,49 @@ class BammService {
     return isOnline;
   }
 
-  /// Checks if authentication tokens are present and non-expired.
-  bool get isAuthenticated {
-    if (_accessToken == null || _sessionToken == null || _tokenExpiresAt == null) {
-      return false;
-    }
-    return DateTime.now().isBefore(_tokenExpiresAt!);
-  }
-
-  /// Performs BAMM authentication: PUT /api/login/FinalizeLogInWeb
-  Future<void> login() async {
-    final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-    final url = Uri.parse('$origin/api/login/FinalizeLogInWeb');
-
-    final payload = {
-      'usercode': config.usercode,
-      'password': config.password,
-      'companyID': config.companyId,
-    };
-
-    final headers = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Origin': origin,
-      'Referer': '$origin/',
-      'Cache-Control': 'no-cache',
-    };
-
-    final response = await _client
-        .put(url, headers: headers, body: jsonEncode(payload))
-        .timeout(const Duration(seconds: 4));
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final val = data['value'] as Map<String, dynamic>?;
-      if (val != null) {
-        final token = val['token']?.toString() ?? '';
-        _accessToken = token.toLowerCase().startsWith('bearer ') ? token : 'Bearer $token';
-        _sessionToken = val['sessionToken']?.toString() ?? '';
-        _tokenExpiresAt = DateTime.now().add(const Duration(minutes: 50));
-      }
-    } else {
-      throw HttpException('BAMM login failed with HTTP ${response.statusCode}: ${response.body}');
-    }
-  }
-
-  /// Builds the standard BAMM authenticated request headers.
-  Map<String, String> _buildHeaders({
-    required String refererPath,
-    String? contentType = 'application/json',
-  }) {
-    final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-    final headers = <String, String>{
-      'Accept': 'application/json, text/plain, */*',
-      'Access-Token': _accessToken ?? '',
-      'Session-Token': _sessionToken ?? '',
-      'Origin': origin,
-      'Referer': refererPath.startsWith('http') ? refererPath : '$origin$refererPath',
-      'Cache-Control': 'no-cache',
-    };
-    if (contentType != null && contentType.isNotEmpty) {
-      headers['Content-Type'] = contentType;
-    }
-    return headers;
-  }
-
   // ---------------------------------------------------------------------------
-  // Work Order List Fetching & Caching
+  // Work Order List Fetching
   // ---------------------------------------------------------------------------
 
-  /// Fetches Work Orders from BAMM with server-side sorting and filtering,
-  /// or falls back to local cache when offline. Zero dummy data is generated.
+  /// Fetches Work Orders from BAMM with server-side sorting and filtering.
+  /// Live-only: an unreachable server or a failed request is reported to the
+  /// caller as a failure, never masked by stale local data. Zero dummy data
+  /// is generated.
   Future<List<BammWorkOrder>> fetchWorkOrders({
     BammFilterCriteria? criteria,
     Map<String, dynamic>? customPayload,
     bool forceOffline = false,
   }) async {
-    final bool hasCriteria = criteria != null && !criteria.isEmpty;
-    final payload = customPayload ?? (hasCriteria ? buildFilterPayload(criteria) : _buildDefaultFilterPayload());
+    if (forceOffline) return const [];
 
-    if (!forceOffline) {
-      final online = await quickPollNetwork();
-      if (online) {
-        try {
-          if (!isAuthenticated && config.usercode.isNotEmpty) {
-            await login();
-          }
-
-          final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-          final listUrl = Uri.parse('$origin/api/WorkOrderList/GetListData');
-
-          final headers = _buildHeaders(
-            refererPath: '/workorder/list/work-order/${config.spwId}',
-            contentType: 'application/json',
-          );
-
-          final response = await _client
-              .post(listUrl, headers: headers, body: jsonEncode(payload))
-              .timeout(const Duration(seconds: 12));
-
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            final body = jsonDecode(response.body);
-            final List<dynamic> rows = (body is Map && body['value'] is List)
-                ? body['value'] as List<dynamic>
-                : (body is List ? body : []);
-
-            final workOrders = <BammWorkOrder>[];
-            for (final r in rows) {
-              if (r is Map<String, dynamic>) {
-                workOrders.add(BammWorkOrder.fromPropertyList(r));
-              }
-            }
-
-            // Only cache the full initial view (open work orders) so a search doesn't wipe base cache
-            if (!hasCriteria && customPayload == null && workOrders.isNotEmpty) {
-              await saveCachedWorkOrders(workOrders);
-            }
-            return workOrders;
-          } else {
-            debugPrint('BAMM GetListData failed with HTTP ${response.statusCode}: ${response.body}');
-            throw HttpException('BAMM server returned HTTP ${response.statusCode}: ${response.body}');
-          }
-        } catch (e) {
-          debugPrint('BAMM live fetch failed ($e), checking local cached work orders.');
-          if (hasCriteria) rethrow;
-        }
-      }
+    final online = await quickPollNetwork();
+    if (!online) {
+      throw HttpException(
+        'BAMM is unreachable at ${config.origin}. Please ensure device is connected to the plant Wi-Fi / VPN.',
+      );
     }
 
-    // Fallback to cache when offline
-    final cached = await loadCachedWorkOrders();
-    if (cached.isEmpty) {
-      return []; // ZERO DUMMY DATA!
+    if (customPayload != null) {
+      final raw = await _transport.post(
+        '/api/WorkOrderList/GetListData',
+        jsonBody: customPayload,
+        referer: '/workorder/list/work-order/${_bammConfig.listScreenId}',
+        operation: 'Work order list',
+      );
+      final rows = (raw is Map && raw['value'] is List) ? raw['value'] as List : const [];
+      return rows.whereType<Map<String, dynamic>>().map(bammWorkOrderFromListRow).toList();
     }
 
-    if (hasCriteria) {
-      return _filterCachedLocally(cached, criteria);
-    }
-
-    return _filterCachedLocally(cached, const BammFilterCriteria());
-  }
-
-  /// Construct standard list format payload matching Cogep GuideTi requirements.
-  /// Major columns: WO, registered date, responsible, requester, work done, description, asset, area.
-  Map<String, dynamic> _buildDefaultFilterPayload() {
-    return {
-      'filters': [
-        _buildOpenStatusFilterBlock(),
-      ],
-      'listFormat': {
-        'schemaVersion': 3,
-        'programId': 1,
-        'id': config.spwId,
-        'topCount': 2000,
-        'fields': _buildMajorFieldsList(),
-        'orderByFields': [
-          {'name': 'woIssueDate', 'ascending': false},
-        ],
-      },
-      'isCountOnly': false,
-    };
-  }
-
-  /// Builds the standard GuideTi filter block that restricts results to open/active work orders.
-  /// Excludes completed (3), declined (5), closed (6), and cancelled (4).
-  Map<String, dynamic> _buildOpenStatusFilterBlock() {
-    return {
-      'searchFieldKey': 'woStatusId',
-      'filterType': 8,
-      'description': 'Statuses',
-      'sourceUrl': 'GetWorkOrderStatus',
-      'categoryDescription': 'WO parameters',
-      'values': [
-        {
-          'status': 'included',
-          'comparisonType': 'contains',
-          'includeNull': false,
-          'listValues': [
-            {'id': 1, 'value': 0, 'description': 'In preparation', 'code': '', 'type': null, 'inactive': false},
-            {'id': 2, 'value': 0, 'description': 'Scheduled', 'code': '', 'type': null, 'inactive': false},
-            {'id': 7, 'value': 0, 'description': 'In estimate', 'code': '', 'type': null, 'inactive': false},
-            {'id': 8, 'value': 0, 'description': 'Registered', 'code': '', 'type': null, 'inactive': false},
-            {'id': 9, 'value': 0, 'description': 'Ready to schedule', 'code': '', 'type': null, 'inactive': false},
-          ],
-          'stringValues': [],
-        }
-      ],
-      'isExpanded': true,
-      'isVisible': true,
-    };
-  }
-
-  /// Builds the complete list of major columns requested by GuideTi.
-  List<Map<String, dynamic>> _buildMajorFieldsList() {
-    return [
-      {
-        'name': 'workOrderId',
-        'key': 'workOrderId',
-        'header': 'ID',
-        'isVisible': false,
-        'fieldDataType': 4,
-      },
-      {
-        'name': 'worNoSeq',
-        'key': 'worNoSeq',
-        'header': 'Work order',
-        'isVisible': true,
-        'fieldDataType': 6,
-      },
-      {
-        'name': 'woIssueDate',
-        'key': 'woIssueDate',
-        'header': 'WO registered date',
-        'isVisible': true,
-        'fieldDataType': 5,
-        'format': 4,
-      },
-      {
-        'name': 'regrouping1Description',
-        'key': 'regrouping1Description',
-        'header': 'Area',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'funCodeLevelNiv3Description',
-        'key': 'funCodeLevelNiv3Description',
-        'header': 'Machine',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'recipientName',
-        'key': 'recipientName',
-        'header': 'Responsible',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'requesterName',
-        'key': 'requesterName',
-        'header': 'Requester',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'woTask',
-        'key': 'woTask',
-        'header': 'Work done',
-        'isVisible': true,
-        'fieldDataType': 1,
-      },
-      {
-        'name': 'woDescription',
-        'key': 'woDescription',
-        'header': 'WO description',
-        'isVisible': true,
-        'fieldDataType': 1,
-      },
-      {
-        'name': 'woStatusDescription',
-        'key': 'woStatusDescription',
-        'header': 'Status',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'woStepDescription',
-        'key': 'woStepDescription',
-        'header': 'Step',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'executionModeDescription',
-        'key': 'executionModeDescription',
-        'header': 'Machine Status',
-        'isVisible': true,
-        'fieldDataType': 15,
-      },
-      {
-        'name': 'woRequiredDate',
-        'key': 'woRequiredDate',
-        'header': 'Required date',
-        'isVisible': true,
-        'fieldDataType': 5,
-        'format': 4,
-      },
-      {
-        'name': 'worNumber3',
-        'key': 'worNumber3',
-        'header': 'EM Priority',
-        'isVisible': true,
-        'fieldDataType': 3,
-      },
-      {
-        'name': 'worEstLaborTime',
-        'key': 'worEstLaborTime',
-        'header': 'Labor Hours',
-        'isVisible': true,
-        'fieldDataType': 3,
-      },
-    ];
+    final request = _buildListQueryRequest(criteria ?? const BammFilterCriteria());
+    final result = await BammListQueryClient(_transport, _bammConfig).fetch(request);
+    return result.rows.map(bammWorkOrderFromListRow).toList();
   }
 
   /// Builds a GuideTi filter payload for server-side execution across 196k+ work orders.
-  Map<String, dynamic> buildFilterPayload(BammFilterCriteria criteria) {
-    final filters = <Map<String, dynamic>>[];
+  Map<String, dynamic> buildFilterPayload(BammFilterCriteria criteria) => _buildListQueryRequest(criteria).toJson();
+
+  ListQueryRequest _buildListQueryRequest(BammFilterCriteria criteria) {
+    final filters = <ListFilter>[];
 
     // Status filter:
     // If empty/null/All Open -> filter by open work orders (exclude completed, declined, closed, cancelled)
@@ -378,66 +149,27 @@ class BammService {
         statusStr.toLowerCase() == 'open';
 
     if (isOpenDefault) {
-      filters.add(_buildOpenStatusFilterBlock());
+      filters.add(_openStatusFilter());
     } else if (!isAllInclusive) {
       final sId = criteria.statusId ?? _lookupStatusId(statusStr);
-      filters.add({
-        'searchFieldKey': 'woStatusId',
-        'filterType': 8,
-        'sourceUrl': 'GetWorkOrderStatus',
-        'categoryDescription': 'WO parameters',
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [
-              {
-                'id': sId,
-                'value': 0,
-                'description': statusStr,
-                'code': '',
-                'type': null,
-                'inactive': false,
-              }
-            ],
-            'stringValues': [],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byList(
+        searchFieldKey: 'woStatusId',
+        sourceUrl: 'GetWorkOrderStatus',
+        categoryDescription: 'WO parameters',
+        options: [_optionMap(sId, statusStr)],
+      ));
     }
 
     // Step filter (woStepId, filterType 3)
     if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
       final stId = criteria.stepId ?? _lookupStepId(criteria.step!);
-      filters.add({
-        'searchFieldKey': 'woStepId',
-        'filterType': 3,
-        'sourceUrl': 'GetWorkOrderStep',
-        'categoryDescription': 'WO parameters',
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [
-              {
-                'id': stId,
-                'value': 0,
-                'description': criteria.step!,
-                'code': '',
-                'type': null,
-                'inactive': false,
-              }
-            ],
-            'stringValues': [],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byList(
+        searchFieldKey: 'woStepId',
+        filterType: 3,
+        sourceUrl: 'GetWorkOrderStep',
+        categoryDescription: 'WO parameters',
+        options: [_optionMap(stId, criteria.step!)],
+      ));
     }
 
     // Maintenance Type filter (maintenanceTypeId, filterType 8)
@@ -445,121 +177,39 @@ class BammService {
         criteria.maintenanceType!.isNotEmpty &&
         criteria.maintenanceType != 'All') {
       final mtId = criteria.maintenanceTypeId ?? _lookupMaintId(criteria.maintenanceType!);
-      filters.add({
-        'searchFieldKey': 'maintenanceTypeId',
-        'filterType': 8,
-        'sourceUrl': 'GetMaintenanceType',
-        'categoryDescription': 'WO parameters',
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [
-              {
-                'id': mtId,
-                'value': 0,
-                'description': criteria.maintenanceType!,
-                'code': '',
-                'type': null,
-                'inactive': false,
-              }
-            ],
-            'stringValues': [],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byList(
+        searchFieldKey: 'maintenanceTypeId',
+        sourceUrl: 'GetMaintenanceType',
+        categoryDescription: 'WO parameters',
+        options: [_optionMap(mtId, criteria.maintenanceType!)],
+      ));
     }
 
     // Area filter (regrouping1Id, filterType 8, sourceUrl: GetGrouping1)
-    final areaVal = (criteria.area ?? criteria.cell)?.trim();
+    final areaVal = criteria.area?.trim();
     if (areaVal != null && areaVal.isNotEmpty && areaVal != 'All') {
       final aId = criteria.areaId ?? _lookupAreaId(areaVal);
-      filters.add({
-        'searchFieldKey': 'regrouping1Id',
-        'filterType': 8,
-        'sourceUrl': 'GetGrouping1',
-        'categoryDescription': 'Asset parameters',
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [
-              {
-                'id': aId,
-                'value': 0,
-                'description': areaVal,
-                'code': '',
-                'type': null,
-                'inactive': false,
-              }
-            ],
-            'stringValues': [],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byList(
+        searchFieldKey: 'regrouping1Id',
+        sourceUrl: 'GetGrouping1',
+        categoryDescription: 'Asset parameters',
+        options: [_optionMap(aId, areaVal)],
+      ));
     }
 
     // Machine filter: 3rd level asset description (funCodeLevelNiv3Description, filterType 1)
     if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
-      filters.add({
-        'searchFieldKey': 'funCodeLevelNiv3Description',
-        'filterType': 1,
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [],
-            'stringValues': [criteria.machine!.trim()],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byText(searchFieldKey: 'funCodeLevelNiv3Description', value: criteria.machine!.trim()));
     }
 
     // Responsible (recipientName, filterType 1)
     if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
-      filters.add({
-        'searchFieldKey': 'recipientName',
-        'filterType': 1,
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [],
-            'stringValues': [criteria.responsible!.trim()],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byText(searchFieldKey: 'recipientName', value: criteria.responsible!.trim()));
     }
 
     // Requester (requesterName, filterType 1)
     if (criteria.requester != null && criteria.requester!.trim().isNotEmpty) {
-      filters.add({
-        'searchFieldKey': 'requesterName',
-        'filterType': 1,
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [],
-            'stringValues': [criteria.requester!.trim()],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byText(searchFieldKey: 'requesterName', value: criteria.requester!.trim()));
     }
 
     // Machine Status / Execution Mode (executionModeId, filterType 8)
@@ -567,142 +217,77 @@ class BammService {
         criteria.executionMode!.isNotEmpty &&
         criteria.executionMode != 'All') {
       final emId = criteria.executionModeId ?? _lookupExecutionModeId(criteria.executionMode!);
-      filters.add({
-        'searchFieldKey': 'executionModeId',
-        'filterType': 8,
-        'sourceUrl': 'GetExecutionMode',
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [
-              {
-                'id': emId,
-                'value': 0,
-                'description': criteria.executionMode!,
-                'code': '',
-                'type': null,
-                'inactive': false,
-              }
-            ],
-            'stringValues': [],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byList(
+        searchFieldKey: 'executionModeId',
+        sourceUrl: 'GetExecutionMode',
+        options: [_optionMap(emId, criteria.executionMode!)],
+      ));
     }
 
     // Text Search / WO Number Search
     if (criteria.searchQuery.trim().isNotEmpty) {
       final q = criteria.searchQuery.trim();
       final isWoNumber = RegExp(r'^(wo-)?\d+(\.\d+)?$', caseSensitive: false).hasMatch(q);
-      filters.add({
-        'searchFieldKey': isWoNumber ? 'worNoSeq' : 'woDescription',
-        'filterType': 1,
-        'values': [
-          {
-            'status': 'included',
-            'comparisonType': 'contains',
-            'includeNull': false,
-            'listValues': [],
-            'stringValues': [q],
-          }
-        ],
-        'isExpanded': true,
-        'isVisible': true,
-      });
+      filters.add(ListFilter.byText(searchFieldKey: isWoNumber ? 'worNoSeq' : 'woDescription', value: q));
     }
 
-    return {
-      'filters': filters,
-      'listFormat': {
-        'fields': _buildMajorFieldsList(),
-        'orderByFields': [
-          {'name': 'woIssueDate', 'ascending': false},
+    return ListQueryRequest(
+      fields: _majorColumns,
+      orderByFields: const [ListOrderBy('woIssueDate', ascending: false)],
+      filters: filters,
+      topCount: 2000,
+    );
+  }
+
+  /// The single-value `listValues` entry GuideTi expects for a resolved id/description pair.
+  Map<String, dynamic> _optionMap(int id, String description) =>
+      {'id': id, 'value': 0, 'description': description, 'code': '', 'type': null, 'inactive': false};
+
+  /// Builds the standard GuideTi filter block that restricts results to open/active work orders.
+  /// Excludes completed (3), declined (5), closed (6), and cancelled (4).
+  ListFilter _openStatusFilter() => ListFilter.byList(
+        searchFieldKey: 'woStatusId',
+        description: 'Statuses',
+        sourceUrl: 'GetWorkOrderStatus',
+        categoryDescription: 'WO parameters',
+        options: const [
+          {'id': 1, 'value': 0, 'description': 'In preparation', 'code': '', 'type': null, 'inactive': false},
+          {'id': 2, 'value': 0, 'description': 'Scheduled', 'code': '', 'type': null, 'inactive': false},
+          {'id': 7, 'value': 0, 'description': 'In estimate', 'code': '', 'type': null, 'inactive': false},
+          {'id': 8, 'value': 0, 'description': 'Registered', 'code': '', 'type': null, 'inactive': false},
+          {'id': 9, 'value': 0, 'description': 'Ready to schedule', 'code': '', 'type': null, 'inactive': false},
         ],
-        'topCount': 2000,
-      },
-      'isCountOnly': false,
-    };
-  }
+      );
 
-  /// Filters local cached work orders in-memory when offline.
-  List<BammWorkOrder> _filterCachedLocally(List<BammWorkOrder> list, BammFilterCriteria criteria) {
-    return list.where((wo) {
-      if (criteria.searchQuery.trim().isNotEmpty) {
-        final q = criteria.searchQuery.trim().toLowerCase();
-        final match = wo.worNoSeq.toLowerCase().contains(q) ||
-            wo.description.toLowerCase().contains(q) ||
-            wo.area.toLowerCase().contains(q) ||
-            wo.machine.toLowerCase().contains(q) ||
-            wo.responsible.toLowerCase().contains(q) ||
-            wo.requester.toLowerCase().contains(q) ||
-            wo.workDone.toLowerCase().contains(q) ||
-            wo.status.toLowerCase().contains(q);
-        if (!match) return false;
-      }
-
-      final status = criteria.status?.trim() ?? '';
-      if (status.isEmpty || status.toLowerCase() == 'all open' || status.toLowerCase() == 'open') {
-        // Exclude completed, closed, cancelled, declined
-        final s = wo.status.toLowerCase();
-        if (s.contains('complet') || s.contains('close') || s.contains('cancel') || s.contains('declin')) {
-          return false;
-        }
-      } else if (status.toLowerCase() != 'all' && status.toLowerCase() != 'all (including closed)') {
-        if (wo.status.toLowerCase() != status.toLowerCase()) return false;
-      }
-
-      if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
-        if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
-      }
-
-      final area = criteria.area ?? criteria.cell;
-      if (area != null && area.isNotEmpty && area != 'All') {
-        if (!wo.area.toLowerCase().contains(area.toLowerCase())) return false;
-      }
-
-      if (criteria.maintenanceType != null &&
-          criteria.maintenanceType!.isNotEmpty &&
-          criteria.maintenanceType != 'All') {
-        if (wo.maintenanceType.isNotEmpty &&
-            !wo.maintenanceType.toLowerCase().contains(criteria.maintenanceType!.toLowerCase())) {
-          return false;
-        }
-      }
-
-      if (criteria.executionMode != null &&
-          criteria.executionMode!.isNotEmpty &&
-          criteria.executionMode != 'All') {
-        if (wo.executionMode.isNotEmpty &&
-            !wo.executionMode.toLowerCase().contains(criteria.executionMode!.toLowerCase())) {
-          return false;
-        }
-      }
-
-      if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
-        if (!wo.responsible.toLowerCase().contains(criteria.responsible!.toLowerCase().trim())) return false;
-      }
-
-      if (criteria.requester != null && criteria.requester!.trim().isNotEmpty) {
-        if (!wo.requester.toLowerCase().contains(criteria.requester!.toLowerCase().trim())) return false;
-      }
-
-      if (criteria.machine != null && criteria.machine!.trim().isNotEmpty) {
-        if (!wo.machine.toLowerCase().contains(criteria.machine!.toLowerCase().trim())) return false;
-      }
-
-      return true;
-    }).toList();
-  }
+  /// The major columns requested by GuideTi.
+  static const List<ListColumn> _majorColumns = [
+    ListColumn(key: 'workOrderId', header: 'ID', isVisible: false, fieldDataType: 4),
+    ListColumn(key: 'worNoSeq', header: 'Work order', fieldDataType: 6),
+    ListColumn(key: 'woIssueDate', header: 'WO registered date', fieldDataType: 5, format: 4),
+    ListColumn(key: 'regrouping1Description', header: 'Area', fieldDataType: 15),
+    ListColumn(key: 'funCodeLevelNiv3Description', header: 'Machine', fieldDataType: 15),
+    ListColumn(key: 'recipientName', header: 'Responsible', fieldDataType: 15),
+    ListColumn(key: 'requesterName', header: 'Requester', fieldDataType: 15),
+    ListColumn(key: 'woTask', header: 'Work done', fieldDataType: 1),
+    ListColumn(key: 'woDescription', header: 'WO description', fieldDataType: 1),
+    ListColumn(key: 'woStatusDescription', header: 'Status', fieldDataType: 15),
+    ListColumn(key: 'woStepDescription', header: 'Step', fieldDataType: 15),
+    ListColumn(key: 'executionModeDescription', header: 'Machine Status', fieldDataType: 15),
+    ListColumn(key: 'woRequiredDate', header: 'Required date', fieldDataType: 5, format: 4),
+    ListColumn(key: 'worNumber3', header: 'EM Priority', fieldDataType: 3),
+    ListColumn(key: 'worEstLaborTime', header: 'Labor Hours', fieldDataType: 3),
+  ];
 
   // ---------------------------------------------------------------------------
   // Create Work Order
   // ---------------------------------------------------------------------------
 
-  /// Creates a new Work Order on BAMM using the full stateful recalculation flow.
+  /// Creates a new Work Order on BAMM via `GetNew -> [asset steps] -> apply
+  /// fields -> Save -> read back` (`BammWorkOrderWriter.createWorkOrder`).
+  /// `area`/`machine`/`responsible`/`laborHours` have no corresponding
+  /// writable BAMM property reachable from this form, so - exactly as the
+  /// previous implementation did - they are carried on the returned view
+  /// model for display only, not sent to BAMM.
   Future<BammWorkOrder> createWorkOrder({
     required String description,
     String assetId = '',
@@ -711,128 +296,47 @@ class BammService {
     String priority = '1.0',
     DateTime? requiredDate,
     String responsible = '',
-    String cell = '',
+    String area = '',
     String machine = '',
     double? laborHours,
   }) async {
     final online = await quickPollNetwork();
-
-    if (online && isAuthenticated) {
-      final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-
-      // Step 1: Obtain Blank Prototype
-      final getNewUrl = Uri.parse('$origin/api/WorkOrder/GetNew?spwId=${config.spwId}&assetId=$assetId&workOrderHeaderId=');
-      final newResp = await _client.get(
-        getNewUrl,
-        headers: _buildHeaders(refererPath: '/workorder/detail/0'),
-      ).timeout(const Duration(seconds: 4));
-
-      if (newResp.statusCode >= 200 && newResp.statusCode < 300) {
-        final blankData = jsonDecode(newResp.body) as Map<String, dynamic>;
-        Map<String, dynamic> model = blankData['value'] as Map<String, dynamic>;
-
-        // Step 2: Contextual Mutating Calls
-        if (assetId.isNotEmpty) {
-          try {
-            final changeFnUrl = Uri.parse('$origin/api/WorkOrder/ChangeFunctionCode?assetId=$assetId&actionId=&isApplyDefaultModel=true');
-            final fnResp = await _client.post(
-              changeFnUrl,
-              headers: _buildHeaders(
-                refererPath: '/workorder/detail/0',
-                contentType: 'application/cogep.dynamicdtoV1+json',
-              ),
-              body: jsonEncode(model),
-            );
-            if (fnResp.statusCode == 200) {
-              final fnData = jsonDecode(fnResp.body);
-              if (fnData['value'] is Map<String, dynamic>) {
-                model = fnData['value'] as Map<String, dynamic>;
-              }
-            }
-          } catch (_) {}
-        }
-
-        // Step 3: Apply User Field Edits
-        final properties = (model['properties'] as List<dynamic>?) ?? [];
-        void setProp(String name, dynamic val, {int type = 9}) {
-          var found = false;
-          for (var p in properties) {
-            if (p is Map && p['name'] == name) {
-              p['value'] = val?.toString();
-              p['state'] = 2;
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            properties.add({
-              'name': name,
-              'value': val?.toString(),
-              'type': type,
-              'state': 2,
-              'shortTypeName': 'WORK_ORDER',
-            });
-          }
-        }
-
-        setProp('WOR_DESCR', description, type: 9);
-        if (assetId.isNotEmpty) setProp('FUN_ID', assetId, type: 4);
-        setProp('MNT_ID', maintenanceTypeId, type: 4);
-        setProp('WSP_ID', stepId, type: 4);
-        if (priority.isNotEmpty) setProp('WOR_NB_3', priority, type: 3);
-        if (requiredDate != null) {
-          setProp('WOR_REQUI_DATE', requiredDate.millisecondsSinceEpoch.toString(), type: 28);
-        }
-
-        model['properties'] = properties;
-        model['state'] = 3;
-        model['isNull'] = false;
-        model['forceEmpty'] = false;
-        model['shortTypeName'] = 'WORK_ORDER';
-
-        // Step 4: Commit Save
-        final saveUrl = Uri.parse('$origin/api/WorkOrder/Save?duplicateQuestionSettingsJson=');
-        final saveResp = await _client.post(
-          saveUrl,
-          headers: _buildHeaders(
-            refererPath: '/workorder/detail/0',
-            contentType: 'application/cogep.dynamicdtoV1+json',
-          ),
-          body: jsonEncode(model),
-        ).timeout(const Duration(seconds: 6));
-
-        if (saveResp.statusCode >= 200 && saveResp.statusCode < 300) {
-          final saveJson = jsonDecode(saveResp.body) as Map<String, dynamic>;
-          final val = saveJson['value'] as Map<String, dynamic>?;
-          final newWorId = (val?['WOR_ID'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          final newWorNo = val?['WOR_NO']?.toString() ?? 'WO-$newWorId';
-
-          final created = BammWorkOrder(
-            worId: newWorId,
-            worNoSeq: newWorNo,
-            description: description,
-            status: 'Registered',
-            step: stepId == 3 ? 'Emergency' : 'Normal',
-            cell: cell,
-            machine: machine,
-            assetId: assetId,
-            priority: priority,
-            responsible: responsible,
-            requiredDate: requiredDate,
-            issueDate: DateTime.now(),
-            laborHours: laborHours,
-            rawDto: saveJson,
-          );
-
-          await _upsertLocalCachedWorkOrder(created);
-          return created;
-        }
-      }
+    if (!online) {
+      throw HttpException(
+        'Cannot create work order while disconnected from BAMM (${config.origin}). '
+        'Please ensure device is connected to the plant Wi-Fi / VPN.',
+      );
     }
 
-    throw HttpException(
-      'Cannot create work order while disconnected from BAMM (${config.origin}). '
-      'Please ensure device is connected to the plant Wi-Fi / VPN.',
+    final writer = BammWorkOrderWriter(_transport, _bammConfig);
+    final fields = <String, Object?>{
+      'WOR_DESCR': description,
+      'MNT_ID': maintenanceTypeId,
+      'WSP_ID': stepId,
+      if (priority.isNotEmpty) 'WOR_NB_3': priority,
+      if (requiredDate != null) 'WOR_REQUI_DATE': _dateOnly(requiredDate),
+    };
+
+    final result = await writer.createWorkOrder(
+      fields: fields,
+      assetId: assetId.isEmpty ? null : assetId,
+    );
+
+    final createdModel = result['model'] as Map<String, dynamic>?;
+    final base = createdModel != null
+        ? bammWorkOrderFromModel(createdModel)
+        : BammWorkOrder(
+            worId: int.tryParse(result['workOrderId']?.toString() ?? '') ?? 0,
+            worNoSeq: result['workOrderNumber']?.toString() ?? '',
+            description: description,
+          );
+
+    return base.copyWith(
+      area: area,
+      machine: machine,
+      assetId: assetId,
+      responsible: responsible,
+      laborHours: laborHours,
     );
   }
 
@@ -840,7 +344,17 @@ class BammService {
   // Edit Work Order
   // ---------------------------------------------------------------------------
 
-  /// Updates an existing Work Order using the BAMM lock & DynamicDTO protocol.
+  /// Updates an existing Work Order through the six-field write whitelist
+  /// (`WhitelistedFieldWriter`): lock -> save -> read back, with the read
+  /// back proving whether the save actually took, rather than trusting a 2xx
+  /// alone. Only `description` and `requiredDate` are on that whitelist;
+  /// `status`/`step`/`priority`/`area`/`machine`/`responsible` are not
+  /// BAMM-writable through this path (the previous implementation captured
+  /// them for display only too - it built its save payload by hand and only
+  /// ever actually sent `WOR_DESCR`, `WOR_NB_3`, and `WOR_REQUI_DATE`, of
+  /// which `WOR_NB_3` (priority) is not one of the six whitelisted
+  /// properties). They are still carried on the returned view model so the
+  /// UI's optimistic display is unchanged.
   Future<BammWorkOrder> updateWorkOrder({
     required int worId,
     required String description,
@@ -848,118 +362,36 @@ class BammService {
     String? step,
     String? priority,
     DateTime? requiredDate,
-    String? cell,
+    String? area,
     String? machine,
     String? responsible,
     double? laborHours,
   }) async {
     final online = await quickPollNetwork();
-
-    if (online && isAuthenticated && worId > 0) {
-      final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-
-      // 1. GET fresh model
-      final getUrl = Uri.parse('$origin/api/WorkOrder/GetById?id=$worId&spwId=${config.spwId}');
-      final getResp = await _client.get(
-        getUrl,
-        headers: _buildHeaders(refererPath: '/workorder/detail/$worId'),
-      ).timeout(const Duration(seconds: 4));
-
-      if (getResp.statusCode == 200) {
-        final dtoData = jsonDecode(getResp.body) as Map<String, dynamic>;
-        Map<String, dynamic> model = dtoData['value'] as Map<String, dynamic>;
-
-        // 2. Mutate properties with state = 2
-        final properties = (model['properties'] as List<dynamic>?) ?? [];
-        void updateProp(String name, dynamic val) {
-          if (val == null) return;
-          for (var p in properties) {
-            if (p is Map && p['name'] == name) {
-              p['value'] = val.toString();
-              p['state'] = 2;
-              return;
-            }
-          }
-        }
-
-        updateProp('WOR_DESCR', description);
-        if (priority != null) updateProp('WOR_NB_3', priority);
-        if (requiredDate != null) {
-          updateProp('WOR_REQUI_DATE', requiredDate.millisecondsSinceEpoch.toString());
-        }
-
-        model['properties'] = properties;
-        model['state'] = 2;
-        model['shortTypeName'] = 'WORK_ORDER';
-
-        // 3. Acquire lock
-        try {
-          final lockUrl = Uri.parse('$origin/api/dataLock/Save');
-          final lockPayload = {
-            'ProgramID': 1,
-            'TableName': 'WORK_ORDER',
-            'RecordID': worId,
-            'CompanyID': config.companyId,
-          };
-          await _client.post(
-            lockUrl,
-            headers: _buildHeaders(refererPath: '/workorder/detail/$worId'),
-            body: jsonEncode(lockPayload),
-          ).timeout(const Duration(seconds: 3));
-        } catch (_) {}
-
-        // 4. Save
-        final saveUrl = Uri.parse('$origin/api/WorkOrder/Save?duplicateQuestionSettingsJson=');
-        final saveResp = await _client.post(
-          saveUrl,
-          headers: _buildHeaders(
-            refererPath: '/workorder/detail/$worId',
-            contentType: 'application/cogep.dynamicdtoV1+json',
-          ),
-          body: jsonEncode(model),
-        ).timeout(const Duration(seconds: 6));
-
-        // 5. Release lock
-        try {
-          final unlockUrl = Uri.parse('$origin/api/dataLock/Delete');
-          final unlockPayload = {
-            'ProgramID': 1,
-            'TableName': 'WORK_ORDER',
-            'RecordID': worId,
-            'CompanyID': config.companyId,
-          };
-          await _client.post(
-            unlockUrl,
-            headers: _buildHeaders(refererPath: '/workorder/detail/$worId'),
-            body: jsonEncode(unlockPayload),
-          ).timeout(const Duration(seconds: 3));
-        } catch (_) {}
-
-        if (saveResp.statusCode >= 200 && saveResp.statusCode < 300) {
-          final updated = BammWorkOrder(
-            worId: worId,
-            worNoSeq: worId.toString(),
-            description: description,
-            status: status ?? 'Registered',
-            step: step ?? 'Normal',
-            cell: cell ?? '',
-            machine: machine ?? '',
-            priority: priority ?? '',
-            responsible: responsible ?? '',
-            requiredDate: requiredDate,
-            laborHours: laborHours,
-            rawDto: model,
-          );
-
-          await _upsertLocalCachedWorkOrder(updated);
-          return updated;
-        }
-      }
+    if (!online || worId <= 0) {
+      throw HttpException(
+        'Cannot update work order #$worId while disconnected from BAMM (${config.origin}). '
+        'Please ensure device is connected to the plant Wi-Fi / VPN.',
+      );
     }
 
-    throw HttpException(
-      'Cannot update work order #$worId while disconnected from BAMM (${config.origin}). '
-      'Please ensure device is connected to the plant Wi-Fi / VPN.',
+    final writer = BammWorkOrderWriter(_transport, _bammConfig);
+    final edits = <BammFieldEdit>[
+      BammFieldEdit(BammWritableField.description, description),
+      if (requiredDate != null) BammFieldEdit(BammWritableField.requiredDate, _dateOnly(requiredDate)),
+    ];
+
+    await WhitelistedFieldWriter(writer).write(worId, edits);
+    final refreshed = await writer.getById(worId);
+
+    return bammWorkOrderFromModel(refreshed).copyWith(
+      status: status,
+      step: step,
+      priority: priority,
+      area: area,
+      machine: machine,
+      responsible: responsible,
+      laborHours: laborHours,
     );
   }
 
@@ -970,61 +402,32 @@ class BammService {
     if (!online) return null;
 
     try {
-      if (!isAuthenticated && config.usercode.isNotEmpty) {
-        await login();
-      }
-
-      final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-      final url = Uri.parse('$origin/api/WorkOrder/GetById?id=$worId&spwId=${config.spwId}');
-
-      final response = await _client
-          .get(url, headers: _buildHeaders(refererPath: '/workorder/detail/$worId'))
-          .timeout(const Duration(seconds: 6));
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final body = jsonDecode(response.body);
-        final val = body is Map ? body['value'] : null;
-        if (val is Map<String, dynamic>) {
-          final detail = BammWorkOrder.fromDynamicDto(val);
-          await _upsertLocalCachedWorkOrder(detail);
-          return detail;
-        }
-      }
+      final writer = BammWorkOrderWriter(_transport, _bammConfig);
+      final model = await writer.getById(worId);
+      return bammWorkOrderFromModel(model);
     } catch (e) {
       debugPrint('Error fetching BAMM work order detail for $worId: $e');
+      return null;
     }
-    return null;
   }
+
+  static String _dateOnly(DateTime dt) =>
+      '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
   /// Fetches lookup options dynamically from BAMM WorkOrderLookup endpoints.
   Future<List<BammLookupItem>> fetchLookup(String method, {String search = ''}) async {
     final online = await quickPollNetwork();
     if (online) {
       try {
-        if (!isAuthenticated && config.usercode.isNotEmpty) {
-          await login();
-        }
-
-        final origin = config.origin.trim().replaceAll(RegExp(r'/+$'), '');
-        final extraParams = method == 'GetWorkOrderStep' ? '&showSecondaryStep=false' : '';
-        final searchParam = search.isNotEmpty ? '&search=${Uri.encodeComponent(search)}&searchColumns=description' : '';
-        final url = Uri.parse(
-          '$origin/api/WorkOrderLookup/$method?querytype=top&pageSize=200&companyId=${config.companyId}&sortColumn=description$extraParams$searchParam',
-        );
-
-        // GuideTi empty-body POSTs must not have Content-Type: application/json
-        final headers = _buildHeaders(refererPath: '/', contentType: null);
-        final response = await _client.post(url, headers: headers, body: '').timeout(const Duration(seconds: 5));
-
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          final body = jsonDecode(response.body);
-          final rows = (body is Map && body['value'] is List) ? body['value'] as List<dynamic> : [];
-          final items = rows
-              .whereType<Map<String, dynamic>>()
-              .map((r) => BammLookupItem.fromJson(r))
-              .toList();
-          if (items.isNotEmpty) return items;
-        }
+        final lookups = BammLookupsClient(_transport, _bammConfig);
+        final extraParams = <String, String>{
+          if (method == 'GetWorkOrderStep') 'showSecondaryStep': 'false',
+          if (search.isNotEmpty) 'search': search,
+          if (search.isNotEmpty) 'searchColumns': 'description',
+        };
+        final result = await lookups.fetch(method, extraParams: extraParams.isEmpty ? null : extraParams);
+        final items = bammLookupItemsFromOptions(result.items);
+        if (items.isNotEmpty) return items;
       } catch (e) {
         debugPrint('Error fetching BAMM lookup $method: $e');
       }
@@ -1201,7 +604,7 @@ class BammService {
   }
 
   // ---------------------------------------------------------------------------
-  // Local File & Storage Utilities
+  // Local File & Storage Utilities (persisted app state - not live BAMM data)
   // ---------------------------------------------------------------------------
 
   Future<File> _getFile(String fileName) async {
@@ -1213,41 +616,6 @@ class BammService {
     final tempFile = File('${file.path}.tmp');
     await tempFile.writeAsString(content);
     await tempFile.rename(file.path);
-  }
-
-  Future<List<BammWorkOrder>> loadCachedWorkOrders() async {
-    try {
-      final file = await _getFile(_cacheFileName);
-      if (!await file.exists()) return [];
-      final text = await file.readAsString();
-      if (text.trim().isEmpty) return [];
-      final list = jsonDecode(text) as List<dynamic>;
-      return list.map((e) => BammWorkOrder.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (e) {
-      debugPrint('Error loading BAMM cache: $e');
-      return [];
-    }
-  }
-
-  Future<void> saveCachedWorkOrders(List<BammWorkOrder> orders) async {
-    try {
-      final file = await _getFile(_cacheFileName);
-      final jsonStr = jsonEncode(orders.map((o) => o.toJson()).toList());
-      await _atomicWrite(file, jsonStr);
-    } catch (e) {
-      debugPrint('Error saving BAMM cache: $e');
-    }
-  }
-
-  Future<void> _upsertLocalCachedWorkOrder(BammWorkOrder item) async {
-    final list = await loadCachedWorkOrders();
-    final idx = list.indexWhere((o) => o.worId == item.worId || (o.worNoSeq.isNotEmpty && o.worNoSeq == item.worNoSeq));
-    if (idx >= 0) {
-      list[idx] = item;
-    } else {
-      list.insert(0, item);
-    }
-    await saveCachedWorkOrders(list);
   }
 
   Future<List<BammSavedFilter>> loadSavedFilters() async {

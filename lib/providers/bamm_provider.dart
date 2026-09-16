@@ -44,12 +44,10 @@ class BammState {
   });
 
   // Backwards compatibility getters
-  List<BammLookupItem> get cellLookups => areaLookups;
   String get searchQuery => criteria.searchQuery;
   String? get statusFilter => criteria.status;
   String? get stepFilter => criteria.step;
   String? get areaFilter => criteria.area;
-  String? get cellFilter => criteria.cell;
 
   BammState copyWith({
     bool? isOnline,
@@ -65,7 +63,6 @@ class BammState {
     List<BammLookupItem>? stepLookups,
     List<BammLookupItem>? maintLookups,
     List<BammLookupItem>? areaLookups,
-    List<BammLookupItem>? cellLookups,
     List<BammLookupItem>? execLookups,
     bool? isLoading,
     String? errorMessage,
@@ -83,7 +80,7 @@ class BammState {
       statusLookups: statusLookups ?? this.statusLookups,
       stepLookups: stepLookups ?? this.stepLookups,
       maintLookups: maintLookups ?? this.maintLookups,
-      areaLookups: areaLookups ?? cellLookups ?? this.areaLookups,
+      areaLookups: areaLookups ?? this.areaLookups,
       execLookups: execLookups ?? this.execLookups,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
@@ -126,7 +123,7 @@ class BammState {
         if (!wo.step.toLowerCase().contains(criteria.step!.toLowerCase())) return false;
       }
 
-      final area = criteria.area ?? criteria.cell;
+      final area = criteria.area;
       if (area != null && area.isNotEmpty && area != 'All') {
         if (!wo.area.toLowerCase().contains(area.toLowerCase())) return false;
       }
@@ -185,12 +182,10 @@ class BammNotifier extends StateNotifier<BammState> {
     state = state.copyWith(isLoading: true);
     final loadedConfig = await _service.loadConfig();
     final savedFilters = await _service.loadSavedFilters();
-    final cachedOrders = await _service.loadCachedWorkOrders();
 
     state = state.copyWith(
       config: loadedConfig,
       savedFilters: savedFilters,
-      workOrders: cachedOrders,
     );
 
     // Initial quick poll & load lookup dropdown options
@@ -341,9 +336,6 @@ class BammNotifier extends StateNotifier<BammState> {
     refreshWorkOrders();
   }
 
-  /// Backwards-compatible alias for setAreaFilter
-  void setCellFilter(String? cell) => setAreaFilter(cell);
-
   /// Filter by Responsible Person
   void setResponsibleFilter(String? resp) {
     final clear = resp == null || resp.trim().isEmpty;
@@ -462,7 +454,7 @@ class BammNotifier extends StateNotifier<BammState> {
     String priority = '1.0',
     DateTime? requiredDate,
     String responsible = '',
-    String cell = '',
+    String area = '',
     String machine = '',
     double? laborHours,
   }) async {
@@ -476,7 +468,7 @@ class BammNotifier extends StateNotifier<BammState> {
         priority: priority,
         requiredDate: requiredDate,
         responsible: responsible,
-        cell: cell,
+        area: area,
         machine: machine,
         laborHours: laborHours,
       );
@@ -498,7 +490,7 @@ class BammNotifier extends StateNotifier<BammState> {
     String? step,
     String? priority,
     DateTime? requiredDate,
-    String? cell,
+    String? area,
     String? machine,
     String? responsible,
     double? laborHours,
@@ -512,7 +504,7 @@ class BammNotifier extends StateNotifier<BammState> {
         step: step,
         priority: priority,
         requiredDate: requiredDate,
-        cell: cell,
+        area: area,
         machine: machine,
         responsible: responsible,
         laborHours: laborHours,

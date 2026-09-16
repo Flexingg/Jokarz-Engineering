@@ -371,7 +371,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   /// Windows/Linux/desktop, Documents elsewhere) so the engineer can find and
   /// keep the file — not just hand it to the OS share sheet.
   Future<void> _saveToDownloads(String format, ReportConfig cfg) async {
-    final base = 'jokarz_report_${DateFormat('MMddyy').format(_today)}';
+    final base = 'aor_report_${DateFormat('MMddyy').format(_today)}';
     final stamp = DateFormat('HHmmss').format(DateTime.now());
     try {
       Directory dir;
@@ -405,12 +405,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
   /// Builds the report in the temp dir and hands it to the OS share sheet.
   Future<void> _share(String format, ReportConfig cfg) async {
-    final base = 'jokarz_report_${DateFormat('MMddyy').format(_today)}';
+    final base = 'aor_report_${DateFormat('MMddyy').format(_today)}';
     try {
       final dir = await getTemporaryDirectory();
       final f = await _writeReportFile(dir, format, '$base.$format', cfg);
       await Share.shareXFiles(
-          [XFile(f.path, mimeType: _mime(format))], text: 'Jokarz Daily Report');
+          [XFile(f.path, mimeType: _mime(format))], text: 'AOR Daily Report');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));

@@ -39,7 +39,7 @@ class _PhotoNoteEditorScreenState extends ConsumerState<PhotoNoteEditorScreen> {
       final image = await boundary.toImage(pixelRatio: 2.5);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       final dir = await getApplicationDocumentsDirectory();
-      final photoFile = File('${dir.path}/jokarz_photo_${DateTime.now().millisecondsSinceEpoch}.png');
+      final photoFile = File('${dir.path}/aor_photo_${DateTime.now().millisecondsSinceEpoch}.png');
       await photoFile.writeAsBytes(bytes!.buffer.asUint8List());
 
       final caption = _captionCtrl.text.trim();

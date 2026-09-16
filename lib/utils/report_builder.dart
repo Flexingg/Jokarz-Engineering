@@ -369,7 +369,7 @@ Future<Uint8List> reportToPdf(ReportData d, ReportConfig cfg, DateTime today) as
       pageFormat: PdfPageFormat.letter,
       margin: const pw.EdgeInsets.all(28),
       build: (ctx) => [
-        pw.Text('Jokarz Engineering — Daily Report',
+        pw.Text('AOR Engineering — Daily Report',
             style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 4),
         pw.Text(DateFormat('MM/dd/yyyy h:mm a').format(today),

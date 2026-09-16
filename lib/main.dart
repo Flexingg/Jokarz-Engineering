@@ -35,7 +35,7 @@ class JokarzEngineeringApp extends ConsumerWidget {
     ref.watch(syncStatusProvider);
 
     return MaterialApp.router(
-      title: 'Jokarz Engineering',
+      title: 'AOR Engineering',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.themeFor(themeFamily),
       routerConfig: appRouter,
