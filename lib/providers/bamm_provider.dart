@@ -121,6 +121,7 @@ class BammState {
             wo.area.toLowerCase().contains(q) ||
             wo.machine.toLowerCase().contains(q) ||
             wo.assembly.toLowerCase().contains(q) ||
+            wo.level2.toLowerCase().contains(q) ||
             wo.responsible.toLowerCase().contains(q) ||
             wo.requester.toLowerCase().contains(q) ||
             wo.workDone.toLowerCase().contains(q) ||
@@ -179,6 +180,10 @@ class BammState {
 
       if (criteria.assembly != null && criteria.assembly!.trim().isNotEmpty) {
         if (!wo.assembly.toLowerCase().contains(criteria.assembly!.toLowerCase().trim())) return false;
+      }
+
+      if (criteria.level2 != null && criteria.level2!.trim().isNotEmpty) {
+        if (!wo.level2.toLowerCase().contains(criteria.level2!.toLowerCase().trim())) return false;
       }
 
       return true;
@@ -426,6 +431,18 @@ class BammNotifier extends StateNotifier<BammState> {
       criteria: state.criteria.copyWith(
         assembly: assembly,
         clearAssembly: clear,
+      ),
+    );
+    _debouncedQuery();
+  }
+
+  /// Filter by function-code level 2 (2nd-level asset description)
+  void setLevel2Filter(String? level2) {
+    final clear = level2 == null || level2.trim().isEmpty;
+    state = state.copyWith(
+      criteria: state.criteria.copyWith(
+        level2: level2,
+        clearLevel2: clear,
       ),
     );
     _debouncedQuery();

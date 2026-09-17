@@ -15,6 +15,7 @@ const Map<String, dynamic> _listRow = {
     'woDescription': 'LR repair request',
     'woStatusDescription': 'Registered',
     'executionModeDescription': 'Down',
+    'funCodeLevelNiv2Description': 'Line 1',
     'funCodeLevelNiv3Description': 'Filler A',
     'funCodeLevelNiv4Description': 'Fill Head 3',
     'requesterName': 'Sample, Person',
@@ -57,6 +58,7 @@ void main() {
       expect(wo.description, 'LR repair request');
       expect(wo.status, 'Registered');
       expect(wo.area, 'Cell 1');
+      expect(wo.level2, 'Line 1');
       expect(wo.machine, 'Filler A');
       expect(wo.assembly, 'Fill Head 3');
       expect(wo.requester, 'Sample, Person');
@@ -198,6 +200,7 @@ void main() {
       step: 'Emergency',
       stepId: 3,
       area: 'Cell 1',
+      level2: 'Line 1',
       machine: 'Filler A',
       assembly: 'Fill Head 3',
       responsible: 'Doe, Jane',
@@ -219,6 +222,7 @@ void main() {
       // must not blank them out.
       expect(merged.worNoSeq, 'WO-143608.4', reason: 'must not fall back to the bare WOR_NO');
       expect(merged.area, 'Cell 1');
+      expect(merged.level2, 'Line 1');
       expect(merged.machine, 'Filler A');
       expect(merged.assembly, 'Fill Head 3');
       expect(merged.responsible, 'Doe, Jane');

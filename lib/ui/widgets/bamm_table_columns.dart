@@ -19,6 +19,22 @@ import '../../models/bamm_models.dart';
 
 class BammColumnDef {
   final String key;
+
+  /// Identity used by the column chooser, hide/show, drag-reorder and the
+  /// persisted layout (`BammService.saveColumnLayout`). Defaults to [key].
+  ///
+  /// Only diverges from [key] for the "3rd level - description" chooser
+  /// column (`bamm_table_columns.dart`'s `buildBammColumns`): it shows the
+  /// exact same live field as the default-visible "Machine" column
+  /// (`funCodeLevelNiv3Description` - there is no separate BAMM property for
+  /// "level 3" vs "Machine", they are the same asset-tree level), so it MUST
+  /// share [key] for sorting/filtering to dispatch correctly (both
+  /// `bamm_sort.dart` and `_applyColumnFilter` switch on [key], and [key] is
+  /// also what's sent as the live `orderByFields` name). Two columns can't
+  /// share a map key in `applyColumnLayout`'s `byId` lookup, though, so [id]
+  /// gives the chooser a distinct, purely-local identity for this one case.
+  final String id;
+
   final String header;
   final bool defaultVisible;
   final bool hideable;
@@ -26,15 +42,16 @@ class BammColumnDef {
   final String Function(BammWorkOrder) textOf;
   final Widget Function(BuildContext, BammWorkOrder)? cellBuilder;
 
-  const BammColumnDef({
+  BammColumnDef({
     required this.key,
+    String? id,
     required this.header,
     this.defaultVisible = false,
     this.hideable = true,
     this.width = 140,
     required this.textOf,
     this.cellBuilder,
-  });
+  }) : id = id ?? key;
 
   Widget buildCell(BuildContext context, BammWorkOrder wo) {
     if (cellBuilder != null) return cellBuilder!(context, wo);
@@ -191,6 +208,24 @@ List<BammColumnDef> buildBammColumns() => [
         width: 120,
         textOf: (wo) => wo.requiredDate != null ? _dateFmt.format(wo.requiredDate!) : '',
       ),
+      // Chooser-only, OFF by default (per the plan - these are lower-value
+      // than Area/Machine/Assembly and would crowd the default set).
+      BammColumnDef(
+        key: 'funCodeLevelNiv2Description',
+        header: 'Function Code - Level 2',
+        width: 160,
+        textOf: (wo) => wo.level2,
+      ),
+      // Same live field as "Machine" above (see BammColumnDef.id's doc
+      // comment) - a distinct chooser id, but the real key, so sort/filter
+      // dispatch to the exact same code path as Machine.
+      BammColumnDef(
+        key: 'funCodeLevelNiv3Description',
+        id: 'funCodeLevelNiv3DescriptionAsLevel',
+        header: 'Function Code - Level 3',
+        width: 160,
+        textOf: (wo) => wo.machine.isNotEmpty ? wo.machine : wo.assetId,
+      ),
     ];
 
 /// Applies a saved [BammColumnLayout] on top of [buildBammColumns]'s
@@ -200,18 +235,18 @@ List<BammColumnDef> buildBammColumns() => [
 /// end; visibility comes from `layout.hidden` (or `defaultVisible` when the
 /// layout has never been saved).
 List<BammColumnDef> applyColumnLayout(List<BammColumnDef> all, BammColumnLayout layout) {
-  final byKey = {for (final c in all) c.key: c};
+  final byId = {for (final c in all) c.id: c};
   final ordered = <BammColumnDef>[];
-  for (final key in layout.order) {
-    final def = byKey.remove(key);
+  for (final id in layout.order) {
+    final def = byId.remove(id);
     if (def != null) ordered.add(def);
   }
-  ordered.addAll(byKey.values);
+  ordered.addAll(byId.values);
   return ordered;
 }
 
 bool isColumnVisible(BammColumnDef def, BammColumnLayout layout) {
-  if (layout.hidden.contains(def.key)) return false;
-  if (layout.order.contains(def.key)) return true;
+  if (layout.hidden.contains(def.id)) return false;
+  if (layout.order.contains(def.id)) return true;
   return def.defaultVisible;
 }

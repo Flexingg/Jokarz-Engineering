@@ -46,6 +46,7 @@ String bammLocalSearchBlob(BammWorkOrder wo) {
     wo.status,
     wo.step,
     wo.area,
+    wo.level2,
     wo.machine,
     wo.assembly,
     wo.assetId,

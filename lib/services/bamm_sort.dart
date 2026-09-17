@@ -49,6 +49,8 @@ Object? _rawValue(BammWorkOrder wo, String field) {
     case 'funCodeLevelNiv1Description':
     case 'regrouping1Description':
       return wo.area;
+    case 'funCodeLevelNiv2Description':
+      return wo.level2;
     case 'recipientName':
       return wo.responsible;
     case 'requesterName':

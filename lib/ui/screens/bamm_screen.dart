@@ -1105,6 +1105,12 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         onDeleted: () => ref.read(bammProvider.notifier).setAssemblyFilter(null),
       ));
     }
+    if (c.level2 != null && c.level2!.isNotEmpty) {
+      chips.add(Chip(
+        label: Text('Level 2: ${c.level2}', style: const TextStyle(fontSize: 11)),
+        onDeleted: () => ref.read(bammProvider.notifier).setLevel2Filter(null),
+      ));
+    }
     if (c.executionMode != null && c.executionMode != 'All') {
       chips.add(Chip(
         label: Text('Status: ${c.executionMode}', style: const TextStyle(fontSize: 11)),
@@ -1171,40 +1177,40 @@ class _BammScreenState extends ConsumerState<BammScreen> {
 
   /// Rebuilds the saved layout so [visibleKeysInOrder] becomes the new
   /// visible order, keeping every hidden column's relative order untouched.
-  BammColumnLayout _layoutWithVisibleOrder(BammColumnLayout current, List<String> visibleKeysInOrder) {
-    final hiddenInOrder = _allColumns(current).map((c) => c.key).where((k) => current.hidden.contains(k)).toList();
-    return BammColumnLayout(order: [...visibleKeysInOrder, ...hiddenInOrder], hidden: current.hidden);
+  BammColumnLayout _layoutWithVisibleOrder(BammColumnLayout current, List<String> visibleIdsInOrder) {
+    final hiddenInOrder = _allColumns(current).map((c) => c.id).where((id) => current.hidden.contains(id)).toList();
+    return BammColumnLayout(order: [...visibleIdsInOrder, ...hiddenInOrder], hidden: current.hidden);
   }
 
-  void _reorderColumn(String draggedKey, String targetKey, List<BammColumnDef> visibleColumns) {
-    if (draggedKey == targetKey) return;
-    final keys = visibleColumns.map((c) => c.key).toList();
-    final oldIndex = keys.indexOf(draggedKey);
-    final newIndex = keys.indexOf(targetKey);
+  void _reorderColumn(String draggedId, String targetId, List<BammColumnDef> visibleColumns) {
+    if (draggedId == targetId) return;
+    final ids = visibleColumns.map((c) => c.id).toList();
+    final oldIndex = ids.indexOf(draggedId);
+    final newIndex = ids.indexOf(targetId);
     if (oldIndex == -1 || newIndex == -1) return;
-    keys.removeAt(oldIndex);
-    keys.insert(newIndex, draggedKey);
+    ids.removeAt(oldIndex);
+    ids.insert(newIndex, draggedId);
     final layout = ref.read(bammProvider).columnLayout;
-    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, keys));
+    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, ids));
   }
 
-  void _moveColumn(String key, int delta, List<BammColumnDef> visibleColumns) {
-    final keys = visibleColumns.map((c) => c.key).toList();
-    final index = keys.indexOf(key);
+  void _moveColumn(String id, int delta, List<BammColumnDef> visibleColumns) {
+    final ids = visibleColumns.map((c) => c.id).toList();
+    final index = ids.indexOf(id);
     final target = index + delta;
-    if (index == -1 || target < 0 || target >= keys.length) return;
-    keys.removeAt(index);
-    keys.insert(target, key);
+    if (index == -1 || target < 0 || target >= ids.length) return;
+    ids.removeAt(index);
+    ids.insert(target, id);
     final layout = ref.read(bammProvider).columnLayout;
-    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, keys));
+    ref.read(bammProvider.notifier).setColumnLayout(_layoutWithVisibleOrder(layout, ids));
   }
 
-  void _hideColumn(String key) {
+  void _hideColumn(String id) {
     final layout = ref.read(bammProvider).columnLayout;
-    ref.read(bammProvider.notifier).setColumnLayout(BammColumnLayout(order: layout.order, hidden: {...layout.hidden, key}));
+    ref.read(bammProvider.notifier).setColumnLayout(BammColumnLayout(order: layout.order, hidden: {...layout.hidden, id}));
   }
 
-  void _showColumn(String key) {
+  void _showColumn(String id) {
     final layout = ref.read(bammProvider).columnLayout;
     // A column that isn't default-visible (e.g. Requester) and has never
     // been explicitly ordered is invisible purely because `isColumnVisible`
@@ -1212,9 +1218,9 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     // `hidden` alone is a no-op for that case, since it was never in
     // `hidden` to begin with. Adding it to `order` makes `isColumnVisible`
     // return true regardless of its default.
-    final order = layout.order.contains(key) ? layout.order : [...layout.order, key];
+    final order = layout.order.contains(id) ? layout.order : [...layout.order, id];
     ref.read(bammProvider.notifier).setColumnLayout(
-          BammColumnLayout(order: order, hidden: layout.hidden.where((k) => k != key).toSet()),
+          BammColumnLayout(order: order, hidden: layout.hidden.where((k) => k != id).toSet()),
         );
   }
 
@@ -1232,6 +1238,8 @@ class _BammScreenState extends ConsumerState<BammScreen> {
       case 'funCodeLevelNiv1Description':
       case 'regrouping1Description':
         notifier.setAreaFilter(value.isEmpty ? null : value);
+      case 'funCodeLevelNiv2Description':
+        notifier.setLevel2Filter(value.isEmpty ? null : value);
       case 'recipientName':
         notifier.setResponsibleFilter(value.isEmpty ? null : value);
       case 'requesterName':
@@ -1275,7 +1283,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     String? prefillValue,
   }) async {
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final index = visibleColumns.indexWhere((c) => c.key == column.key);
+    final index = visibleColumns.indexWhere((c) => c.id == column.id);
     final selected = await showMenu<String>(
       context: context,
       position: RelativeRect.fromRect(globalPosition & const Size(1, 1), Offset.zero & overlay.size),
@@ -1302,11 +1310,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
       case 'sort_desc':
         notifier.setSortField(column.key, ascending: false);
       case 'hide':
-        _hideColumn(column.key);
+        _hideColumn(column.id);
       case 'move_left':
-        _moveColumn(column.key, -1, visibleColumns);
+        _moveColumn(column.id, -1, visibleColumns);
       case 'move_right':
-        _moveColumn(column.key, 1, visibleColumns);
+        _moveColumn(column.id, 1, visibleColumns);
     }
   }
 
@@ -1316,8 +1324,8 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     final sortedDesc = criteria.sortField == column.key && !criteria.sortAscending;
 
     return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => details.data != column.key,
-      onAcceptWithDetails: (details) => _reorderColumn(details.data, column.key, visibleColumns),
+      onWillAcceptWithDetails: (details) => details.data != column.id,
+      onAcceptWithDetails: (details) => _reorderColumn(details.data, column.id, visibleColumns),
       builder: (context, candidateData, rejectedData) {
         return Container(
           width: column.width,
@@ -1333,7 +1341,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             child: Row(
               children: [
                 Draggable<String>(
-                  data: column.key,
+                  data: column.id,
                   feedback: Material(
                     color: Colors.transparent,
                     child: Container(
@@ -1412,9 +1420,9 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   onChanged: column.hideable
                       ? (checked) {
                           if (checked == true) {
-                            _showColumn(column.key);
+                            _showColumn(column.id);
                           } else {
-                            _hideColumn(column.key);
+                            _hideColumn(column.id);
                           }
                           setSheetState(() {});
                         }

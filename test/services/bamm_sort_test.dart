@@ -13,6 +13,7 @@ BammWorkOrder _wo({
   String description = '',
   String assembly = '',
   String area = '',
+  String level2 = '',
 }) =>
     BammWorkOrder(
       worId: id,
@@ -22,6 +23,7 @@ BammWorkOrder _wo({
       priority: priority,
       assembly: assembly,
       area: area,
+      level2: level2,
     );
 
 void main() {
@@ -92,6 +94,16 @@ void main() {
       final blank = _wo(id: 3);
       expect(compareBammWorkOrders(blank, a, 'funCodeLevelNiv1Description', ascending: true), greaterThan(0),
           reason: 'a blank area always sorts last');
+    });
+
+    test('Function Code Level 2 column (funCodeLevelNiv2Description) sorts like any other text column', () {
+      final a = _wo(id: 1, level2: 'Line 9');
+      final b = _wo(id: 2, level2: 'Line 10');
+      // Natural compare: "9" before "10" by magnitude, not string order.
+      expect(compareBammWorkOrders(a, b, 'funCodeLevelNiv2Description', ascending: true), lessThan(0));
+      final blank = _wo(id: 3);
+      expect(compareBammWorkOrders(blank, a, 'funCodeLevelNiv2Description', ascending: true), greaterThan(0),
+          reason: 'a blank level 2 always sorts last');
     });
   });
 

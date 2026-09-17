@@ -266,6 +266,11 @@ class BammService {
       filters.add(ListFilter.byText(searchFieldKey: 'funCodeLevelNiv4Description', value: criteria.assembly!.trim()));
     }
 
+    // Function code level 2 filter: 2nd level asset description (funCodeLevelNiv2Description, filterType 1)
+    if (criteria.level2 != null && criteria.level2!.trim().isNotEmpty) {
+      filters.add(ListFilter.byText(searchFieldKey: 'funCodeLevelNiv2Description', value: criteria.level2!.trim()));
+    }
+
     // Responsible (recipientName, filterType 1)
     if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
       filters.add(ListFilter.byText(searchFieldKey: 'recipientName', value: criteria.responsible!.trim()));
@@ -332,6 +337,7 @@ class BammService {
     ListColumn(key: 'woIssueDate', header: 'WO registered date', fieldDataType: 5, format: 4),
     ListColumn(key: 'regrouping1Description', header: 'Area', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv1Description', header: '1st level - description', fieldDataType: 15),
+    ListColumn(key: 'funCodeLevelNiv2Description', header: '2nd level - description', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv3Description', header: 'Machine', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv4Description', header: '4th level - description', fieldDataType: 15),
     ListColumn(key: 'recipientName', header: 'Responsible', fieldDataType: 15),

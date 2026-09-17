@@ -115,6 +115,9 @@ class _FakeBammNotifier extends BammNotifier {
     if (c.assembly != null && c.assembly!.trim().isNotEmpty) {
       list = list.where((w) => w.assembly == c.assembly).toList();
     }
+    if (c.level2 != null && c.level2!.trim().isNotEmpty) {
+      list = list.where((w) => w.level2 == c.level2).toList();
+    }
     if (c.responsible != null && c.responsible!.trim().isNotEmpty) {
       list = list.where((w) => w.responsible == c.responsible).toList();
     }
@@ -155,6 +158,7 @@ BammWorkOrder _wo({
   String status = 'StatusAlpha',
   String step = 'StepAlpha',
   String area = 'ZONE-A',
+  String level2 = 'LVL2-A',
   String machine = 'MACH-A',
   String assembly = 'ASSY-A',
   String responsible = 'Dave M',
@@ -167,6 +171,7 @@ BammWorkOrder _wo({
       status: status,
       step: step,
       area: area,
+      level2: level2,
       machine: machine,
       assembly: assembly,
       responsible: responsible,
@@ -324,6 +329,93 @@ void main() {
       expect(find.text('#512'), findsNothing, reason: 'Filling row filtered out');
     });
 
+    testWidgets('Function Code - Level 2 is chooser-only (off by default), and once added sorts and filters like every other column', (tester) async {
+      final level2Seed = [
+        _wo(id: 521, issueDate: DateTime(2026, 4, 1), level2: 'Line A'),
+        _wo(id: 522, issueDate: DateTime(2026, 4, 2), level2: 'Line B'),
+        _wo(id: 523, issueDate: DateTime(2026, 4, 3), level2: 'Line A'),
+      ];
+      await _pumpAt(tester, _wide, overrides: _overrides(level2Seed));
+
+      // OFF by default - not rendered until added from the chooser.
+      expect(find.text('Function Code - Level 2'), findsNothing);
+      expect(find.text('Line A'), findsNothing);
+
+      await tester.tap(find.byTooltip('Choose columns'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Function Code - Level 2'), 200.0, scrollable: find.byType(Scrollable).last);
+      expect(find.text('Function Code - Level 2'), findsOneWidget, reason: 'must be offered in the chooser');
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Function Code - Level 2'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(700, 50)); // dismiss the sheet
+      await tester.pumpAndSettle();
+
+      expect(find.text('Function Code - Level 2'), findsOneWidget, reason: 'header now visible');
+      expect(find.text('Line A'), findsWidgets, reason: 'cell values now render');
+      expect(find.text('Line B'), findsOneWidget);
+
+      // Filters like every other column: long-press a cell, "Filter by this value".
+      await tester.longPress(find.text('Line A').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filter by this value'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('#521'), findsOneWidget, reason: 'Line A rows remain');
+      expect(find.text('#523'), findsOneWidget, reason: 'Line A rows remain');
+      expect(find.text('#522'), findsNothing, reason: 'Line B row filtered out');
+    });
+
+    testWidgets('Function Code - Level 3 is chooser-only (off by default), independent of Machine, and sorts/filters via the shared underlying field', (tester) async {
+      final level3Seed = [
+        _wo(id: 531, issueDate: DateTime(2026, 5, 1), machine: 'Filler A'),
+        _wo(id: 532, issueDate: DateTime(2026, 5, 2), machine: 'Filler B'),
+        _wo(id: 533, issueDate: DateTime(2026, 5, 3), machine: 'Filler A'),
+      ];
+      await _pumpAt(tester, _wide, overrides: _overrides(level3Seed));
+
+      // Machine (the default-visible column reading the exact same field)
+      // is already showing this data - Level 3 must not double up on it.
+      expect(find.text('Machine'), findsOneWidget);
+      expect(find.text('Function Code - Level 3'), findsNothing);
+
+      await tester.tap(find.byTooltip('Choose columns'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Function Code - Level 3'), 200.0, scrollable: find.byType(Scrollable).last);
+      expect(find.text('Function Code - Level 3'), findsOneWidget, reason: 'must be offered in the chooser');
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Function Code - Level 3'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(700, 50));
+      await tester.pumpAndSettle();
+
+      // Both columns now render side by side, independently.
+      expect(find.text('Machine'), findsOneWidget);
+      expect(find.text('Function Code - Level 3'), findsOneWidget);
+      // 2 rows (#531, #533) x 2 columns (Machine, Level 3) both showing the
+      // same live value.
+      expect(find.text('Filler A'), findsNWidgets(4));
+
+      // Filtering the Level 3 column dispatches to the same real filter as
+      // Machine (the field is identical), so it narrows rows correctly.
+      await tester.longPress(find.text('Filler A').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filter by this value'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('#531'), findsOneWidget, reason: 'Filler A rows remain');
+      expect(find.text('#533'), findsOneWidget, reason: 'Filler A rows remain');
+      expect(find.text('#532'), findsNothing, reason: 'Filler B row filtered out');
+
+      // Hiding the Level 3 duplicate must not hide Machine too (proves the
+      // id/key split actually decouples chooser identity from the shared
+      // sort/filter key).
+      await tester.longPress(find.text('Function Code - Level 3'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hide column'));
+      await tester.pumpAndSettle();
+      expect(find.text('Function Code - Level 3'), findsNothing);
+      expect(find.text('Machine'), findsOneWidget, reason: 'Machine must survive hiding its chooser-only twin');
+    });
+
     testWidgets('"Hide column" removes the header AND its cells', (tester) async {
       await _pumpAt(tester, _expanded, overrides: _overrides(seed));
 
@@ -380,7 +472,7 @@ void main() {
       await tester.tap(find.byTooltip('Choose columns'));
       await tester.pumpAndSettle();
       // The chooser is a scrollable sheet - columns below the fold (this
-      // app has 14, only ~9 fit in the initial viewport) aren't built until
+      // app has 16, only ~9 fit in the initial viewport) aren't built until
       // scrolled into view, same as the Settings screen's parity test.
       await tester.scrollUntilVisible(find.text('Requester'), 200.0, scrollable: find.byType(Scrollable).last);
       expect(find.text('Requester'), findsOneWidget, reason: 'Requester must be offered in the chooser');

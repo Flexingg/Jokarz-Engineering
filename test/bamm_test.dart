@@ -292,6 +292,7 @@ void main() {
         requester: 'Operator Dan',
         machine: 'PRESS-01',
         assembly: 'Gearbox assembly',
+        level2: 'Line 4',
         executionMode: 'Down',
         searchQuery: '198440',
       );
@@ -317,6 +318,7 @@ void main() {
         'woDescription',
         'regrouping1Description',
         'funCodeLevelNiv1Description',
+        'funCodeLevelNiv2Description',
         'funCodeLevelNiv3Description',
         'funCodeLevelNiv4Description',
         'woStatusDescription',
@@ -333,6 +335,7 @@ void main() {
       expect(filters.any((f) => f['searchFieldKey'] == 'requesterName'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv3Description'), isTrue); // Machine filter
       expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv4Description'), isTrue); // Assembly filter
+      expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv2Description'), isTrue); // Level 2 filter
       expect(filters.any((f) => f['searchFieldKey'] == 'executionModeId'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
     });

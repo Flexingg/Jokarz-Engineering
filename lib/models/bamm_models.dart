@@ -10,6 +10,7 @@ class BammWorkOrder {
   final String step;
   final int? stepId;
   final String area;
+  final String level2;
   final String machine;
   final String assembly;
   final String assetId;
@@ -35,6 +36,7 @@ class BammWorkOrder {
     this.step = 'Normal',
     this.stepId,
     this.area = '',
+    this.level2 = '',
     this.machine = '',
     this.assembly = '',
     this.assetId = '',
@@ -84,6 +86,7 @@ class BammWorkOrder {
     String? step,
     int? stepId,
     String? area,
+    String? level2,
     String? machine,
     String? assembly,
     String? assetId,
@@ -109,6 +112,7 @@ class BammWorkOrder {
       step: step ?? this.step,
       stepId: stepId ?? this.stepId,
       area: area ?? this.area,
+      level2: level2 ?? this.level2,
       machine: machine ?? this.machine,
       assembly: assembly ?? this.assembly,
       assetId: assetId ?? this.assetId,
@@ -137,6 +141,7 @@ class BammWorkOrder {
       'step': step,
       'stepId': stepId,
       'area': area,
+      'level2': level2,
       'machine': machine,
       'assembly': assembly,
       'assetId': assetId,
@@ -176,6 +181,7 @@ class BammWorkOrder {
       step: json['step']?.toString() ?? 'Normal',
       stepId: (json['stepId'] as num?)?.toInt(),
       area: json['area']?.toString() ?? json['cell']?.toString() ?? '',
+      level2: json['level2']?.toString() ?? '',
       machine: json['machine']?.toString() ?? '',
       assembly: json['assembly']?.toString() ?? '',
       assetId: json['assetId']?.toString() ?? '',
@@ -229,6 +235,9 @@ class BammWorkOrder {
       step: (p['woStepDescription'] ?? p['WOR_STEP_DESC'] ?? p['step'] ?? 'Normal').toString(),
       stepId: (p['woStepId'] ?? p['WOR_STEP_ID'] as num?)?.toInt(),
       area: areaVal,
+      // funCodeLevelNiv2Description ("2nd level - description") - a
+      // GetListData-only display column, same limitation as level 1/3/4.
+      level2: (p['funCodeLevelNiv2Description'] ?? '').toString(),
       machine: (p['funCodeLevelNiv3Description'] ?? p['WOR_EQUIPMENT_CODE'] ?? p['machine'] ?? '').toString(),
       assembly: (p['funCodeLevelNiv4Description'] ?? p['assembly'] ?? '').toString(),
       assetId: (p['functionCode'] ?? p['FUN_ID'] ?? p['assetId'] ?? '').toString(),
@@ -332,6 +341,10 @@ class BammWorkOrder {
       // mergeDetail preserves whatever the list row already had.
       area: getProp('funCodeLevelNiv1Description',
           getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell'))))),
+      // Same GetListData-only limitation as machine/assembly/area - GetById
+      // never carries this property; mergeDetail preserves whatever the
+      // list row already had.
+      level2: getProp('funCodeLevelNiv2Description'),
       machine: getProp('funCodeLevelNiv3Description', getProp('WOR_EQUIPMENT_CODE', getProp('machine'))),
       // Same GetListData-only limitation as machine/area - GetById never
       // carries this property, so it's blank here; mergeDetail preserves
@@ -450,6 +463,7 @@ class BammFilterCriteria {
   final int? areaId;
   final String? responsible;
   final String? requester;
+  final String? level2;
   final String? machine;
   final String? assembly;
   final String? executionMode;
@@ -473,6 +487,7 @@ class BammFilterCriteria {
     this.areaId,
     this.responsible,
     this.requester,
+    this.level2,
     this.machine,
     this.assembly,
     this.executionMode,
@@ -489,6 +504,7 @@ class BammFilterCriteria {
       (area == null || area == 'All' || area!.isEmpty) &&
       (responsible == null || responsible!.trim().isEmpty) &&
       (requester == null || requester!.trim().isEmpty) &&
+      (level2 == null || level2!.trim().isEmpty) &&
       (machine == null || machine!.trim().isEmpty) &&
       (assembly == null || assembly!.trim().isEmpty) &&
       (executionMode == null || executionMode == 'All' || executionMode!.isEmpty);
@@ -502,6 +518,7 @@ class BammFilterCriteria {
     if (area != null && area != 'All' && area!.isNotEmpty) count++;
     if (responsible != null && responsible!.trim().isNotEmpty) count++;
     if (requester != null && requester!.trim().isNotEmpty) count++;
+    if (level2 != null && level2!.trim().isNotEmpty) count++;
     if (machine != null && machine!.trim().isNotEmpty) count++;
     if (assembly != null && assembly!.trim().isNotEmpty) count++;
     if (executionMode != null && executionMode != 'All' && executionMode!.isNotEmpty) count++;
@@ -526,6 +543,8 @@ class BammFilterCriteria {
     bool clearResponsible = false,
     String? requester,
     bool clearRequester = false,
+    String? level2,
+    bool clearLevel2 = false,
     String? machine,
     bool clearMachine = false,
     String? assembly,
@@ -549,6 +568,7 @@ class BammFilterCriteria {
       areaId: clearArea ? null : (areaId ?? this.areaId),
       responsible: clearResponsible ? null : (responsible ?? this.responsible),
       requester: clearRequester ? null : (requester ?? this.requester),
+      level2: clearLevel2 ? null : (level2 ?? this.level2),
       machine: clearMachine ? null : (machine ?? this.machine),
       assembly: clearAssembly ? null : (assembly ?? this.assembly),
       executionMode: clearExecutionMode ? null : (executionMode ?? this.executionMode),
