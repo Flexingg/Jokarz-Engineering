@@ -51,7 +51,9 @@ class _FakeBammServer {
           {'name': 'CTG_ID', 'type': 4, 'value': stored['CTG_ID'], 'state': 1},
           {'name': 'WOR_NB_3', 'type': 15, 'value': stored['WOR_NB_3'], 'state': 1},
           {'name': 'FUN_ID', 'type': 4, 'value': stored['FUN_ID'], 'state': 1},
+          {'name': 'WOR_EST_LABOR_TIME', 'type': 15, 'value': stored['WOR_EST_LABOR_TIME'], 'state': 1},
           {'name': 'Status', 'type': 18, 'value': '8', 'state': 1},
+          {'name': 'WOS_ID', 'type': 4, 'value': stored['WOS_ID'] ?? '8', 'state': 1},
         ],
         'childSets': <dynamic>[],
         'childs': <dynamic>[],
@@ -98,12 +100,14 @@ Future<WhitelistedFieldWriter> _writerFor(_FakeBammServer server) async {
 
 void main() {
   group('BammWritableField (structural whitelist)', () {
-    test('is exactly the sixteen approved BAMM properties, nothing more', () {
-      // Expanded from the original six (Batch A) to the fields/lookups batch's
-      // requested set - see fields.dart's doc comment and
-      // ~/repos/BAMM/docs/06-field-reference.md for the property types backing
-      // each addition. Still a closed enum: this test is the structural proof
-      // that adding a sixteenth requires touching this list too.
+    test('is exactly the eighteen approved BAMM properties, nothing more', () {
+      // Expanded from the original six (Batch A) through seventeen
+      // (WOR_EST_LABOR_TIME) to this batch's eighteenth: WOS_ID (Status).
+      // BAMM's own field reference flags WOS_ID RO and every real Save
+      // capture sends it unchanged - see the doc comment on
+      // BammWritableField.status for why it was added anyway. Still a
+      // closed enum: this test is the structural proof that adding a
+      // nineteenth requires touching this list too.
       expect(
         BammWritableField.values.map((f) => f.bammProperty).toSet(),
         {
@@ -123,6 +127,8 @@ void main() {
           'EXM_ID',
           'WOR_NB_3',
           'FUN_ID',
+          'WOR_EST_LABOR_TIME',
+          'WOS_ID',
         },
       );
     });
@@ -276,6 +282,85 @@ void main() {
 
       expect(result.isSuccess, isFalse);
       expect(result.fields.single.status, BammFieldReadBackStatus.silentlyDropped);
+    });
+
+    // Item 2's bug: a decimal field the server echoes back re-formatted
+    // ("6" sent, "6.000000000" returned) was reported as dropped, even
+    // though it genuinely saved. Both halves of the fix must hold: a
+    // differently-formatted echo reads as SAVED, and a field genuinely not
+    // kept must still read as dropped - "a verdict that cannot fail is
+    // worthless" (same lesson as the adapter_test regression).
+    test('a decimal field BAMM echoes back in a different numeric format reads as SAVED, not dropped', () async {
+      final server = _FakeBammServer(forcedValues: {'WOR_NB_3': '6.000000000'});
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.priorityEm, '6'),
+      ]);
+
+      expect(result.isSuccess, isTrue, reason: '6 and 6.000000000 are the same value');
+      expect(result.fields.single.status, BammFieldReadBackStatus.saved);
+    });
+
+    test('a decimal field BAMM genuinely does not keep still reads as dropped, even with numeric-aware comparison', () async {
+      final server = _FakeBammServer(dropFields: {'WOR_NB_3'});
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.priorityEm, '6'),
+      ]);
+
+      expect(result.isSuccess, isFalse);
+      expect(result.fields.single.status, BammFieldReadBackStatus.silentlyDropped);
+    });
+
+    test('a status change sends WOS_ID with the selected id and reports it saved', () async {
+      final server = _FakeBammServer(stored: {'WOS_ID': '8'}); // starts Registered
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.status, '2'), // Scheduled
+      ]);
+
+      expect(server.stored['WOS_ID'], '2');
+      expect(result.isSuccess, isTrue);
+      expect(result.fields.single.status, BammFieldReadBackStatus.saved);
+    });
+
+    test('a status change BAMM does not actually apply is reported (not swallowed as success) - WOS_ID always carries the old status back, so this reads as "returned differently"', () async {
+      final server = _FakeBammServer(stored: {'WOS_ID': '8'}, dropFields: {'WOS_ID'});
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.status, '6'), // Closed
+      ]);
+
+      expect(result.isSuccess, isFalse);
+      final field = result.fields.single;
+      expect(field.status, BammFieldReadBackStatus.returnedDifferent);
+      expect(field.returnedValue, '8', reason: 'BAMM kept the old status instead of applying the new one');
+    });
+
+    test('estimated labour hours (WOR_EST_LABOR_TIME) round-trips through the same numeric-aware comparison', () async {
+      final server = _FakeBammServer(forcedValues: {'WOR_EST_LABOR_TIME': '2.500000000'});
+      final writer = await _writerFor(server);
+
+      final result = await writer.write(700100, [
+        const BammFieldEdit(BammWritableField.estimatedLaborHours, '2.5'),
+      ]);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.fields.single.status, BammFieldReadBackStatus.saved);
+    });
+
+    test('describe() spells out both the sent and returned value when they genuinely differ', () {
+      const field = BammFieldReadBack(
+        field: BammWritableField.responsible,
+        sentValue: '42',
+        returnedValue: '999',
+        status: BammFieldReadBackStatus.returnedDifferent,
+      );
+      expect(field.describe(), 'RCP_ID: sent 42 but BAMM returned 999');
     });
 
     test('BAMM reporting the work order as not modifiable is refused before any write', () async {

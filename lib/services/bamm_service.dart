@@ -261,6 +261,11 @@ class BammService {
       filters.add(ListFilter.byText(searchFieldKey: 'funCodeLevelNiv3Description', value: criteria.machine!.trim()));
     }
 
+    // Assembly filter: 4th level asset description (funCodeLevelNiv4Description, filterType 1)
+    if (criteria.assembly != null && criteria.assembly!.trim().isNotEmpty) {
+      filters.add(ListFilter.byText(searchFieldKey: 'funCodeLevelNiv4Description', value: criteria.assembly!.trim()));
+    }
+
     // Responsible (recipientName, filterType 1)
     if (criteria.responsible != null && criteria.responsible!.trim().isNotEmpty) {
       filters.add(ListFilter.byText(searchFieldKey: 'recipientName', value: criteria.responsible!.trim()));
@@ -327,6 +332,7 @@ class BammService {
     ListColumn(key: 'woIssueDate', header: 'WO registered date', fieldDataType: 5, format: 4),
     ListColumn(key: 'regrouping1Description', header: 'Area', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv3Description', header: 'Machine', fieldDataType: 15),
+    ListColumn(key: 'funCodeLevelNiv4Description', header: '4th level - description', fieldDataType: 15),
     ListColumn(key: 'recipientName', header: 'Responsible', fieldDataType: 15),
     ListColumn(key: 'requesterName', header: 'Requester', fieldDataType: 15),
     ListColumn(key: 'woTask', header: 'Work done', fieldDataType: 1),
@@ -431,6 +437,8 @@ class BammService {
     String? executionModeId,
     double? priorityEm,
     String? assetId,
+    double? estimatedLaborHours,
+    String? statusId,
   }) async {
     final online = await quickPollNetwork();
     if (!online || worId <= 0) {
@@ -458,6 +466,8 @@ class BammService {
       if (executionModeId != null) BammFieldEdit(BammWritableField.executionMode, executionModeId),
       if (priorityEm != null) BammFieldEdit(BammWritableField.priorityEm, priorityEm.toString()),
       if (assetId != null) BammFieldEdit(BammWritableField.asset, assetId),
+      if (estimatedLaborHours != null) BammFieldEdit(BammWritableField.estimatedLaborHours, estimatedLaborHours.toString()),
+      if (statusId != null) BammFieldEdit(BammWritableField.status, statusId),
     ];
 
     final writeResult = await WhitelistedFieldWriter(writer).write(worId, edits);

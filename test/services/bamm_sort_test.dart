@@ -11,8 +11,16 @@ BammWorkOrder _wo({
   DateTime? issueDate,
   String priority = '',
   String description = '',
+  String assembly = '',
 }) =>
-    BammWorkOrder(worId: id, worNoSeq: '$id', description: description, issueDate: issueDate, priority: priority);
+    BammWorkOrder(
+      worId: id,
+      worNoSeq: '$id',
+      description: description,
+      issueDate: issueDate,
+      priority: priority,
+      assembly: assembly,
+    );
 
 void main() {
   group('compareBammWorkOrders', () {
@@ -62,6 +70,16 @@ void main() {
       final a = _wo(id: 1);
       final b = _wo(id: 2);
       expect(compareBammWorkOrders(a, b, 'woDescription', ascending: true), 0);
+    });
+
+    test('Assembly column (funCodeLevelNiv4Description) sorts like any other text column', () {
+      final a = _wo(id: 1, assembly: 'Fill Head 9');
+      final b = _wo(id: 2, assembly: 'Fill Head 10');
+      // Natural compare: "9" before "10" by magnitude, not string order.
+      expect(compareBammWorkOrders(a, b, 'funCodeLevelNiv4Description', ascending: true), lessThan(0));
+      final blank = _wo(id: 3);
+      expect(compareBammWorkOrders(blank, a, 'funCodeLevelNiv4Description', ascending: true), greaterThan(0),
+          reason: 'a blank assembly always sorts last');
     });
   });
 

@@ -98,8 +98,11 @@ class _FakeBammNotifier extends BammNotifier {
   Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async =>
       _seed.where((w) => w.worId == worId).firstOrNull;
 
+  int refreshCalls = 0;
+
   @override
   Future<void> refreshWorkOrders() async {
+    refreshCalls++;
     var list = List<BammWorkOrder>.from(_seed);
     final c = state.criteria;
 
@@ -108,6 +111,9 @@ class _FakeBammNotifier extends BammNotifier {
     }
     if (c.machine != null && c.machine!.trim().isNotEmpty) {
       list = list.where((w) => w.machine == c.machine).toList();
+    }
+    if (c.assembly != null && c.assembly!.trim().isNotEmpty) {
+      list = list.where((w) => w.assembly == c.assembly).toList();
     }
     if (c.responsible != null && c.responsible!.trim().isNotEmpty) {
       list = list.where((w) => w.responsible == c.responsible).toList();
@@ -150,6 +156,7 @@ BammWorkOrder _wo({
   String step = 'StepAlpha',
   String area = 'ZONE-A',
   String machine = 'MACH-A',
+  String assembly = 'ASSY-A',
   String responsible = 'Dave M',
   String requester = 'Alex R',
 }) =>
@@ -161,6 +168,7 @@ BammWorkOrder _wo({
       step: step,
       area: area,
       machine: machine,
+      assembly: assembly,
       responsible: responsible,
       requester: requester,
       issueDate: issueDate,
@@ -246,7 +254,11 @@ void main() {
     ];
 
     testWidgets('long-pressing a cell and choosing "Filter by this value" narrows the rows', (tester) async {
-      await _pumpAt(tester, _expanded, overrides: _overrides(seed));
+      // Needs `_wide`, not `_expanded`: the Area column sits far enough
+      // right (after the new default-visible Assembly column) that at
+      // `_expanded`'s 1400px it falls outside the horizontal scroller's
+      // initial viewport, and longPress() cannot hit-test an off-screen cell.
+      await _pumpAt(tester, _wide, overrides: _overrides(seed));
 
       expect(find.text('#401'), findsOneWidget);
       expect(find.text('#402'), findsOneWidget);
@@ -262,6 +274,30 @@ void main() {
       expect(find.text('#401'), findsOneWidget, reason: 'ZONE-A row should remain');
       expect(find.text('#403'), findsOneWidget, reason: 'ZONE-A row should remain');
       expect(find.text('#402'), findsNothing, reason: 'ZONE-B row should be filtered out');
+    });
+
+    testWidgets('Assembly column is visible by default, sorts, and filters by cell value like every other column', (tester) async {
+      final assemblySeed = [
+        _wo(id: 501, issueDate: DateTime(2026, 3, 1), assembly: 'Fill Head 9'),
+        _wo(id: 502, issueDate: DateTime(2026, 3, 2), assembly: 'Fill Head 10'),
+        _wo(id: 503, issueDate: DateTime(2026, 3, 3), assembly: 'Fill Head 9'),
+      ];
+      await _pumpAt(tester, _wide, overrides: _overrides(assemblySeed));
+
+      // In the DEFAULT visible set - no chooser interaction needed to see it.
+      expect(find.text('Assembly'), findsOneWidget);
+      expect(find.text('Fill Head 9'), findsWidgets);
+      expect(find.text('Fill Head 10'), findsOneWidget);
+
+      // Filters like every other column: long-press a cell, "Filter by this value".
+      await tester.longPress(find.text('Fill Head 9').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filter by this value'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('#501'), findsOneWidget, reason: 'Fill Head 9 rows remain');
+      expect(find.text('#503'), findsOneWidget, reason: 'Fill Head 9 rows remain');
+      expect(find.text('#502'), findsNothing, reason: 'Fill Head 10 row filtered out');
     });
 
     testWidgets('"Hide column" removes the header AND its cells', (tester) async {
@@ -414,6 +450,55 @@ void main() {
 
       expect(reloaded.order, layout.order);
       expect(reloaded.hidden, layout.hidden);
+    });
+  });
+
+  group('BAMM local search toggle', () {
+    // Same scenario as bamm_local_search_test.dart, exercised end-to-end
+    // through the real screen: a WO found by combining a work-done token, a
+    // responsible token, and a spoken-month date token - only once the "All
+    // fields" toggle is on, and without triggering a new server query.
+    final seed = [
+      _wo(id: 601, issueDate: DateTime(2026, 9, 17)).copyWith(workDone: 'hit tire with hammer', responsible: 'Jonathan Randall'),
+      _wo(id: 602, issueDate: DateTime(2026, 1, 5)).copyWith(workDone: 'replaced bearing', responsible: 'Someone Else'),
+    ];
+
+    testWidgets('OFF by default: typing the combined query does not filter rows locally', (tester) async {
+      await _pumpAt(tester, _wide, overrides: _overrides(seed));
+      expect(find.text('#601'), findsOneWidget);
+      expect(find.text('#602'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'Randall hammer September');
+      await tester.pump();
+
+      // Toggle is off - onChanged updated local state but it is never
+      // consulted, and onSubmitted (server search) was not fired either.
+      expect(find.text('#601'), findsOneWidget);
+      expect(find.text('#602'), findsOneWidget);
+    });
+
+    testWidgets('ON: filters rows already loaded as you type, all fields combined, no new request', (tester) async {
+      late _FakeBammNotifier notifier;
+      final overrides = <Override>[
+        storageServiceProvider.overrideWithValue(_FakeStorageService()),
+        bammProvider.overrideWith((ref) {
+          notifier = _FakeBammNotifier(seed);
+          return notifier;
+        }),
+      ];
+      await _pumpAt(tester, _wide, overrides: overrides);
+      final callsBeforeToggle = notifier.refreshCalls;
+
+      await tester.tap(find.byKey(const Key('bamm_local_search_toggle')));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).first, 'Randall hammer September');
+      await tester.pump();
+
+      expect(find.text('#601'), findsOneWidget, reason: 'matches work done + responsible + spoken date month');
+      expect(find.text('#602'), findsNothing);
+      expect(find.textContaining('of 2 loaded rows'), findsOneWidget, reason: 'must plainly show rows are hidden by the local filter');
+      expect(notifier.refreshCalls, callsBeforeToggle, reason: 'local search must never trigger a new API request');
     });
   });
 }

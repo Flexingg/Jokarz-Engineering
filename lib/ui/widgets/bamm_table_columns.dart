@@ -63,7 +63,7 @@ Widget _badge(String text, Color color) {
 /// order. `key` matches `BammService._majorColumns` / the BAMM list-query
 /// field names, so it also works unmodified as a sort key and as a
 /// quick-filter field. Default-visible keys match the plan's agreed set: WO#,
-/// Registered, Status, Step, Description, Work done, Machine, Area,
+/// Registered, Status, Step, Description, Work done, Machine, Assembly, Area,
 /// Responsible.
 List<BammColumnDef> buildBammColumns() => [
       BammColumnDef(
@@ -139,6 +139,13 @@ List<BammColumnDef> buildBammColumns() => [
         defaultVisible: true,
         width: 160,
         textOf: (wo) => wo.machine.isNotEmpty ? wo.machine : wo.assetId,
+      ),
+      BammColumnDef(
+        key: 'funCodeLevelNiv4Description',
+        header: 'Assembly',
+        defaultVisible: true,
+        width: 160,
+        textOf: (wo) => wo.assembly,
       ),
       BammColumnDef(
         key: 'regrouping1Description',

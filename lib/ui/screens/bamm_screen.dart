@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/bamm_models.dart';
 import '../../providers/bamm_provider.dart';
 import '../../providers/project_provider.dart';
+import '../../services/bamm_local_search.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/bamm_detail_dialog.dart';
 import '../widgets/bamm_table_columns.dart';
@@ -26,6 +27,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _denseView = true;
   bool _hasHandledInitialWo = false;
+
+  /// Local "search everything already loaded" mode (item 4): OFF by default,
+  /// never persisted, filters the rows already fetched with no new API call
+  /// - see `bamm_local_search.dart`. Independent of the server-side search
+  /// (`setSearchQuery`), which this toggle leaves untouched.
+  bool _localSearchOn = false;
+  String _localSearchQuery = '';
 
   @override
   void initState() {
@@ -499,7 +507,11 @@ class _BammScreenState extends ConsumerState<BammScreen> {
   Widget build(BuildContext context) {
     final bammState = ref.watch(bammProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 900;
-    final workOrders = bammState.filteredWorkOrders;
+    final loadedWorkOrders = bammState.filteredWorkOrders;
+    final workOrders = _localSearchOn
+        ? filterBammWorkOrdersLocally(loadedWorkOrders, _localSearchQuery)
+        : loadedWorkOrders;
+    final localSearchHidingRows = _localSearchOn && workOrders.length != loadedWorkOrders.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -636,11 +648,25 @@ class _BammScreenState extends ConsumerState<BammScreen> {
           _buildFilterPresetsBar(bammState),
 
           // Search & Filter Dropdowns Row
-          _buildFilterControlsRow(bammState, isDesktop),
+          _buildFilterControlsRow(bammState, isDesktop, workOrders.length),
 
           // Active Filter Chips Bar (if any filters active)
           if (bammState.criteria.activeFilterCount > 0)
             _buildActiveFilterChipsRow(bammState),
+
+          // Local-search Warning: when the "search all loaded fields" toggle
+          // is on and narrowing the rows, make that plain rather than let the
+          // user think the table only has this many work orders.
+          if (localSearchHidingRows)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: Colors.purple.withValues(alpha: 0.08),
+              child: Text(
+                'Showing ${workOrders.length} of ${loadedWorkOrders.length} loaded rows (local search).',
+                style: TextStyle(fontSize: 12, color: Colors.purple.shade900),
+              ),
+            ),
 
           // Truncation Warning: the server caps a list query at 2000 rows -
           // this makes a truncated result visible instead of silently
@@ -751,7 +777,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     );
   }
 
-  Widget _buildFilterControlsRow(BammState bammState, bool isDesktop) {
+  Widget _buildFilterControlsRow(BammState bammState, bool isDesktop, int displayedCount) {
     final c = bammState.criteria;
     final statusItems = [
       'All Open',
@@ -806,6 +832,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   flex: 3,
                   child: TextField(
                     controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _localSearchQuery = val),
                     onSubmitted: (val) => ref.read(bammProvider.notifier).setSearchQuery(val.trim()),
                     decoration: InputDecoration(
                       hintText: 'Search BAMM (WO#, description, responsible)...',
@@ -817,6 +844,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                               icon: const Icon(Icons.clear, size: 16),
                               onPressed: () {
                                 _searchCtrl.clear();
+                                setState(() => _localSearchQuery = '');
                                 ref.read(bammProvider.notifier).setSearchQuery('');
                               },
                             )
@@ -824,6 +852,8 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                _buildLocalSearchToggle(),
                 const SizedBox(width: 10),
 
                 // Status Dropdown
@@ -874,22 +904,31 @@ class _BammScreenState extends ConsumerState<BammScreen> {
 
                 // Results Count
                 Text(
-                  '${bammState.filteredWorkOrders.length} orders',
+                  '$displayedCount orders',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
               ],
             )
           : Column(
               children: [
-                TextField(
-                  controller: _searchCtrl,
-                  onSubmitted: (val) => ref.read(bammProvider.notifier).setSearchQuery(val.trim()),
-                  decoration: InputDecoration(
-                    hintText: 'Search BAMM work orders...',
-                    prefixIcon: const Icon(Icons.search, size: 18),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (val) => setState(() => _localSearchQuery = val),
+                        onSubmitted: (val) => ref.read(bammProvider.notifier).setSearchQuery(val.trim()),
+                        decoration: InputDecoration(
+                          hintText: 'Search BAMM work orders...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildLocalSearchToggle(),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -932,6 +971,25 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  /// Toggles local "search everything already loaded" mode (item 4): OFF by
+  /// default, filters the rows already in memory - all fields, including
+  /// hidden columns - as the user types, with no new API request. Leaves the
+  /// existing server-side search (submit-to-query) untouched either way.
+  Widget _buildLocalSearchToggle() {
+    return Tooltip(
+      message: _localSearchOn
+          ? 'Searching all loaded fields locally (no new request). Tap to search BAMM again on submit.'
+          : 'Search all fields of already-loaded rows as you type, with no new request',
+      child: FilterChip(
+        key: const Key('bamm_local_search_toggle'),
+        label: const Text('All fields', style: TextStyle(fontSize: 11)),
+        avatar: Icon(Icons.travel_explore_rounded, size: 16, color: _localSearchOn ? null : Colors.grey),
+        selected: _localSearchOn,
+        onSelected: (val) => setState(() => _localSearchOn = val),
+      ),
     );
   }
 
@@ -1039,6 +1097,12 @@ class _BammScreenState extends ConsumerState<BammScreen> {
       chips.add(Chip(
         label: Text('Machine: ${c.machine}', style: const TextStyle(fontSize: 11)),
         onDeleted: () => ref.read(bammProvider.notifier).setMachineFilter(null),
+      ));
+    }
+    if (c.assembly != null && c.assembly!.isNotEmpty) {
+      chips.add(Chip(
+        label: Text('Assembly: ${c.assembly}', style: const TextStyle(fontSize: 11)),
+        onDeleted: () => ref.read(bammProvider.notifier).setAssemblyFilter(null),
       ));
     }
     if (c.executionMode != null && c.executionMode != 'All') {
@@ -1173,6 +1237,8 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         notifier.setRequesterFilter(value.isEmpty ? null : value);
       case 'funCodeLevelNiv3Description':
         notifier.setMachineFilter(value.isEmpty ? null : value);
+      case 'funCodeLevelNiv4Description':
+        notifier.setAssemblyFilter(value.isEmpty ? null : value);
       case 'executionModeDescription':
         notifier.setExecutionModeFilter(value.isEmpty ? null : value);
       default:

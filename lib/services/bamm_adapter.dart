@@ -63,6 +63,23 @@ BammLookupItem bammLookupItemFromOption(LookupOption option) => BammLookupItem(
 List<BammLookupItem> bammLookupItemsFromOptions(Iterable<LookupOption> options) =>
     options.map(bammLookupItemFromOption).toList();
 
+/// Resolves a raw property id (as read off a `GetById` model, e.g. `RCP_ID`)
+/// against an already-fetched live [options] list into the matching
+/// [LookupOption] - never a plausible-looking wrong label. `null`/empty/`"0"`
+/// means "not set" (returns `null`, same convention as `_optionFromRaw` in
+/// `bamm_detail_dialog.dart`). When [rawId] is set but no option matches it
+/// (truncated lookup page, stale id, ...), returns a placeholder option
+/// labelled with the id itself so the dialog never shows a bare number with
+/// no indication it's unresolved.
+LookupOption? resolveLookupOption(String? rawId, List<LookupOption> options) {
+  final id = rawId?.trim();
+  if (id == null || id.isEmpty || id == '0') return null;
+  for (final option in options) {
+    if (option.id == id) return option;
+  }
+  return LookupOption(id: id, label: 'id $id', code: '', inactive: false);
+}
+
 /// The `WO_DETAIL` child set of a full `GetById`/`GetNew`/`Save` model into
 /// display-ready [BammActivityLine]s - display + add only (no edit/delete),
 /// per the batch's scope.

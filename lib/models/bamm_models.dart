@@ -11,6 +11,7 @@ class BammWorkOrder {
   final int? stepId;
   final String area;
   final String machine;
+  final String assembly;
   final String assetId;
   final String priority;
   final String responsible;
@@ -35,6 +36,7 @@ class BammWorkOrder {
     this.stepId,
     this.area = '',
     this.machine = '',
+    this.assembly = '',
     this.assetId = '',
     this.priority = '',
     this.responsible = '',
@@ -83,6 +85,7 @@ class BammWorkOrder {
     int? stepId,
     String? area,
     String? machine,
+    String? assembly,
     String? assetId,
     String? priority,
     String? responsible,
@@ -107,6 +110,7 @@ class BammWorkOrder {
       stepId: stepId ?? this.stepId,
       area: area ?? this.area,
       machine: machine ?? this.machine,
+      assembly: assembly ?? this.assembly,
       assetId: assetId ?? this.assetId,
       priority: priority ?? this.priority,
       responsible: responsible ?? this.responsible,
@@ -134,6 +138,7 @@ class BammWorkOrder {
       'stepId': stepId,
       'area': area,
       'machine': machine,
+      'assembly': assembly,
       'assetId': assetId,
       'priority': priority,
       'responsible': responsible,
@@ -172,6 +177,7 @@ class BammWorkOrder {
       stepId: (json['stepId'] as num?)?.toInt(),
       area: json['area']?.toString() ?? json['cell']?.toString() ?? '',
       machine: json['machine']?.toString() ?? '',
+      assembly: json['assembly']?.toString() ?? '',
       assetId: json['assetId']?.toString() ?? '',
       priority: json['priority']?.toString() ?? '',
       responsible: json['responsible']?.toString() ?? '',
@@ -220,6 +226,7 @@ class BammWorkOrder {
       stepId: (p['woStepId'] ?? p['WOR_STEP_ID'] as num?)?.toInt(),
       area: areaVal,
       machine: (p['funCodeLevelNiv3Description'] ?? p['WOR_EQUIPMENT_CODE'] ?? p['machine'] ?? '').toString(),
+      assembly: (p['funCodeLevelNiv4Description'] ?? p['assembly'] ?? '').toString(),
       assetId: (p['functionCode'] ?? p['FUN_ID'] ?? p['assetId'] ?? '').toString(),
       priority: (p['worNumber3'] ?? p['WOR_PRIORITY_DESC'] ?? p['PRI_ID'] ?? '').toString(),
       responsible: (p['recipientName'] ?? p['WOR_RESPONSIBLE_NAME'] ?? p['responsible'] ?? '').toString(),
@@ -317,6 +324,10 @@ class BammWorkOrder {
       stepId: int.tryParse(getProp('WSP_ID', '')),
       area: getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell')))),
       machine: getProp('funCodeLevelNiv3Description', getProp('WOR_EQUIPMENT_CODE', getProp('machine'))),
+      // Same GetListData-only limitation as machine/area - GetById never
+      // carries this property, so it's blank here; mergeDetail preserves
+      // whatever the list row already had (see BammWorkOrderDetailMerge).
+      assembly: getProp('funCodeLevelNiv4Description', getProp('assembly')),
       assetId: getProp('FUN_ID'),
       priority: trimDecimal(getProp('WOR_PRIORITY_DESC', getProp('WOR_NB_3'))),
       responsible: getProp('WOR_RESPONSIBLE_NAME', getProp('recipientName')),
@@ -324,7 +335,11 @@ class BammWorkOrder {
       workDone: extractedWorkDone.isNotEmpty ? extractedWorkDone : getProp('woTask'),
       issueDate: parseEpochOrDate(getProp('WOR_ISSUE_DATE')),
       requiredDate: parseEpochOrDate(getProp('WOR_REQUI_DATE')),
-      laborHours: double.tryParse(getProp('WOR_EST_LABOR_HOURS', '')),
+      // `WOR_EST_LABOR_HOURS` is not a real BAMM property (verified against
+      // ~/repos/BAMM/docs/06-field-reference.md's catalogue) - the actual
+      // DynamicDTO property is `WOR_EST_LABOR_TIME`, sent as a decimal like
+      // "1.000000000"; trimmed the same way WOR_NB_3 is.
+      laborHours: double.tryParse(trimDecimal(getProp('WOR_EST_LABOR_TIME', ''))),
       maintenanceType: getProp('WOR_MAINT_TYPE_DESC', getProp('maintenanceTypeDescription')),
       maintenanceTypeId: int.tryParse(getProp('MNT_ID', '')),
       rawDto: dto,
@@ -427,6 +442,7 @@ class BammFilterCriteria {
   final String? responsible;
   final String? requester;
   final String? machine;
+  final String? assembly;
   final String? executionMode;
   final int? executionModeId;
 
@@ -449,6 +465,7 @@ class BammFilterCriteria {
     this.responsible,
     this.requester,
     this.machine,
+    this.assembly,
     this.executionMode,
     this.executionModeId,
     this.sortField,
@@ -464,6 +481,7 @@ class BammFilterCriteria {
       (responsible == null || responsible!.trim().isEmpty) &&
       (requester == null || requester!.trim().isEmpty) &&
       (machine == null || machine!.trim().isEmpty) &&
+      (assembly == null || assembly!.trim().isEmpty) &&
       (executionMode == null || executionMode == 'All' || executionMode!.isEmpty);
 
   int get activeFilterCount {
@@ -476,6 +494,7 @@ class BammFilterCriteria {
     if (responsible != null && responsible!.trim().isNotEmpty) count++;
     if (requester != null && requester!.trim().isNotEmpty) count++;
     if (machine != null && machine!.trim().isNotEmpty) count++;
+    if (assembly != null && assembly!.trim().isNotEmpty) count++;
     if (executionMode != null && executionMode != 'All' && executionMode!.isNotEmpty) count++;
     return count;
   }
@@ -500,6 +519,8 @@ class BammFilterCriteria {
     bool clearRequester = false,
     String? machine,
     bool clearMachine = false,
+    String? assembly,
+    bool clearAssembly = false,
     String? executionMode,
     bool clearExecutionMode = false,
     int? executionModeId,
@@ -520,6 +541,7 @@ class BammFilterCriteria {
       responsible: clearResponsible ? null : (responsible ?? this.responsible),
       requester: clearRequester ? null : (requester ?? this.requester),
       machine: clearMachine ? null : (machine ?? this.machine),
+      assembly: clearAssembly ? null : (assembly ?? this.assembly),
       executionMode: clearExecutionMode ? null : (executionMode ?? this.executionMode),
       executionModeId: clearExecutionMode ? null : (executionModeId ?? this.executionModeId),
       sortField: clearSort ? null : (sortField ?? this.sortField),

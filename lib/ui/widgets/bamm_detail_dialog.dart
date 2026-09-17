@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,7 @@ import '../../models/project_template.dart';
 import '../../models/task_item.dart';
 import '../../providers/bamm_provider.dart';
 import '../../providers/project_provider.dart';
-import '../../services/bamm_adapter.dart' show bammActivityLinesFromModel;
+import '../../services/bamm_adapter.dart' show bammActivityLinesFromModel, resolveLookupOption;
 import '../../services/bamm_service.dart' show BammAddActivityLineOutcome;
 import '../../theme/app_theme.dart';
 import 'bamm_asset_tree_picker.dart';
@@ -41,6 +43,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   late final TextEditingController _workDoneCtrl;
   late final TextEditingController _employeesCtrl;
   late final TextEditingController _priorityEmCtrl;
+  late final TextEditingController _laborHoursCtrl;
   DateTime? _requiredDate;
   bool _isSaving = false;
   bool _isLoadingDetail = false;
@@ -50,6 +53,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   // `_optionFromRaw`) until the user opens a picker, which resolves the
   // matching label from whatever BAMM's lookup endpoint actually returns.
   BammAssetSelection? _asset;
+  LookupOption? _status;
   LookupOption? _responsible;
   LookupOption? _classification;
   LookupOption? _skill;
@@ -68,6 +72,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _requiredDate = _wo.requiredDate;
     _employeesCtrl = TextEditingController(text: _wo.requiredEmployees?.toString() ?? '');
     _priorityEmCtrl = TextEditingController();
+    _laborHoursCtrl = TextEditingController(text: _wo.laborHours?.toString() ?? '');
     _resetPickersFromRawDto();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -91,6 +96,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _asset = (rawAssetId == null || rawAssetId.isEmpty || rawAssetId == '0')
         ? null
         : BammAssetSelection(id: rawAssetId, path: [if (_wo.machine.isNotEmpty) _wo.machine else 'ID $rawAssetId']);
+    _status = _optionFromRaw('WOS_ID');
     _responsible = _optionFromRaw('RCP_ID');
     _classification = _optionFromRaw('CTG_ID');
     _skill = _optionFromRaw('SKI_ID');
@@ -100,6 +106,49 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _maintenanceType = _optionFromRaw('MNT_ID');
     _executionMode = _optionFromRaw('EXM_ID');
     _priorityEmCtrl.text = _wo.rawDto != null ? (propertyValue(_wo.rawDto!, 'WOR_NB_3') ?? '') : '';
+    _laborHoursCtrl.text = _wo.laborHours?.toString() ?? '';
+  }
+
+  /// Resolves every id-only picker field's real label against the live
+  /// lookup lists (the same `BammLookupsClient` endpoints the pickers
+  /// themselves call) - the fix for the dialog showing raw ids where a label
+  /// was actually resolvable. Runs after every raw-dto refresh (initial
+  /// fetch, save, add-activity-line); a failure here must not crash the
+  /// dialog - the id-only placeholder from [_resetPickersFromRawDto] (shown
+  /// via `_buildPickerRow`'s own "ID x" fallback) stays in place until it
+  /// succeeds.
+  Future<void> _resolveLookupLabels() async {
+    final raw = _wo.rawDto;
+    if (raw == null) return;
+    final lookups = ref.read(bammServiceProvider).lookups;
+    try {
+      final results = await Future.wait([
+        lookups.status(),
+        lookups.responsible(),
+        lookups.categories(),
+        lookups.skills(),
+        lookups.classificationTables(),
+        lookups.crewShifts(),
+        lookups.steps(),
+        lookups.maintenanceTypes(),
+        lookups.executionModes(),
+      ]);
+      if (!mounted || _wo.rawDto != raw) return;
+      setState(() {
+        _status = resolveLookupOption(propertyValue(raw, 'WOS_ID'), results[0].items) ?? _status;
+        _responsible = resolveLookupOption(propertyValue(raw, 'RCP_ID'), results[1].items) ?? _responsible;
+        _classification = resolveLookupOption(propertyValue(raw, 'CTG_ID'), results[2].items) ?? _classification;
+        _skill = resolveLookupOption(propertyValue(raw, 'SKI_ID'), results[3].items) ?? _skill;
+        _classificationTable = resolveLookupOption(propertyValue(raw, 'WG6_ID'), results[4].items) ?? _classificationTable;
+        _crewShift = resolveLookupOption(propertyValue(raw, 'WG7_ID'), results[5].items) ?? _crewShift;
+        _step = resolveLookupOption(propertyValue(raw, 'WSP_ID'), results[6].items) ?? _step;
+        _maintenanceType = resolveLookupOption(propertyValue(raw, 'MNT_ID'), results[7].items) ?? _maintenanceType;
+        _executionMode = resolveLookupOption(propertyValue(raw, 'EXM_ID'), results[8].items) ?? _executionMode;
+      });
+    } catch (_) {
+      // Leave the id-only placeholders in place - a resolution failure must
+      // never crash the dialog or show a wrong label.
+    }
   }
 
   Future<void> _fetchFullDetail() async {
@@ -117,6 +166,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
           _resetPickersFromRawDto();
           _isLoadingDetail = false;
         });
+        unawaited(_resolveLookupLabels());
       } else if (mounted) {
         setState(() => _isLoadingDetail = false);
       }
@@ -131,6 +181,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     _workDoneCtrl.dispose();
     _employeesCtrl.dispose();
     _priorityEmCtrl.dispose();
+    _laborHoursCtrl.dispose();
     super.dispose();
   }
 
@@ -139,6 +190,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     try {
       final employees = int.tryParse(_employeesCtrl.text.trim());
       final priorityEm = double.tryParse(_priorityEmCtrl.text.trim());
+      final laborHours = double.tryParse(_laborHoursCtrl.text.trim());
       final outcome = await ref.read(bammProvider.notifier).updateWorkOrder(
         worId: _wo.worId,
         description: _descCtrl.text.trim(),
@@ -155,6 +207,8 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         executionModeId: _executionMode?.id,
         priorityEm: priorityEm,
         assetId: _asset?.id,
+        estimatedLaborHours: laborHours,
+        statusId: _status?.id,
       );
       setState(() {
         _wo = outcome.workOrder;
@@ -162,10 +216,12 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         _workDoneCtrl.text = outcome.workOrder.workDone;
         _requiredDate = outcome.workOrder.requiredDate;
         _employeesCtrl.text = outcome.workOrder.requiredEmployees?.toString() ?? '';
+        _laborHoursCtrl.text = outcome.workOrder.laborHours?.toString() ?? '';
         _resetPickersFromRawDto();
         _isEditing = false;
         _isSaving = false;
       });
+      unawaited(_resolveLookupLabels());
       if (mounted) {
         final result = outcome.writeResult;
         final verdict = result.fields.map((f) => f.describe()).join('\n');
@@ -313,6 +369,12 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                 ),
                 const SizedBox(height: 12),
                 _buildPickerRow(
+                  label: 'Status',
+                  current: _status,
+                  onTap: _pickStatus,
+                ),
+                const SizedBox(height: 12),
+                _buildPickerRow(
                   label: 'Responsible',
                   current: _responsible,
                   onTap: () => _pickLookup(
@@ -432,6 +494,13 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                TextField(
+                  controller: _laborHoursCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))],
+                  decoration: const InputDecoration(labelText: 'Estimated labour hours', isDense: true),
+                ),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
@@ -447,9 +516,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 6),
-                      _buildInfoRow('Status', _wo.status.isNotEmpty ? _wo.status : 'Unknown'),
                       _buildInfoRow('Area', _wo.area.isNotEmpty ? _wo.area : 'Unspecified'),
-                      if (_wo.laborHours != null) _buildInfoRow('Est. Labor Hours', '${_wo.laborHours} hrs'),
                     ],
                   ),
                 ),
@@ -694,6 +761,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         _wo = outcome.workOrder;
         _resetPickersFromRawDto();
       });
+      unawaited(_resolveLookupLabels());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(outcome.added
@@ -713,6 +781,42 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
   }) async {
     final selected = await showBammLookupPicker(context, title: title, fetch: fetch, serverSearch: serverSearch);
     if (selected != null && mounted) setState(() => onSelected(selected));
+  }
+
+  /// Status ids (`WOS_ID`) that end a work order's workflow - confirmed
+  /// against `~/repos/BAMM/docs/11-field-inventory.md`'s enumerated values
+  /// (Completed `3`, Cancelled `4`, Closed `6`). Picking one of these is not
+  /// accepted until the user explicitly confirms it in [_pickStatus], since
+  /// closing/completing/cancelling a work order affects plant workflow.
+  static const Set<String> _closingStatusIds = {'3', '4', '6'};
+
+  Future<void> _pickStatus() async {
+    final selected = await showBammLookupPicker(
+      context,
+      title: 'Status',
+      fetch: (_) => ref.read(bammServiceProvider).lookups.status(),
+    );
+    if (selected == null || !mounted) return;
+
+    if (_closingStatusIds.contains(selected.id)) {
+      final label = selected.label.isNotEmpty ? selected.label : 'ID ${selected.id}';
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirm status change'),
+          content: Text(
+            'Setting status to "$label" closes this work order and affects plant workflow. '
+            'This cannot be easily undone from this app. Are you sure?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+          ],
+        ),
+      );
+      if (confirmed != true) return; // not sent - the picker selection is simply discarded
+    }
+    if (mounted) setState(() => _status = selected);
   }
 
   Widget _buildPickerRow({required String label, required LookupOption? current, VoidCallback? onTap}) {

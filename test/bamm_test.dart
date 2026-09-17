@@ -190,7 +190,12 @@ void main() {
           {'name': 'WOR_EQUIPMENT_CODE', 'value': 'CONV-MOTOR-01'},
           {'name': 'WOR_ISSUE_DATE', 'value': '2026-09-12T07:30:00.000Z'},
           {'name': 'WOR_REQUI_DATE', 'value': '2026-09-12T16:00:00.000Z'},
-          {'name': 'WOR_EST_LABOR_HOURS', 'value': 2.5},
+          // The real DynamicDTO property is WOR_EST_LABOR_TIME (verified
+          // against ~/repos/BAMM/docs/06-field-reference.md's catalogue) -
+          // WOR_EST_LABOR_HOURS does not exist on the wire and was a latent
+          // bug in fromDynamicDto that made this fixture pass for the wrong
+          // reason.
+          {'name': 'WOR_EST_LABOR_TIME', 'value': 2.5},
         ],
         'childSets': [
           {
@@ -274,6 +279,7 @@ void main() {
         responsible: 'John Tech',
         requester: 'Operator Dan',
         machine: 'PRESS-01',
+        assembly: 'Gearbox assembly',
         executionMode: 'Down',
         searchQuery: '198440',
       );
@@ -298,6 +304,7 @@ void main() {
         'woDescription',
         'regrouping1Description',
         'funCodeLevelNiv3Description',
+        'funCodeLevelNiv4Description',
         'woStatusDescription',
         'woStepDescription',
       ]));
@@ -311,6 +318,7 @@ void main() {
       expect(filters.any((f) => f['searchFieldKey'] == 'recipientName'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'requesterName'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv3Description'), isTrue); // Machine filter
+      expect(filters.any((f) => f['searchFieldKey'] == 'funCodeLevelNiv4Description'), isTrue); // Assembly filter
       expect(filters.any((f) => f['searchFieldKey'] == 'executionModeId'), isTrue);
       expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
     });

@@ -105,6 +105,10 @@ class BammLookupsClient {
 
   // -- context-free parameter lists, mirrored from LookupService ------------
 
+  /// `WOS_ID` options - the work order status lookup, the same catalogue the
+  /// list screen's status filter dropdown already uses.
+  Future<LookupResult> status() => fetch('GetWorkOrderStatus');
+
   /// `WSP_ID` options - the required "step" field.
   Future<LookupResult> steps() =>
       fetch('GetWorkOrderStep', extraParams: {'showSecondaryStep': 'false'});

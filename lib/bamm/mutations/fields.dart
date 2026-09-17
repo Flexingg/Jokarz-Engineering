@@ -1,5 +1,5 @@
-/// The six-field write whitelist for BAMM work orders - the only properties
-/// this app is ever allowed to send to an *existing* work order. Mirrors
+/// The write whitelist for BAMM work orders - the only properties this app
+/// is ever allowed to send to an *existing* work order. Mirrors
 /// `~/repos/BAMM/app/projects/bamm_sync.py`'s `FIELD_MAP` / `verify_readback`
 /// / `summarise_status`.
 ///
@@ -21,9 +21,9 @@ import 'exceptions.dart';
 import 'model_ops.dart';
 import 'writer.dart';
 
-/// One of the six BAMM properties this app may ever write to an existing
-/// work order. Adding a seventh means adding a case here - and thinking
-/// about whether it belongs in a whitelist at all.
+/// One of the BAMM properties this app may ever write to an existing work
+/// order. Adding another means adding a case here - and thinking about
+/// whether it belongs in a whitelist at all.
 enum BammWritableField {
   description('WOR_DESCR'),
   workDone('WOR_TASK'),
@@ -40,7 +40,18 @@ enum BammWritableField {
   maintenanceType('MNT_ID'),
   executionMode('EXM_ID'),
   priorityEm('WOR_NB_3'),
-  asset('FUN_ID');
+  asset('FUN_ID'),
+  estimatedLaborHours('WOR_EST_LABOR_TIME'),
+  // `~/repos/BAMM/docs/06-field-reference.md` flags WOS_ID `RO`, and every
+  // real `Save` capture in `~/repos/BAMM/captures/*.har` sends it with
+  // `state: 1` (unchanged), never `state: 2` - BAMM's own web UI never
+  // writes this property directly. Added anyway on explicit instruction,
+  // with the closing-status confirmation dialog and verbatim-error surfacing
+  // called for in the task brief; the existing read-back verdict (numeric-
+  // aware, see WhitelistedFieldWriter._readBackMatches) will honestly report
+  // "silently dropped" if BAMM accepts the Save but does not apply the
+  // change, exactly as it does for any other field.
+  status('WOS_ID');
 
   final String bammProperty;
   const BammWritableField(this.bammProperty);
@@ -73,8 +84,10 @@ enum BammWritableField {
       case BammWritableField.maintenanceType:
       case BammWritableField.executionMode:
       case BammWritableField.asset:
+      case BammWritableField.status:
         return 4; // ID / lookup key
       case BammWritableField.priorityEm:
+      case BammWritableField.estimatedLaborHours:
         return 15; // decimal
       case BammWritableField.requiredDate:
       case BammWritableField.installStart:
@@ -110,7 +123,11 @@ class BammFieldReadBack {
   });
 
   /// A human-readable line for a status/report display, with dates rendered
-  /// as calendar dates rather than raw epoch millis.
+  /// as calendar dates rather than raw epoch millis. Unambiguous about which
+  /// outcome happened: `saved` means it landed, `silently dropped` means
+  /// BAMM's read-back came back empty, and `returnedDifferent` spells out
+  /// both what was sent and what came back instead of leaving the reader to
+  /// infer the sent side from context.
   String describe() {
     switch (status) {
       case BammFieldReadBackStatus.saved:
@@ -118,8 +135,9 @@ class BammFieldReadBack {
       case BammFieldReadBackStatus.silentlyDropped:
         return '${field.bammProperty}: silently dropped';
       case BammFieldReadBackStatus.returnedDifferent:
-        final shown = field.isDate && returnedValue != null ? epochMsToDate(returnedValue!) : returnedValue;
-        return '${field.bammProperty}: BAMM returned $shown';
+        final shownSent = field.isDate ? epochMsToDate(sentValue) : sentValue;
+        final shownReturned = field.isDate && returnedValue != null ? epochMsToDate(returnedValue!) : returnedValue;
+        return '${field.bammProperty}: sent $shownSent but BAMM returned $shownReturned';
     }
   }
 }
@@ -201,7 +219,7 @@ class WhitelistedFieldWriter {
     for (final entry in coerced.entries) {
       final sent = entry.value;
       final returned = propertyValue(refreshed, entry.key.bammProperty);
-      final status = returned == sent
+      final status = _readBackMatches(entry.key, sent, returned)
           ? BammFieldReadBackStatus.saved
           : ((returned == null || returned.trim().isEmpty)
               ? BammFieldReadBackStatus.silentlyDropped
@@ -214,5 +232,31 @@ class WhitelistedFieldWriter {
       ));
     }
     return BammWriteResult(workOrderId: workOrderId.toString(), fields: results);
+  }
+
+  /// Whether BAMM's read-back [returned] value counts as "the same as what
+  /// was [sent]" for [field]. A plain string comparison is wrong for
+  /// anything BAMM can re-format on the way back: a decimal field like
+  /// `WOR_NB_3` (EM Priority) or `WOR_EST_LABOR_TIME` echoes `6` back as
+  /// `6.000000000`, and a lookup id field could in principle do the same -
+  /// both are numerically identical, and reporting that as "BAMM returned
+  /// 6.00000" was a false-positive "field dropped" bug, not a real one. Date
+  /// fields (types 27/28) compare as epoch-millisecond integers for the same
+  /// reason. Text fields (`WOR_DESCR`/`WOR_TASK`) are compared exactly -
+  /// there is no legitimate re-formatting of free text to normalise past.
+  bool _readBackMatches(BammWritableField field, String sent, String? returned) {
+    if (returned == null) return false;
+    if (sent == returned) return true;
+    if (field.isDate) {
+      final sentMs = int.tryParse(sent);
+      final returnedMs = int.tryParse(returned);
+      return sentMs != null && returnedMs != null && sentMs == returnedMs;
+    }
+    if (field._propertyType == 15 || field._propertyType == 4) {
+      final sentNum = num.tryParse(sent);
+      final returnedNum = num.tryParse(returned);
+      return sentNum != null && returnedNum != null && sentNum == returnedNum;
+    }
+    return false;
   }
 }

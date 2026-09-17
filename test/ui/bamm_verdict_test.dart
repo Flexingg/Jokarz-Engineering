@@ -113,6 +113,8 @@ class _MixedVerdictBammNotifier extends BammNotifier {
     String? executionModeId,
     double? priorityEm,
     String? assetId,
+    double? estimatedLaborHours,
+    String? statusId,
   }) async {
     final updated = _testWorkOrder().copyWith(description: description);
     return BammUpdateOutcome(

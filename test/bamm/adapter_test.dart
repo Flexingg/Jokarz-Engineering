@@ -16,6 +16,7 @@ const Map<String, dynamic> _listRow = {
     'woStatusDescription': 'Registered',
     'executionModeDescription': 'Down',
     'funCodeLevelNiv3Description': 'Filler A',
+    'funCodeLevelNiv4Description': 'Fill Head 3',
     'requesterName': 'Sample, Person',
     'recipientName': '',
     'worNumber3': null,
@@ -57,6 +58,7 @@ void main() {
       expect(wo.status, 'Registered');
       expect(wo.area, 'Cell 1');
       expect(wo.machine, 'Filler A');
+      expect(wo.assembly, 'Fill Head 3');
       expect(wo.requester, 'Sample, Person');
       // Absent/empty on this row: responsible, priority.
       expect(wo.responsible, '');
@@ -150,6 +152,7 @@ void main() {
       stepId: 3,
       area: 'Cell 1',
       machine: 'Filler A',
+      assembly: 'Fill Head 3',
       responsible: 'Doe, Jane',
       requester: 'Sample, Person',
       priority: '6',
@@ -170,6 +173,7 @@ void main() {
       expect(merged.worNoSeq, 'WO-143608.4', reason: 'must not fall back to the bare WOR_NO');
       expect(merged.area, 'Cell 1');
       expect(merged.machine, 'Filler A');
+      expect(merged.assembly, 'Fill Head 3');
       expect(merged.responsible, 'Doe, Jane');
       expect(merged.requester, 'Sample, Person');
       expect(merged.executionMode, 'Down');
@@ -201,6 +205,30 @@ void main() {
       expect(merged.status, listRow.status);
       expect(merged.step, listRow.step);
       expect(merged.priority, listRow.priority);
+    });
+  });
+
+  group('resolveLookupOption', () {
+    const options = [
+      LookupOption(id: '4123', label: 'Electrical', code: '', inactive: false),
+      LookupOption(id: '9', label: 'Millwright', code: 'MW', inactive: false),
+    ];
+
+    test('resolves a raw id against the live options list into its real label', () {
+      final resolved = resolveLookupOption('4123', options);
+      expect(resolved?.label, 'Electrical');
+    });
+
+    test('falls back to an id-labelled placeholder - never a wrong label - when nothing matches', () {
+      final resolved = resolveLookupOption('700000007', options);
+      expect(resolved?.id, '700000007');
+      expect(resolved?.label, 'id 700000007');
+    });
+
+    test('null/empty/"0" all mean "not set"', () {
+      expect(resolveLookupOption(null, options), isNull);
+      expect(resolveLookupOption('', options), isNull);
+      expect(resolveLookupOption('0', options), isNull);
     });
   });
 

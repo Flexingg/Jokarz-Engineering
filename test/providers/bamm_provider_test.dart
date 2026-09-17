@@ -69,6 +69,8 @@ class _UpdateFakeService extends BammService {
     String? executionModeId,
     double? priorityEm,
     String? assetId,
+    double? estimatedLaborHours,
+    String? statusId,
   }) async {
     return BammUpdateOutcome(
       // Simulates the raw, unmerged/unresolved read-back: blank labels,
