@@ -11,9 +11,11 @@ import '../bamm/mutations/writer.dart';
 import '../bamm/queries/asset_tree.dart';
 import '../bamm/queries/list_query.dart';
 import '../bamm/schema/lookups.dart';
+import '../bamm/src/json_helpers.dart';
 import '../bamm/transport/http_transport.dart';
 import '../models/bamm_models.dart';
 import 'bamm_adapter.dart';
+import 'bamm_sort.dart';
 
 /// The honest result of [BammService.updateWorkOrder]: the work order as
 /// BAMM's own read-back returned it, plus the per-field verdict for exactly
@@ -79,6 +81,12 @@ class BammService {
   bool isPolling = false;
   DateTime? lastChecked;
 
+  /// The server-reported `total` from the most recent `GetListData` call -
+  /// `null` until a query has run. `BammListQueryClient.fetch` already parses
+  /// this; surfacing it here is what lets the UI show "showing N of total"
+  /// instead of silently truncating at `topCount` (2000).
+  int? lastQueryTotal;
+
   final http.Client _client = http.Client();
 
   /// Fast network poll to determine if BAMM is reachable on the current network.
@@ -123,10 +131,18 @@ class BammService {
   /// Live-only: an unreachable server or a failed request is reported to the
   /// caller as a failure, never masked by stale local data. Zero dummy data
   /// is generated.
+  ///
+  /// [statusLookups]/[stepLookups] are the live-fetched `GetWorkOrderStatus`/
+  /// `GetWorkOrderStep` option lists (`BammState.statusLookups`/
+  /// `stepLookups`) - passed through to resolve a filter's status/step id
+  /// from the real live data rather than a short hardcoded guess (see
+  /// [_lookupStatusId]/[_lookupStepId]).
   Future<List<BammWorkOrder>> fetchWorkOrders({
     BammFilterCriteria? criteria,
     Map<String, dynamic>? customPayload,
     bool forceOffline = false,
+    List<BammLookupItem> statusLookups = const [],
+    List<BammLookupItem> stepLookups = const [],
   }) async {
     if (forceOffline) return const [];
 
@@ -145,18 +161,38 @@ class BammService {
         operation: 'Work order list',
       );
       final rows = (raw is Map && raw['value'] is List) ? raw['value'] as List : const [];
+      lastQueryTotal = (raw is Map) ? asInt(raw['total']) : null;
       return rows.whereType<Map<String, dynamic>>().map(bammWorkOrderFromListRow).toList();
     }
 
-    final request = _buildListQueryRequest(criteria ?? const BammFilterCriteria());
+    final effectiveCriteria = criteria ?? const BammFilterCriteria();
+    final request = _buildListQueryRequest(effectiveCriteria, statusLookups: statusLookups, stepLookups: stepLookups);
     final result = await BammListQueryClient(_transport, _bammConfig).fetch(request);
-    return result.rows.map(bammWorkOrderFromListRow).toList();
+    lastQueryTotal = result.total;
+    final mapped = result.rows.map(bammWorkOrderFromListRow).toList();
+
+    // The real server ignores `orderByFields` (see BAMM/captures/*.har for
+    // WorkOrderOpenOnAssetList) - sort the returned page locally, same as
+    // the reference web app's header click. Falls back to the same default
+    // sent on the wire (woIssueDate desc) when no explicit sort is set.
+    final sortField = effectiveCriteria.sortField ?? 'woIssueDate';
+    final sortAscending = effectiveCriteria.sortField == null ? false : effectiveCriteria.sortAscending;
+    return sortBammWorkOrders(mapped, sortField, sortAscending);
   }
 
   /// Builds a GuideTi filter payload for server-side execution across 196k+ work orders.
-  Map<String, dynamic> buildFilterPayload(BammFilterCriteria criteria) => _buildListQueryRequest(criteria).toJson();
+  Map<String, dynamic> buildFilterPayload(
+    BammFilterCriteria criteria, {
+    List<BammLookupItem> statusLookups = const [],
+    List<BammLookupItem> stepLookups = const [],
+  }) =>
+      _buildListQueryRequest(criteria, statusLookups: statusLookups, stepLookups: stepLookups).toJson();
 
-  ListQueryRequest _buildListQueryRequest(BammFilterCriteria criteria) {
+  ListQueryRequest _buildListQueryRequest(
+    BammFilterCriteria criteria, {
+    List<BammLookupItem> statusLookups = const [],
+    List<BammLookupItem> stepLookups = const [],
+  }) {
     final filters = <ListFilter>[];
 
     // Status filter:
@@ -174,7 +210,7 @@ class BammService {
     if (isOpenDefault) {
       filters.add(_openStatusFilter());
     } else if (!isAllInclusive) {
-      final sId = criteria.statusId ?? _lookupStatusId(statusStr);
+      final sId = criteria.statusId ?? _lookupStatusId(statusStr, statusLookups);
       filters.add(ListFilter.byList(
         searchFieldKey: 'woStatusId',
         sourceUrl: 'GetWorkOrderStatus',
@@ -185,7 +221,7 @@ class BammService {
 
     // Step filter (woStepId, filterType 3)
     if (criteria.step != null && criteria.step!.isNotEmpty && criteria.step != 'All') {
-      final stId = criteria.stepId ?? _lookupStepId(criteria.step!);
+      final stId = criteria.stepId ?? _lookupStepId(criteria.step!, stepLookups);
       filters.add(ListFilter.byList(
         searchFieldKey: 'woStepId',
         filterType: 3,
@@ -533,29 +569,38 @@ class BammService {
   // Lookup Id Resolvers & Defaults
   // ---------------------------------------------------------------------------
 
-  int _lookupStatusId(String status) {
-    final s = status.trim().toLowerCase();
-    if (s.contains('prep')) return 1; // In preparation
-    if (s.contains('schedul')) return 2; // Scheduled
-    if (s.contains('ready')) return 9; // Ready to schedule
-    if (s.contains('estimat')) return 7; // In estimate
-    if (s.contains('regist')) return 8; // Registered
-    if (s.contains('complet')) return 3; // Completed
-    if (s.contains('close')) return 6; // Closed
-    if (s.contains('cancel')) return 4; // Cancelled
-    if (s.contains('declin')) return 5; // Declined
-    return 1;
+  /// Resolves a status description to its BAMM id, preferring the live
+  /// `GetWorkOrderStatus` lookup ([liveLookups]) over the offline dictionary
+  /// - falling back to id 1 only when neither has a match, rather than the
+  /// old short hardcoded keyword list that silently returned 1 (In
+  /// preparation) for anything it didn't recognise.
+  int _lookupStatusId(String status, List<BammLookupItem> liveLookups) =>
+      _resolveIdFromLookups(status, liveLookups) ??
+      _resolveIdFromLookups(status, _getStandardFallbackLookup('GetWorkOrderStatus')) ??
+      1;
+
+  /// Same as [_lookupStatusId] for the step (`WSP_ID`) filter.
+  int _lookupStepId(String step, List<BammLookupItem> liveLookups) =>
+      _resolveIdFromLookups(step, liveLookups) ??
+      _resolveIdFromLookups(step, _getStandardFallbackLookup('GetWorkOrderStep')) ??
+      1;
+
+  int? _resolveIdFromLookups(String description, List<BammLookupItem> lookups) {
+    final d = description.trim().toLowerCase();
+    if (d.isEmpty) return null;
+    for (final item in lookups) {
+      if (item.description.toLowerCase().trim() == d) return _asLookupId(item.id);
+    }
+    for (final item in lookups) {
+      final id = item.description.toLowerCase().contains(d) || d.contains(item.description.toLowerCase())
+          ? _asLookupId(item.id)
+          : null;
+      if (id != null) return id;
+    }
+    return null;
   }
 
-  int _lookupStepId(String step) {
-    final s = step.trim().toLowerCase();
-    if (s.contains('counter')) return 2; // Countermeasure
-    if (s.contains('defect')) return 700000007; // Defect Handling
-    if (s.contains('emerg')) return 3; // Emergency
-    if (s.contains('follow')) return 4; // Follow-up
-    if (s.contains('plan')) return 5; // Planned Work
-    return 1;
-  }
+  int? _asLookupId(dynamic id) => id is int ? id : int.tryParse(id?.toString() ?? '');
 
   int _lookupMaintId(String maint) {
     final m = maint.trim().toLowerCase();

@@ -642,6 +642,20 @@ class _BammScreenState extends ConsumerState<BammScreen> {
           if (bammState.criteria.activeFilterCount > 0)
             _buildActiveFilterChipsRow(bammState),
 
+          // Truncation Warning: the server caps a list query at 2000 rows -
+          // this makes a truncated result visible instead of silently
+          // capping with no indication more exist.
+          if (bammState.isTruncated)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: Colors.blue.withValues(alpha: 0.08),
+              child: Text(
+                'Showing ${bammState.workOrders.length} of ${bammState.lastQueryTotal} work orders - refine your filters to see the rest.',
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+              ),
+            ),
+
           const Divider(height: 1),
 
           // List / Table

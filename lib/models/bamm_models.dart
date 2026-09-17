@@ -237,6 +237,15 @@ class BammWorkOrder {
   }
 
   /// Parses a full DynamicDTO model returned by GET /api/WorkOrder/GetById.
+  ///
+  /// GetById never carries `WOR_STATUS_DESC`/`WOR_STEP_DESC` (those are
+  /// GetListData-only display columns) - only the enumerated ids (`WOS_ID`/
+  /// `WSP_ID`). This factory has no access to a live lookup, so it leaves
+  /// [status]/[step] blank rather than guessing a plausible-looking label;
+  /// resolving the real label from a live `GetWorkOrderStatus`/
+  /// `GetWorkOrderStep` lookup is [resolveWorkOrderLabels]'s job (see
+  /// `bamm_adapter.dart`), and preserving whatever a list row already had is
+  /// [mergeDetail]'s job.
   factory BammWorkOrder.fromDynamicDto(Map<String, dynamic> dto) {
     final properties = (dto['properties'] as List<dynamic>?) ?? [];
     String getProp(String name, [String fallback = '']) {
@@ -259,6 +268,17 @@ class BammWorkOrder {
         return DateTime.fromMillisecondsSinceEpoch(ms);
       }
       return DateTime.tryParse(raw);
+    }
+
+    // BAMM sends decimal fields like WOR_NB_3 as "6.0000000" - trim to "6"
+    // for display. Only touches values that actually parse as a decimal, so
+    // a genuine text description (if WOR_PRIORITY_DESC ever exists) passes
+    // through untouched.
+    String trimDecimal(String raw) {
+      if (!RegExp(r'^-?\d+\.\d+$').hasMatch(raw)) return raw;
+      var s = raw.replaceFirst(RegExp(r'0+$'), '');
+      if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+      return s;
     }
 
     final id = int.tryParse(getProp('WOR_ID', '0')) ?? 0;
@@ -288,14 +308,17 @@ class BammWorkOrder {
       worId: id,
       worNoSeq: no,
       description: getProp('WOR_DESCR'),
-      status: getProp('WOR_STATUS_DESC', 'Registered'),
-      statusId: int.tryParse(getProp('WOR_STATUS_ID', '')),
-      step: getProp('WOR_STEP_DESC', 'Normal'),
+      // Real (enumerated) ids: WOS_ID = 8 (Registered), WSP_ID = 3
+      // (Emergency), etc. Never a hardcoded fallback label - blank when the
+      // description property genuinely isn't on the wire.
+      status: getProp('WOR_STATUS_DESC', ''),
+      statusId: int.tryParse(getProp('WOS_ID', '')),
+      step: getProp('WOR_STEP_DESC', ''),
       stepId: int.tryParse(getProp('WSP_ID', '')),
       area: getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell')))),
       machine: getProp('funCodeLevelNiv3Description', getProp('WOR_EQUIPMENT_CODE', getProp('machine'))),
       assetId: getProp('FUN_ID'),
-      priority: getProp('WOR_PRIORITY_DESC', getProp('WOR_NB_3')),
+      priority: trimDecimal(getProp('WOR_PRIORITY_DESC', getProp('WOR_NB_3'))),
       responsible: getProp('WOR_RESPONSIBLE_NAME', getProp('recipientName')),
       requester: getProp('WOR_REQUESTER_NAME', getProp('requesterName')),
       workDone: extractedWorkDone.isNotEmpty ? extractedWorkDone : getProp('woTask'),
@@ -305,6 +328,36 @@ class BammWorkOrder {
       maintenanceType: getProp('WOR_MAINT_TYPE_DESC', getProp('maintenanceTypeDescription')),
       maintenanceTypeId: int.tryParse(getProp('MNT_ID', '')),
       rawDto: dto,
+    );
+  }
+}
+
+/// Merging a `GetById` detail model onto a list row - the fix for the
+/// regression where opening/editing a work order clobbered its list row with
+/// a `GetById` model that structurally cannot carry the list-only display
+/// columns (`worNoSeq`'s "WO-x.y" form, area, machine, responsible,
+/// requester, execution mode, maintenance type text - see
+/// `BammWorkOrder.fromDynamicDto`'s doc comment). Only fields the detail
+/// model genuinely carries a non-empty value for are patched onto `this`;
+/// everything else - including a blank/unresolved status or step - falls
+/// back to what the list row already had.
+extension BammWorkOrderDetailMerge on BammWorkOrder {
+  BammWorkOrder mergeDetail(BammWorkOrder detail) {
+    return copyWith(
+      description: detail.description.isNotEmpty ? detail.description : null,
+      workDone: detail.workDone.isNotEmpty ? detail.workDone : null,
+      status: detail.status.isNotEmpty ? detail.status : null,
+      statusId: detail.statusId,
+      step: detail.step.isNotEmpty ? detail.step : null,
+      stepId: detail.stepId,
+      priority: detail.priority.isNotEmpty ? detail.priority : null,
+      assetId: detail.assetId.isNotEmpty ? detail.assetId : null,
+      maintenanceTypeId: detail.maintenanceTypeId,
+      requiredEmployees: detail.requiredEmployees,
+      issueDate: detail.issueDate,
+      requiredDate: detail.requiredDate,
+      laborHours: detail.laborHours,
+      rawDto: detail.rawDto,
     );
   }
 }

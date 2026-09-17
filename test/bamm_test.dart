@@ -315,6 +315,72 @@ void main() {
       expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
     });
 
+    test('BammService.buildFilterPayload sends the full filter key list BAMM expects', () {
+      // Port of ~/repos/BAMM/app/bamm/views.py:170-266 - a filter block
+      // missing any of these is the reason filters were silently ignored.
+      final service = BammService();
+      final payload = service.buildFilterPayload(const BammFilterCriteria(area: '100'));
+      final filters = payload['filters'] as List;
+      final areaFilter = filters.firstWhere((f) => f['searchFieldKey'] == 'regrouping1Id') as Map<String, dynamic>;
+
+      expect(areaFilter['sourceUrl'], isNotNull);
+      expect(areaFilter['categoryDescription'], isNotNull);
+      expect(areaFilter['optionalCheckboxText'], isNull);
+      expect(areaFilter['isSelected'], isFalse);
+      expect(areaFilter['isHidden'], isFalse);
+      expect(areaFilter['hasUserDictionary'], isFalse);
+      expect(areaFilter['isSelectable'], isTrue);
+      expect(areaFilter['collationName'], '');
+      expect(areaFilter['filterUIControlOptions'], {'decimals': 6, 'allowNegative': true});
+      expect(areaFilter['lookupColumns'], isNull);
+      expect(areaFilter['additionalFilter'], isNull);
+      expect(areaFilter['timeZoneName'], 'Eastern Standard Time');
+
+      final values = (areaFilter['values'] as List).first as Map<String, dynamic>;
+      expect(values['treeViewValues'], isEmpty);
+      expect(values['conditionalOperator'], isNull);
+      expect(values['interval'], 'day');
+      expect(values['intervalValue'], '1');
+      expect(values['dates'], isNull);
+      expect(values['times'], isEmpty);
+      expect(values['recurrence'], isNull);
+      expect(values['optionalCheckboxValue'], isFalse);
+      expect(values['additionalFilterValue'], isNull);
+      expect(values['token'], isNull);
+      expect(values['datesXmlElement'], isEmpty);
+      expect(values['hasToken'], isFalse);
+
+      final text = areaFilter['text'] as List;
+      expect(text.any((b) => b['header'] == 'Included'), isTrue);
+      expect(text.any((b) => b['header'] == 'Null excluded'), isTrue);
+    });
+
+    test('BammService resolves status/step filter ids from the live lookup, not a hardcoded guess', () {
+      final service = BammService();
+      final payload = service.buildFilterPayload(
+        const BammFilterCriteria(status: 'Weird Custom Status', step: 'Weird Custom Step'),
+        statusLookups: const [BammLookupItem(id: 555, description: 'Weird Custom Status')],
+        stepLookups: const [BammLookupItem(id: 777, description: 'Weird Custom Step')],
+      );
+      final filters = payload['filters'] as List;
+      final statusFilter = filters.firstWhere((f) => f['searchFieldKey'] == 'woStatusId') as Map<String, dynamic>;
+      final stepFilter = filters.firstWhere((f) => f['searchFieldKey'] == 'woStepId') as Map<String, dynamic>;
+
+      expect((statusFilter['values'][0]['listValues'] as List).first['id'], 555);
+      expect((stepFilter['values'][0]['listValues'] as List).first['id'], 777);
+    });
+
+    test('BammService falls back to id 1 only when neither the live lookup nor the dictionary resolves', () {
+      final service = BammService();
+      final payload = service.buildFilterPayload(
+        const BammFilterCriteria(status: 'Totally Unknown Status Xyz'),
+        statusLookups: const [],
+      );
+      final filters = payload['filters'] as List;
+      final statusFilter = filters.firstWhere((f) => f['searchFieldKey'] == 'woStatusId') as Map<String, dynamic>;
+      expect((statusFilter['values'][0]['listValues'] as List).first['id'], 1);
+    });
+
     test('BammService defaults to open statuses filter (excluding completed, closed, cancelled, declined)', () {
       final service = BammService();
       // When criteria is empty or status is 'All Open'

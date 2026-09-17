@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bamm_models.dart';
+import '../services/bamm_adapter.dart' show resolveWorkOrderLabels;
 import '../services/bamm_service.dart';
 
 final bammServiceProvider = Provider<BammService>((ref) {
@@ -26,6 +27,11 @@ class BammState {
   final bool isLoading;
   final String? errorMessage;
 
+  /// The server-reported total for the most recent list query - `null`
+  /// until a query has run. Lets the UI show a truncation warning instead of
+  /// silently capping at `topCount` (2000) with no indication more exist.
+  final int? lastQueryTotal;
+
   const BammState({
     this.isOnline = false,
     this.isPolling = false,
@@ -43,7 +49,12 @@ class BammState {
     this.columnLayout = const BammColumnLayout(),
     this.isLoading = false,
     this.errorMessage,
+    this.lastQueryTotal,
   });
+
+  /// True when the server reports more rows exist than the current page
+  /// (capped at `topCount` = 2000) actually returned.
+  bool get isTruncated => lastQueryTotal != null && lastQueryTotal! > workOrders.length;
 
   // Backwards compatibility getters
   String get searchQuery => criteria.searchQuery;
@@ -70,6 +81,8 @@ class BammState {
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
+    int? lastQueryTotal,
+    bool clearLastQueryTotal = false,
   }) {
     return BammState(
       isOnline: isOnline ?? this.isOnline,
@@ -88,6 +101,7 @@ class BammState {
       columnLayout: columnLayout ?? this.columnLayout,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      lastQueryTotal: clearLastQueryTotal ? null : (lastQueryTotal ?? this.lastQueryTotal),
     );
   }
 
@@ -178,6 +192,13 @@ class BammNotifier extends StateNotifier<BammState> {
   Timer? _autoPollTimer;
   Timer? _debounceTimer;
 
+  /// Monotonically increasing id for [refreshWorkOrders] - every list query
+  /// (search debounce, filter setters, sort, pull-to-refresh, poll button)
+  /// funnels through that one method, so a single guard here is enough to
+  /// drop a superseded response even when several queries end up in flight
+  /// at once (e.g. "Apply Filters" firing several setters back to back).
+  int _requestId = 0;
+
   BammNotifier(this._service) : super(const BammState()) {
     init();
   }
@@ -192,6 +213,10 @@ class BammNotifier extends StateNotifier<BammState> {
       config: loadedConfig,
       savedFilters: savedFilters,
       columnLayout: columnLayout,
+      // Default view on boot: all OPEN work orders (the server-side default
+      // when `status` is unset) whose step is Emergency - matches the
+      // existing "Emergency" saved-filter preset (`_getDefaultSavedFilters`).
+      criteria: const BammFilterCriteria(step: 'Emergency', stepId: 3),
     );
 
     // Initial quick poll & load lookup dropdown options
@@ -252,16 +277,27 @@ class BammNotifier extends StateNotifier<BammState> {
     }
   }
 
-  /// Executes a query against BAMM with current criteria or refreshes default list.
+  /// Executes a query against BAMM with current criteria or refreshes
+  /// default list. The single funnel point for every list query - see
+  /// [_requestId].
   Future<void> refreshWorkOrders() async {
+    final myRequestId = ++_requestId;
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
     try {
-      final list = await _service.fetchWorkOrders(criteria: state.criteria);
+      final list = await _service.fetchWorkOrders(
+        criteria: state.criteria,
+        statusLookups: state.statusLookups,
+        stepLookups: state.stepLookups,
+      );
+      if (myRequestId != _requestId) return; // superseded by a newer query
       state = state.copyWith(
         workOrders: list,
         isLoading: false,
+        lastQueryTotal: _service.lastQueryTotal,
+        clearLastQueryTotal: _service.lastQueryTotal == null,
       );
     } catch (e) {
+      if (myRequestId != _requestId) return; // superseded by a newer query
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
@@ -480,12 +516,31 @@ class BammNotifier extends StateNotifier<BammState> {
     await _service.saveSavedFilters(updated);
   }
 
+  /// Resolves [detail]'s status/step ids against the live lookups already in
+  /// state, then merges the result onto the matching list row (if any) so
+  /// list-only display columns (worNoSeq's "WO-x.y" form, area, machine,
+  /// responsible, requester, ...) survive - `GetById` structurally cannot
+  /// carry them (see `BammWorkOrder.fromDynamicDto`'s doc comment). This is
+  /// the fix for the regression where tapping/editing a row overwrote it
+  /// with a `GetById` model that looked plausible but was missing or wrong.
+  BammWorkOrder _resolveAndMerge(BammWorkOrder detail) {
+    final resolved = resolveWorkOrderLabels(
+      detail,
+      statusLookups: state.statusLookups,
+      stepLookups: state.stepLookups,
+    );
+    final existing = state.workOrders.where((w) => w.worId == detail.worId).firstOrNull;
+    return existing != null ? existing.mergeDetail(resolved) : resolved;
+  }
+
   /// Fetches individual detail for a single work order on click.
   Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async {
     final detail = await _service.fetchWorkOrderDetail(worId);
     if (detail != null) {
-      final updatedList = state.workOrders.map((w) => w.worId == worId ? detail : w).toList();
+      final merged = _resolveAndMerge(detail);
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? merged : w).toList();
       state = state.copyWith(workOrders: updatedList);
+      return merged;
     }
     return detail;
   }
@@ -571,9 +626,16 @@ class BammNotifier extends StateNotifier<BammState> {
         assetId: assetId,
       );
 
-      final updatedList = state.workOrders.map((w) => w.worId == worId ? outcome.workOrder : w).toList();
+      final merged = _resolveAndMerge(outcome.workOrder);
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? merged : w).toList();
       state = state.copyWith(workOrders: updatedList, isLoading: false);
-      return outcome;
+
+      // A save must not leave the table showing stale data - re-run the list
+      // query so the row's list-only display columns (and any other row a
+      // filter/sort now excludes or includes) reflect BAMM's own state.
+      await refreshWorkOrders();
+
+      return BammUpdateOutcome(workOrder: merged, writeResult: outcome.writeResult);
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
       rethrow;
@@ -598,9 +660,10 @@ class BammNotifier extends StateNotifier<BammState> {
         hours: hours,
         memo: memo,
       );
-      final updatedList = state.workOrders.map((w) => w.worId == worId ? outcome.workOrder : w).toList();
+      final merged = _resolveAndMerge(outcome.workOrder);
+      final updatedList = state.workOrders.map((w) => w.worId == worId ? merged : w).toList();
       state = state.copyWith(workOrders: updatedList, isLoading: false);
-      return outcome;
+      return BammAddActivityLineOutcome(workOrder: merged, added: outcome.added);
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
       rethrow;

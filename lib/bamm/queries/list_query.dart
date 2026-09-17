@@ -112,12 +112,34 @@ class ListFilter {
   }) =>
       ListFilter._(searchFieldKey: searchFieldKey, filterType: 1, stringValues: [value], status: status);
 
+  /// The "Included"/"Excluded" + "Null excluded" text summary blocks BAMM's
+  /// own UI sends alongside every filter - mirrors
+  /// `~/repos/BAMM/app/bamm/views.py:220-228`.
+  List<Map<String, dynamic>> _textBlocks() {
+    final textValues = listValues.isNotEmpty
+        ? listValues.map((v) => (v['description'] ?? v['id']?.toString() ?? '').toString()).toList()
+        : stringValues;
+    final blocks = <Map<String, dynamic>>[];
+    if (textValues.isNotEmpty) {
+      blocks.add({'values': textValues, 'header': status == 'included' ? 'Included' : 'Excluded'});
+    }
+    if (!includeNull) {
+      blocks.add({'values': <String>[], 'header': 'Null excluded'});
+    }
+    return blocks;
+  }
+
+  /// Every key BAMM's own filter payload sends
+  /// (`~/repos/BAMM/app/bamm/views.py:170-266`) - a filter block missing any
+  /// of these is the reason filters were silently ignored. `sourceUrl`/
+  /// `categoryDescription` travel as `''` (not omitted) when unset, matching
+  /// the reference's `compiled` dict shape.
   Map<String, dynamic> toJson() => {
         'searchFieldKey': searchFieldKey,
         'filterType': filterType,
         if (description != null) 'description': description,
-        if (sourceUrl != null) 'sourceUrl': sourceUrl,
-        if (categoryDescription != null) 'categoryDescription': categoryDescription,
+        'sourceUrl': sourceUrl ?? '',
+        'categoryDescription': categoryDescription ?? '',
         'values': [
           {
             'status': status,
@@ -125,10 +147,34 @@ class ListFilter {
             'includeNull': includeNull,
             'listValues': listValues,
             'stringValues': stringValues,
+            'treeViewValues': <Map<String, dynamic>>[],
+            'conditionalOperator': null,
+            'interval': 'day',
+            'intervalValue': '1',
+            'period': null,
+            'dates': null,
+            'times': <String>[],
+            'recurrence': null,
+            'optionalCheckboxValue': false,
+            'additionalFilterValue': null,
+            'token': null,
+            'datesXmlElement': <String>[],
+            'hasToken': false,
           }
         ],
+        'optionalCheckboxText': null,
         'isExpanded': true,
+        'isSelected': false,
         'isVisible': true,
+        'isHidden': false,
+        'hasUserDictionary': false,
+        'isSelectable': true,
+        'collationName': '',
+        'filterUIControlOptions': {'decimals': 6, 'allowNegative': true},
+        'lookupColumns': null,
+        'additionalFilter': null,
+        'timeZoneName': 'Eastern Standard Time',
+        'text': _textBlocks(),
       };
 }
 

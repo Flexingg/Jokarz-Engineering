@@ -21,6 +21,33 @@ BammWorkOrder bammWorkOrderFromListRow(Map<String, dynamic> row) => BammWorkOrde
 /// returned by `BammWorkOrderWriter`) into a [BammWorkOrder].
 BammWorkOrder bammWorkOrderFromModel(Map<String, dynamic> model) => BammWorkOrder.fromDynamicDto(model);
 
+/// Resolves [wo]'s enumerated `statusId`/`stepId` into human labels using
+/// already-fetched live lookup lists (`GetWorkOrderStatus`/
+/// `GetWorkOrderStep`) - never a hardcoded label. `BammWorkOrder.
+/// fromDynamicDto` intentionally leaves [BammWorkOrder.status]/[step] blank
+/// because `GetById` never carries the description properties, only the raw
+/// id; this is the layer that has access to the live lookups and can fill
+/// them in. Falls back to showing the raw id (not a wrong guess) when the id
+/// has no match in the lookup list, and to blank when there is no id at all.
+BammWorkOrder resolveWorkOrderLabels(
+  BammWorkOrder wo, {
+  required List<BammLookupItem> statusLookups,
+  required List<BammLookupItem> stepLookups,
+}) {
+  String resolve(int? id, List<BammLookupItem> items) {
+    if (id == null) return '';
+    for (final item in items) {
+      if (item.id == id) return item.description;
+    }
+    return id.toString();
+  }
+
+  return wo.copyWith(
+    status: resolve(wo.statusId, statusLookups),
+    step: resolve(wo.stepId, stepLookups),
+  );
+}
+
 /// One `BammLookupsClient` option into this app's dropdown item type.
 ///
 /// [LookupOption.id] always travels as a [String]; call sites that compare
