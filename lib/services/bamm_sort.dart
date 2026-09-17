@@ -46,6 +46,7 @@ Object? _rawValue(BammWorkOrder wo, String field) {
       return wo.machine.isNotEmpty ? wo.machine : wo.assetId;
     case 'funCodeLevelNiv4Description':
       return wo.assembly;
+    case 'funCodeLevelNiv1Description':
     case 'regrouping1Description':
       return wo.area;
     case 'recipientName':

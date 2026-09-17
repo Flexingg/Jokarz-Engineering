@@ -214,7 +214,11 @@ class BammWorkOrder {
     final idVal = p['workOrderId'] ?? p['WOR_ID'] ?? p['worId'];
     final worId = (idVal is num) ? idVal.toInt() : (int.tryParse(idVal?.toString() ?? '') ?? 0);
     final worNo = (p['worNoSeq'] ?? p['WOR_NO_SEQ'] ?? p['WOR_NO'] ?? p['worNo'] ?? '').toString();
-    final areaVal = (p['regrouping1Description'] ?? p['area'] ?? p['functionInfo2'] ?? p['WOR_DEPARTMENT_CODE'] ?? p['cell'] ?? '').toString();
+    // funCodeLevelNiv1Description ("1st level - description") is the real
+    // Area - the 1st-level function code of the asset. Older fallbacks kept
+    // secondary so a row that (for whatever reason) doesn't carry it still
+    // shows something.
+    final areaVal = (p['funCodeLevelNiv1Description'] ?? p['regrouping1Description'] ?? p['area'] ?? p['functionInfo2'] ?? p['WOR_DEPARTMENT_CODE'] ?? p['cell'] ?? '').toString();
 
     return BammWorkOrder(
       worId: worId,
@@ -322,7 +326,12 @@ class BammWorkOrder {
       statusId: int.tryParse(getProp('WOS_ID', '')),
       step: getProp('WOR_STEP_DESC', ''),
       stepId: int.tryParse(getProp('WSP_ID', '')),
-      area: getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell')))),
+      // Same GetListData-only limitation as machine/assembly below -
+      // funCodeLevelNiv1Description ("1st level - description", the real
+      // Area) never appears on a GetById model, so this is blank here;
+      // mergeDetail preserves whatever the list row already had.
+      area: getProp('funCodeLevelNiv1Description',
+          getProp('regrouping1Description', getProp('WOR_DEPARTMENT_CODE', getProp('functionInfo2', getProp('cell'))))),
       machine: getProp('funCodeLevelNiv3Description', getProp('WOR_EQUIPMENT_CODE', getProp('machine'))),
       // Same GetListData-only limitation as machine/area - GetById never
       // carries this property, so it's blank here; mergeDetail preserves

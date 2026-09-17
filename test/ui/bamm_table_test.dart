@@ -300,6 +300,30 @@ void main() {
       expect(find.text('#502'), findsNothing, reason: 'Fill Head 10 row filtered out');
     });
 
+    testWidgets('Area column (1st-level function code) is visible by default, sorts, and filters by cell value like every other column', (tester) async {
+      final areaSeed = [
+        _wo(id: 511, issueDate: DateTime(2026, 3, 1), area: 'Packaging'),
+        _wo(id: 512, issueDate: DateTime(2026, 3, 2), area: 'Filling'),
+        _wo(id: 513, issueDate: DateTime(2026, 3, 3), area: 'Packaging'),
+      ];
+      await _pumpAt(tester, _wide, overrides: _overrides(areaSeed));
+
+      // In the DEFAULT visible set - no chooser interaction needed to see it.
+      expect(find.text('Area'), findsOneWidget);
+      expect(find.text('Packaging'), findsWidgets);
+      expect(find.text('Filling'), findsOneWidget);
+
+      // Filters like every other column: long-press a cell, "Filter by this value".
+      await tester.longPress(find.text('Packaging').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filter by this value'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('#511'), findsOneWidget, reason: 'Packaging rows remain');
+      expect(find.text('#513'), findsOneWidget, reason: 'Packaging rows remain');
+      expect(find.text('#512'), findsNothing, reason: 'Filling row filtered out');
+    });
+
     testWidgets('"Hide column" removes the header AND its cells', (tester) async {
       await _pumpAt(tester, _expanded, overrides: _overrides(seed));
 

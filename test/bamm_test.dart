@@ -116,6 +116,18 @@ void main() {
       expect(wo.laborHours, 8.0);
     });
 
+    test('BammWorkOrder.fromPropertyList prefers funCodeLevelNiv1Description (the real Area) over WOR_DEPARTMENT_CODE', () {
+      final rawCogepRow = {
+        'propertyList': {
+          'WOR_ID': 554434,
+          'funCodeLevelNiv1Description': 'North Wing',
+          'WOR_DEPARTMENT_CODE': 'HYDRAULICS',
+        },
+      };
+      final wo = BammWorkOrder.fromPropertyList(rawCogepRow);
+      expect(wo.area, 'North Wing');
+    });
+
     test('BammSavedFilter serialization', () {
       const filter = BammSavedFilter(
         id: 'f-1',
@@ -293,7 +305,8 @@ void main() {
       expect(orderBy['name'], 'woIssueDate');
       expect(orderBy['ascending'], isFalse);
 
-      // Verify major fields requested including Area (regrouping1Description)
+      // Verify major fields requested including Area (regrouping1Description,
+      // funCodeLevelNiv1Description - the 1st-level function code)
       final fields = (listFormat['fields'] as List).map((f) => f['name']).toList();
       expect(fields, containsAll([
         'worNoSeq',
@@ -303,6 +316,7 @@ void main() {
         'woTask',
         'woDescription',
         'regrouping1Description',
+        'funCodeLevelNiv1Description',
         'funCodeLevelNiv3Description',
         'funCodeLevelNiv4Description',
         'woStatusDescription',

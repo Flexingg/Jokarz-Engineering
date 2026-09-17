@@ -1229,6 +1229,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         notifier.setStatusFilter(value.isEmpty ? null : value);
       case 'woStepDescription':
         notifier.setStepFilter(value.isEmpty ? null : value);
+      case 'funCodeLevelNiv1Description':
       case 'regrouping1Description':
         notifier.setAreaFilter(value.isEmpty ? null : value);
       case 'recipientName':

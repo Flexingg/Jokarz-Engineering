@@ -148,7 +148,7 @@ List<BammColumnDef> buildBammColumns() => [
         textOf: (wo) => wo.assembly,
       ),
       BammColumnDef(
-        key: 'regrouping1Description',
+        key: 'funCodeLevelNiv1Description',
         header: 'Area',
         defaultVisible: true,
         width: 120,

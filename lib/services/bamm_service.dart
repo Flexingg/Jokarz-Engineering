@@ -331,6 +331,7 @@ class BammService {
     ListColumn(key: 'worNoSeq', header: 'Work order', fieldDataType: 6),
     ListColumn(key: 'woIssueDate', header: 'WO registered date', fieldDataType: 5, format: 4),
     ListColumn(key: 'regrouping1Description', header: 'Area', fieldDataType: 15),
+    ListColumn(key: 'funCodeLevelNiv1Description', header: '1st level - description', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv3Description', header: 'Machine', fieldDataType: 15),
     ListColumn(key: 'funCodeLevelNiv4Description', header: '4th level - description', fieldDataType: 15),
     ListColumn(key: 'recipientName', header: 'Responsible', fieldDataType: 15),

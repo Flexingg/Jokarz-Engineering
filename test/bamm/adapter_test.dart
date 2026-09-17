@@ -64,6 +64,24 @@ void main() {
       expect(wo.responsible, '');
       expect(wo.priority, '');
     });
+
+    test('prefers funCodeLevelNiv1Description ("1st level - description", the real Area) over the older fallbacks', () {
+      final row = {
+        'propertyList': {
+          ..._listRow['propertyList'] as Map<String, dynamic>,
+          'funCodeLevelNiv1Description': 'North Wing',
+        },
+      };
+      final wo = bammWorkOrderFromListRow(row);
+      expect(wo.area, 'North Wing', reason: 'funCodeLevelNiv1Description must win over functionInfo2');
+    });
+
+    test('falls back to functionInfo2 when funCodeLevelNiv1Description is absent', () {
+      // _listRow carries no funCodeLevelNiv1Description - proves the old
+      // source still works so nothing that works today breaks.
+      final wo = bammWorkOrderFromListRow(_listRow);
+      expect(wo.area, 'Cell 1');
+    });
   });
 
   group('bammWorkOrderFromModel', () {
@@ -95,6 +113,35 @@ void main() {
       // A null property value must not be misread as a date.
       expect(wo.requiredDate, isNull);
       expect(wo.issueDate, isNotNull);
+    });
+
+    test('prefers funCodeLevelNiv1Description over regrouping1Description for area when a model somehow carries both', () {
+      // Neither property is ever actually present on a real GetById
+      // response (see the doc comment on `_getByIdModel` above) - this is a
+      // pure priority-ordering proof of `BammWorkOrder.fromDynamicDto`, not a
+      // claim about what BAMM sends.
+      final model = {
+        'properties': [
+          ...(_getByIdModel['properties'] as List<dynamic>),
+          {'name': 'funCodeLevelNiv1Description', 'value': 'North Wing', 'type': 9},
+          {'name': 'regrouping1Description', 'value': 'Old Area Name', 'type': 9},
+        ],
+        'childSets': <dynamic>[],
+      };
+      final wo = bammWorkOrderFromModel(model);
+      expect(wo.area, 'North Wing');
+    });
+
+    test('falls back to regrouping1Description when funCodeLevelNiv1Description is absent', () {
+      final model = {
+        'properties': [
+          ...(_getByIdModel['properties'] as List<dynamic>),
+          {'name': 'regrouping1Description', 'value': 'Old Area Name', 'type': 9},
+        ],
+        'childSets': <dynamic>[],
+      };
+      final wo = bammWorkOrderFromModel(model);
+      expect(wo.area, 'Old Area Name');
     });
   });
 
