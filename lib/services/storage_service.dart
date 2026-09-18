@@ -11,6 +11,8 @@ import '../models/downtime_event.dart';
 import '../models/inbox_item.dart';
 import '../models/vendor.dart';
 import '../models/project_template.dart';
+import '../models/time_block.dart';
+import '../models/slip_log_entry.dart';
 
 class StorageService {
   static const String _downtimesFile = 'jokarz_downtimes.json';
@@ -203,6 +205,33 @@ class StorageService {
     }
   }
 
+  // --- BAMM report templates ---
+  static const String _bammReportFile = 'jokarz_bamm_report_templates.json';
+
+  Future<File> _getBammReportFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_bammReportFile');
+  }
+
+  Future<Map<String, dynamic>?> loadBammReportTemplates() async {
+    try {
+      final file = await _getBammReportFile();
+      if (!await file.exists()) return null;
+      return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveBammReportTemplates(Map<String, dynamic> data) async {
+    try {
+      final file = await _getBammReportFile();
+      await _atomicWrite(file, jsonEncode(data));
+    } catch (e) {
+      debugPrint('Error saving BAMM report templates: $e');
+    }
+  }
+
   // --- Activity Log ---
   static const String _activityFile = 'jokarz_activity_log.json';
 
@@ -288,6 +317,97 @@ class StorageService {
       await _atomicWrite(file, jsonEncode(data));
     } catch (e) {
       debugPrint('Error saving storage data: $e');
+    }
+  }
+
+  // --- Time blocking (personal planning data - never sent to BAMM) ---
+  static const String _timeBlocksFile = 'jokarz_time_blocks.json';
+  static const String _slipLogFile = 'jokarz_slip_log.json';
+  static const String _scheduleSettingsFile = 'jokarz_schedule_settings.json';
+
+  Future<File> _getTimeBlocksFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_timeBlocksFile');
+  }
+
+  Future<File> _getSlipLogFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_slipLogFile');
+  }
+
+  Future<File> _getScheduleSettingsFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_scheduleSettingsFile');
+  }
+
+  Future<List<TimeBlock>> loadTimeBlocks() async {
+    try {
+      final file = await _getTimeBlocksFile();
+      if (!await file.exists()) return [];
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return [];
+      final list = jsonDecode(content) as List;
+      return list.map((e) => TimeBlock.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      debugPrint('Error loading time blocks: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveTimeBlocks(List<TimeBlock> blocks) async {
+    try {
+      final file = await _getTimeBlocksFile();
+      await _atomicWrite(file, jsonEncode(blocks.map((b) => b.toJson()).toList()));
+    } catch (e) {
+      debugPrint('Error saving time blocks: $e');
+    }
+  }
+
+  Future<List<SlipLogEntry>> loadSlipLog() async {
+    try {
+      final file = await _getSlipLogFile();
+      if (!await file.exists()) return [];
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return [];
+      final list = jsonDecode(content) as List;
+      return list.map((e) => SlipLogEntry.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      debugPrint('Error loading slip log: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveSlipLog(List<SlipLogEntry> entries) async {
+    try {
+      final file = await _getSlipLogFile();
+      await _atomicWrite(file, jsonEncode(entries.map((e) => e.toJson()).toList()));
+    } catch (e) {
+      debugPrint('Error saving slip log: $e');
+    }
+  }
+
+  /// Just `{"cascadeEnabled": bool}` today - a small, standalone file (like
+  /// `_reportFile`/`_bindingsFile`) rather than folded into the main data
+  /// file, so a corrupt/missing settings file can never affect projects.
+  Future<bool> loadCascadeEnabled() async {
+    try {
+      final file = await _getScheduleSettingsFile();
+      if (!await file.exists()) return true;
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return true;
+      final json = jsonDecode(content) as Map<String, dynamic>;
+      return json['cascadeEnabled'] as bool? ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> saveCascadeEnabled(bool enabled) async {
+    try {
+      final file = await _getScheduleSettingsFile();
+      await _atomicWrite(file, jsonEncode({'cascadeEnabled': enabled}));
+    } catch (e) {
+      debugPrint('Error saving schedule settings: $e');
     }
   }
 

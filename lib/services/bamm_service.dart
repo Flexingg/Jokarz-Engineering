@@ -540,6 +540,15 @@ class BammService {
   /// bundled/cached tree.
   BammAssetTreeClient get assetTree => BammAssetTreeClient(_transport, _bammConfig);
 
+  /// The BAMM web UI's own URL for a work order - `{origin}/workorder/detail/{workOrderId}`,
+  /// verified against `~/repos/BAMM/samples/grid_fields.json`'s `linkURL` and
+  /// the `Referer` headers in `~/repos/BAMM/docs/03-reading-work-orders.md`.
+  /// `workOrderId` is the internal id ([BammWorkOrder.worId]), not the
+  /// display `worNoSeq`. Used as the "fallback for whoever else holds the
+  /// sheet" QR code on a printed report - never guessed, never a different
+  /// path shape.
+  String bammWebUrl(BammWorkOrder wo) => '${_bammConfig.normalizedOrigin}/workorder/detail/${wo.worId}';
+
   /// Fetches complete Work Order detail on demand from BAMM using GetById.
   Future<BammWorkOrder?> fetchWorkOrderDetail(int worId) async {
     if (worId <= 0) return null;

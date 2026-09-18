@@ -22,13 +22,17 @@ import 'bamm_lookup_picker.dart';
 
 class BammDetailDialog extends ConsumerStatefulWidget {
   final BammWorkOrder workOrder;
+  /// Sheet-integrity warning text (non-null only when a scanned report QR's
+  /// embedded hash no longer matches this work order's live data) - see
+  /// `bamm_report_integrity.dart`.
+  final String? staleWarning;
 
-  const BammDetailDialog({super.key, required this.workOrder});
+  const BammDetailDialog({super.key, required this.workOrder, this.staleWarning});
 
-  static Future<void> show(BuildContext context, BammWorkOrder workOrder) {
+  static Future<void> show(BuildContext context, BammWorkOrder workOrder, {String? staleWarning}) {
     return showDialog(
       context: context,
-      builder: (ctx) => BammDetailDialog(workOrder: workOrder),
+      builder: (ctx) => BammDetailDialog(workOrder: workOrder, staleWarning: staleWarning),
     );
   }
 
@@ -297,6 +301,30 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (widget.staleWarning != null) ...[
+                Container(
+                  key: const Key('bamm_stale_warning'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.orange.shade700, width: 1.5),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.staleWarning!,
+                          style: TextStyle(color: Colors.orange.shade900, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               // Status & Step Badges
               Wrap(
                 spacing: 8,

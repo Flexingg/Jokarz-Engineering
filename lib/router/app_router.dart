@@ -20,6 +20,7 @@ import '../ui/screens/vendors_screen.dart';
 import '../ui/screens/machines_screen.dart';
 import '../ui/screens/machine_detail_screen.dart';
 import '../ui/screens/bamm_screen.dart';
+import '../ui/screens/day_schedule_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -161,6 +162,8 @@ final appRouter = GoRouter(
                 child: BammScreen(
                   targetWo: state.uri.queryParameters['wo'],
                   initialFilter: state.uri.queryParameters['filter'],
+                  snapshotHash: state.uri.queryParameters['h'],
+                  printedAtEpochMs: state.uri.queryParameters['t'],
                 ),
               ),
             ),
@@ -172,6 +175,11 @@ final appRouter = GoRouter(
       path: '/calendar',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const TasksCalendarScreen(),
+    ),
+    GoRoute(
+      path: '/schedule',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const DayScheduleScreen(),
     ),
     GoRoute(
       path: '/overdue',

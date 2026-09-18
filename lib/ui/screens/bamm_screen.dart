@@ -5,6 +5,7 @@ import '../../models/bamm_models.dart';
 import '../../providers/bamm_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../services/bamm_local_search.dart';
+import '../../services/bamm_report_integrity.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/bamm_detail_dialog.dart';
 import '../widgets/bamm_table_columns.dart';
@@ -12,11 +13,21 @@ import '../widgets/bamm_table_columns.dart';
 class BammScreen extends ConsumerStatefulWidget {
   final String? targetWo;
   final String? initialFilter;
+  /// Sheet-integrity hash embedded in a scanned report QR
+  /// (`aor-report://wo?id=...&h=...`) - compared against the live work
+  /// order once fetched. Null for any other way this screen is opened.
+  final String? snapshotHash;
+  /// Epoch-ms print timestamp embedded alongside [snapshotHash], for a
+  /// friendlier staleness message ("printed Sep 17" rather than just "this
+  /// sheet is stale").
+  final String? printedAtEpochMs;
 
   const BammScreen({
     super.key,
     this.targetWo,
     this.initialFilter,
+    this.snapshotHash,
+    this.printedAtEpochMs,
   });
 
   @override
@@ -47,16 +58,43 @@ class _BammScreenState extends ConsumerState<BammScreen> {
     }
   }
 
-  void _autoOpenTargetWo() {
+  Future<void> _autoOpenTargetWo() async {
     if (_hasHandledInitialWo) return;
     _hasHandledInitialWo = true;
     final bammState = ref.read(bammProvider);
     final match = bammState.workOrders.where((w) =>
         w.worNoSeq.toLowerCase() == widget.targetWo!.toLowerCase().trim() ||
         w.worId.toString() == widget.targetWo!.trim()).firstOrNull;
-    if (match != null && mounted) {
-      BammDetailDialog.show(context, match);
+
+    if (match != null) {
+      if (mounted) _openWithStaleCheck(match);
+      return;
     }
+
+    // Cold-start gap: the target work order isn't in whatever's currently
+    // loaded (e.g. the app booted with its default Emergency-step filter
+    // and a scanned sheet points at a non-Emergency WO) - fetch it directly
+    // by id rather than silently doing nothing. Only works when the target
+    // is a numeric worId (the deep link always encodes that; a bare
+    // worNoSeq typed into a URL has no live single-WO lookup by that key).
+    final worId = int.tryParse(widget.targetWo!.trim());
+    if (worId == null) return;
+    final detail = await ref.read(bammProvider.notifier).fetchWorkOrderDetail(worId);
+    if (detail != null && mounted) _openWithStaleCheck(detail);
+  }
+
+  void _openWithStaleCheck(BammWorkOrder wo) {
+    String? warning;
+    if (widget.snapshotHash != null && widget.snapshotHash!.isNotEmpty) {
+      if (bammHasChangedSincePrint(wo, widget.snapshotHash!)) {
+        final printedAtMs = int.tryParse(widget.printedAtEpochMs ?? '');
+        final printedAtText = printedAtMs != null
+            ? ' (printed ${DateFormat('MMM d, y').format(DateTime.fromMillisecondsSinceEpoch(printedAtMs))})'
+            : '';
+        warning = 'This sheet is out of date$printedAtText - BAMM has changed since it was printed.';
+      }
+    }
+    BammDetailDialog.show(context, wo, staleWarning: warning);
   }
 
   @override

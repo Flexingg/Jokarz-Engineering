@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 import 'services/sync_service.dart';
 import 'router/app_router.dart';
+import 'services/deep_link_service.dart';
 import 'ui/widgets/app_shortcuts.dart';
 
 Future<void> main() async {
@@ -23,6 +24,10 @@ Future<void> main() async {
       child: JokarzEngineeringApp(),
     ),
   );
+
+  // Fire-and-forget: a scanned report QR (or a cold start from one) routes
+  // straight to that work order. Never blocks app startup.
+  initDeepLinks(appRouter).catchError((e) => debugPrint('Deep link init note: $e'));
 }
 
 class JokarzEngineeringApp extends ConsumerWidget {

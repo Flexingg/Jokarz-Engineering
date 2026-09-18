@@ -88,6 +88,11 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () => context.push('/calendar'),
           ),
           IconButton(
+            icon: Icon(Icons.view_timeline_rounded, color: AppTheme.of(context).primary),
+            tooltip: 'Day Schedule (time blocking)',
+            onPressed: () => context.push('/schedule'),
+          ),
+          IconButton(
             icon: Icon(Icons.account_circle_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Settings & Account',
             onPressed: () => context.go('/settings'),

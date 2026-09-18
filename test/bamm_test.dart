@@ -340,6 +340,12 @@ void main() {
       expect(filters.any((f) => f['searchFieldKey'] == 'worNoSeq'), isTrue); // Recognized as WO sequence number
     });
 
+    test('BammService.bammWebUrl builds the verified /workorder/detail/{id} path from the internal worId', () {
+      final service = BammService();
+      final wo = BammWorkOrder(worId: 700203549, worNoSeq: '185610', description: 'x');
+      expect(service.bammWebUrl(wo), 'http://app02-ao-plt:82/workorder/detail/700203549');
+    });
+
     test('BammService.buildFilterPayload sends the full filter key list BAMM expects', () {
       // Port of ~/repos/BAMM/app/bamm/views.py:170-266 - a filter block
       // missing any of these is the reason filters were silently ignored.

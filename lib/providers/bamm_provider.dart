@@ -202,6 +202,12 @@ class BammNotifier extends StateNotifier<BammState> {
   Timer? _autoPollTimer;
   Timer? _debounceTimer;
 
+  /// Direct access to the underlying service (e.g. for
+  /// `BammService.bammWebUrl` from the report screen) - mirrors
+  /// `BammService.lookups`/`.assetTree`'s "expose the live client, don't
+  /// wrap it" pattern.
+  BammService get service => _service;
+
   /// Monotonically increasing id for [refreshWorkOrders] - every list query
   /// (search debounce, filter setters, sort, pull-to-refresh, poll button)
   /// funnels through that one method, so a single guard here is enough to
