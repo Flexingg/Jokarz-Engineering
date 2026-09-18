@@ -20,6 +20,7 @@ import '../ui/screens/vendors_screen.dart';
 import '../ui/screens/machines_screen.dart';
 import '../ui/screens/machine_detail_screen.dart';
 import '../ui/screens/bamm_screen.dart';
+import '../ui/screens/bamm_batch_update_screen.dart';
 import '../ui/screens/day_schedule_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -166,6 +167,13 @@ final appRouter = GoRouter(
                   printedAtEpochMs: state.uri.queryParameters['t'],
                 ),
               ),
+              routes: [
+                GoRoute(
+                  path: 'batch',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const BammBatchUpdateScreen(),
+                ),
+              ],
             ),
           ],
         ),
