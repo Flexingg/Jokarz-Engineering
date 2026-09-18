@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import 'package:jokarz_engineering/models/bamm_models.dart';
 import 'package:jokarz_engineering/providers/bamm_provider.dart';
@@ -135,5 +136,77 @@ void main() {
     );
 
     expect(find.byKey(const Key('bamm_stale_warning')), findsNothing);
+  });
+
+  // The banner text itself is the safety feature - a scan that only checks
+  // for the warning KEY (as the three tests above do) would not notice if
+  // the print timestamp carried alongside the hash got dropped on the way
+  // from the deep link into the dialog. These pin the exact wording.
+  group('printed-at timestamp in the warning text', () {
+    final wrongHash = 'ffffffff';
+    const baseMessage = 'This sheet is out of date - BAMM has changed since it was printed.';
+
+    testWidgets('a mismatched hash with a printed-at timestamp includes the formatted print date', (tester) async {
+      final printedAt = DateTime(2026, 9, 17, 8, 30);
+      await _pump(
+        tester,
+        BammScreen(
+          targetWo: '${scannedWo.worId}',
+          snapshotHash: wrongHash,
+          printedAtEpochMs: '${printedAt.millisecondsSinceEpoch}',
+        ),
+        notifier: _ColdStartNotifier(scannedWo),
+      );
+
+      final expectedDate = DateFormat('MMM d, y').format(printedAt);
+      expect(
+        find.text('This sheet is out of date (printed $expectedDate) - BAMM has changed since it was printed.'),
+        findsOneWidget,
+        reason: 'the print timestamp carried in the deep link must reach the warning text verbatim',
+      );
+    });
+
+    testWidgets('a mismatched hash with no printed-at timestamp warns without a date suffix', (tester) async {
+      await _pump(
+        tester,
+        BammScreen(targetWo: '${scannedWo.worId}', snapshotHash: wrongHash),
+        notifier: _ColdStartNotifier(scannedWo),
+      );
+
+      expect(find.text(baseMessage), findsOneWidget);
+    });
+
+    testWidgets('a mismatched hash with a malformed printed-at timestamp does not crash and does not fabricate a date',
+        (tester) async {
+      await _pump(
+        tester,
+        BammScreen(
+          targetWo: '${scannedWo.worId}',
+          snapshotHash: wrongHash,
+          printedAtEpochMs: 'not-a-number',
+        ),
+        notifier: _ColdStartNotifier(scannedWo),
+      );
+
+      expect(tester.takeException(), isNull, reason: 'a malformed t= value must never crash the screen');
+      expect(find.text(baseMessage), findsOneWidget,
+          reason: 'an unparsable timestamp should fall back to the plain warning, not a garbage date');
+    });
+
+    testWidgets('a matching hash with a printed-at timestamp still shows no banner', (tester) async {
+      final correctHash = bammSnapshotHash(scannedWo);
+      await _pump(
+        tester,
+        BammScreen(
+          targetWo: '${scannedWo.worId}',
+          snapshotHash: correctHash,
+          printedAtEpochMs: '${DateTime(2026, 9, 17).millisecondsSinceEpoch}',
+        ),
+        notifier: _ColdStartNotifier(scannedWo),
+      );
+
+      expect(find.byKey(const Key('bamm_stale_warning')), findsNothing,
+          reason: 'a printed-at timestamp alone must never trigger a warning - only a hash mismatch does');
+    });
   });
 }
