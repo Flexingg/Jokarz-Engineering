@@ -1400,6 +1400,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       vendorName: standalone.vendorName,
       vendorQuoteNumber: standalone.vendorQuoteNumber,
       trackingUrl: standalone.trackingUrl,
+      notes: standalone.notes,
       bammWorkOrders: standalone.bammWorkOrders,
     );
 

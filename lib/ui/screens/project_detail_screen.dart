@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../models/project.dart';
 import '../../models/task_item.dart';
 import '../../models/order_item.dart';
+import '../widgets/order_dialogs.dart';
 import '../../models/project_log.dart';
 import '../../providers/project_provider.dart';
 import '../../services/sync_service.dart';
@@ -124,7 +125,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               : 'No scheduled date';
 
           return AlertDialog(
-            title: Text(existingTask == null ? 'Add Project Task' : 'Edit Task'),
+            title: Text(existingTask == null ? 'Add Project Tasks' : 'Edit Task'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -132,9 +133,23 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 children: [
                   TextField(
                     controller: descCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Task Description *',
-                      hintText: 'e.g. Machine UHMW starwheel guide plates',
+                    autofocus: existingTask == null,
+                    textCapitalization: TextCapitalization.sentences,
+                    // New tasks: one per line, so a whole list can be added at once.
+                    minLines: existingTask == null ? 4 : 1,
+                    maxLines: existingTask == null ? 10 : 3,
+                    keyboardType: TextInputType.multiline,
+                    decoration: InputDecoration(
+                      labelText: existingTask == null
+                          ? 'Tasks * (one per line)'
+                          : 'Task Description *',
+                      hintText: existingTask == null
+                          ? 'Machine UHMW starwheel guide plates\nOrder bearings\nRe-align conveyor'
+                          : 'e.g. Machine UHMW starwheel guide plates',
+                      helperText: existingTask == null
+                          ? 'Paste or type several - each line becomes its own task'
+                          : null,
+                      alignLabelWithHint: true,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -234,19 +249,27 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                         .read(projectProvider.notifier)
                         .updateTask(widget.projectId, updated);
                   } else {
-                    final newTask = TaskItem(
-                      description: descCtrl.text.trim(),
-                      pendingReason: pendingCtrl.text.trim(),
-                      scheduledDate: scheduled,
-                      bammWorkOrders: taskBamms,
-                    );
-                    await ref
-                        .read(projectProvider.notifier)
-                        .addTask(widget.projectId, newTask);
+                    // One task per non-empty line; strip pasted list bullets/numbers.
+                    final lines = descCtrl.text
+                        .split(RegExp(r'[\r\n]+'))
+                        .map((l) => l.trim().replaceFirst(RegExp(r'^([-*\u2022]|\d+[.)])\s+'), '').trim())
+                        .where((l) => l.isNotEmpty)
+                        .toList();
+                    for (final line in lines) {
+                      await ref.read(projectProvider.notifier).addTask(
+                            widget.projectId,
+                            TaskItem(
+                              description: line,
+                              pendingReason: pendingCtrl.text.trim(),
+                              scheduledDate: scheduled,
+                              bammWorkOrders: List.of(taskBamms),
+                            ),
+                          );
+                    }
                   }
                   if (context.mounted) Navigator.pop(ctx);
                 },
-                child: const Text('Save Task'),
+                child: Text(existingTask == null ? 'Add Tasks' : 'Save Task'),
               ),
             ],
           );
@@ -256,184 +279,12 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   }
 
   void _showAddOrderDialog(BuildContext context, {OrderItem? existingOrder}) {
-    final prCtrl = TextEditingController(text: existingOrder?.pr ?? '');
-    final poCtrl = TextEditingController(text: existingOrder?.po ?? '');
-    final descCtrl = TextEditingController(text: existingOrder?.description ?? '');
-    final priceCtrl = TextEditingController(
-      text: existingOrder != null && existingOrder.price > 0
-          ? existingOrder.price.toStringAsFixed(2)
-          : '',
-    );
-    DateTime? eta = existingOrder?.eta;
-    List<String> orderBamms = List.from(existingOrder?.bammWorkOrders ?? []);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final etaText = eta != null
-              ? DateFormat('MMM d, y').format(eta!)
-              : 'Unscheduled ETA';
-
-          return AlertDialog(
-            title: Text(existingOrder == null ? 'Add Order / Requisition' : 'Edit Order'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: prCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'PR (Requisition)',
-                            hintText: 'PR-48901',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: poCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'PO (Purchase Order)',
-                            hintText: 'PO-9921004',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: descCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Order Description',
-                      hintText: 'e.g. SKF 6205 Bearings, UHMW Sheet',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: priceCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Price (\$ USD)',
-                      prefixIcon: Icon(Icons.attach_money_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.local_shipping_outlined, color: AppTheme.of(context).primary),
-                    title: Text(
-                      etaText,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: const Text('Estimated Delivery Date (ETA)', style: TextStyle(fontSize: 11)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (eta != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              setDialogState(() => eta = null);
-                            },
-                          ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: ctx,
-                              initialDate: eta ?? DateTime.now().add(const Duration(days: 3)),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2035),
-                            );
-                            if (picked != null) {
-                              setDialogState(() => eta = picked);
-                            }
-                          },
-                          child: const Text('Set ETA'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 20),
-                  // BAMM Work Orders
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Assigned BAMMs:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final res = await BammAssignDialog.show(context, currentSelections: orderBamms);
-                          if (res != null) {
-                            setDialogState(() => orderBamms = res);
-                          }
-                        },
-                        icon: const Icon(Icons.add, size: 14),
-                        label: const Text('Assign BAMM', style: TextStyle(fontSize: 11)),
-                      ),
-                    ],
-                  ),
-                  if (orderBamms.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: orderBamms.map((wo) => BammChip(
-                        worNo: wo,
-                        onDeleted: () => setDialogState(() => orderBamms.remove(wo)),
-                      )).toList(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
-                  if (existingOrder != null) {
-                    final updated = existingOrder.copyWith(
-                      pr: prCtrl.text.trim(),
-                      po: poCtrl.text.trim(),
-                      description: descCtrl.text.trim(),
-                      price: price,
-                      eta: eta,
-                      clearEta: eta == null,
-                      bammWorkOrders: orderBamms,
-                    );
-                    await ref
-                        .read(projectProvider.notifier)
-                        .updateOrder(widget.projectId, updated);
-                  } else {
-                    final newOrder = OrderItem(
-                      pr: prCtrl.text.trim(),
-                      po: poCtrl.text.trim(),
-                      description: descCtrl.text.trim(),
-                      price: price,
-                      eta: eta,
-                      bammWorkOrders: orderBamms,
-                    );
-                    await ref
-                        .read(projectProvider.notifier)
-                        .addOrder(widget.projectId, newOrder);
-                  }
-                  if (context.mounted) Navigator.pop(ctx);
-                },
-                child: const Text('Save Order'),
-              ),
-            ],
-          );
-        },
-      ),
+    showOrderDialog(
+      context,
+      ref,
+      existingOrder: existingOrder,
+      existingOrderProjectId: widget.projectId,
+      fixedProjectId: widget.projectId,
     );
   }
 
@@ -1294,7 +1145,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               ElevatedButton.icon(
                 onPressed: () => _showAddTaskDialog(context),
                 icon: const Icon(Icons.add_task_rounded, size: 16),
-                label: const Text('Add Task'),
+                label: const Text('Add Tasks'),
               ),
             ],
           ),

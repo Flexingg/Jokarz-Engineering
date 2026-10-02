@@ -17,6 +17,8 @@ extension AccentKeyX on AccentKey {
 
 /// A theme family the user can select. Drives the whole app's palette.
 enum AppThemeFamily {
+  bridgestoneDark('Bridgestone Dark'),
+  bridgestoneLight('Bridgestone Light'),
   vibesDark('Vibes Dark'),
   vibesLight('Vibes White'),
   materialLight('Material Light'),
@@ -135,7 +137,7 @@ class AppTheme {
 
   /// The active palette. Kept in sync with the selected theme so widgets that
   /// read tokens without a [BuildContext] (helper/color methods) still resolve.
-  static AppColors _active = _vibesDark;
+  static AppColors _active = _bridgestoneDark;
 
   /// The theme's semantic colors. Pass a [BuildContext] from a build method so
   /// the widget correctly rebuilds on theme change; helper methods may call it
@@ -220,8 +222,174 @@ class AppTheme {
     textSecondary: Color(0xFFA0A0A0),
   );
 
+  // Bridgestone Modern: red/black/white with rounded, soft surfaces. Red is the
+  // brand + action color; green/amber/coral keep their status meanings.
+  static const AppColors _bridgestoneDark = AppColors(
+    primary: Color(0xFFE4002B),
+    primaryBlue: Color(0xFF8A94A6),
+    amber: Color(0xFFFFB020),
+    emerald: Color(0xFF2ECC71),
+    coral: Color(0xFFFF6B6B),
+    background: Color(0xFF0D0D0F),
+    surface: Color(0xFF161618),
+    surfaceCard: Color(0xFF1C1C1F),
+    surfaceHighlight: Color(0xFF2A2A2E),
+    surfaceVariant: Color(0xFF26262A),
+    border: Color(0xFF34343A),
+    textPrimary: Color(0xFFF4F4F5),
+    textSecondary: Color(0xFFA1A1AA),
+  );
+
+  static const AppColors _bridgestoneLight = AppColors(
+    primary: Color(0xFFE4002B),
+    primaryBlue: Color(0xFF52525B),
+    amber: Color(0xFFD97706),
+    emerald: Color(0xFF16A34A),
+    coral: Color(0xFFDC2626),
+    background: Color(0xFFF5F5F6),
+    surface: Color(0xFFFFFFFF),
+    surfaceCard: Color(0xFFFFFFFF),
+    surfaceHighlight: Color(0xFFEDEDEF),
+    surfaceVariant: Color(0xFFE9E9EC),
+    border: Color(0xFFDADADF),
+    textPrimary: Color(0xFF111113),
+    textSecondary: Color(0xFF63636B),
+  );
+
+  static ThemeData _buildBridgestone(AppColors c, Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: bridgestoneRed,
+      brightness: brightness,
+    ).copyWith(
+      primary: bridgestoneRed,
+      onPrimary: Colors.white,
+      surface: c.surface,
+      onSurface: c.textPrimary,
+      outline: c.border,
+      error: c.coral,
+    );
+    final base = _buildTheme(
+      brightness: brightness,
+      colors: c,
+      colorScheme: scheme,
+      radius: radiusSm,
+    );
+    _active = c;
+    final btnShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm));
+    return base.copyWith(
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: c.surface,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: c.textPrimary,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+          fontSize: 20,
+        ),
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          side: BorderSide(color: c.border),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bridgestoneRed,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: btnShape,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: bridgestoneRed,
+          foregroundColor: Colors.white,
+          shape: btnShape,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: c.textPrimary,
+          side: BorderSide(color: c.border, width: 1.4),
+          shape: btnShape,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: isDark ? Colors.white : bridgestoneRed,
+          shape: btnShape,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: bridgestoneRed,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: c.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
+        titleTextStyle: TextStyle(
+            color: c.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: c.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLg)),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? Colors.white : c.textSecondary),
+        trackColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? bridgestoneRed : c.surfaceHighlight),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? bridgestoneRed : Colors.transparent),
+        checkColor: const WidgetStatePropertyAll(Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        side: BorderSide(color: c.textSecondary, width: 1.5),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: bridgestoneRed,
+        unselectedLabelColor: c.textSecondary,
+        indicatorColor: bridgestoneRed,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: isDark ? c.surfaceHighlight : const Color(0xFF18181B),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm)),
+      ),
+    );
+  }
+
+  static ThemeData get bridgestoneDarkTheme =>
+      _buildBridgestone(_bridgestoneDark, Brightness.dark);
+  static ThemeData get bridgestoneLightTheme =>
+      _buildBridgestone(_bridgestoneLight, Brightness.light);
+
   static ThemeData themeFor(AppThemeFamily family) {
     switch (family) {
+      case AppThemeFamily.bridgestoneDark:
+        return bridgestoneDarkTheme;
+      case AppThemeFamily.bridgestoneLight:
+        return bridgestoneLightTheme;
       case AppThemeFamily.vibesDark:
         return vibesDarkTheme;
       case AppThemeFamily.vibesLight:

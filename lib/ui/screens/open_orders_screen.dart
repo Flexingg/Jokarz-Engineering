@@ -12,7 +12,6 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/order_dialogs.dart';
 import '../widgets/bamm_chip.dart';
-import '../widgets/bamm_assign_dialog.dart';
 
 /// Unified view of a purchase order that is either attached to a project or
 /// standalone/unlinked.
@@ -101,190 +100,13 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   }
 
   void _showEditOrderDialog(BuildContext context, _OrderEntry entry) {
-    final projectId = entry.project!.id;
-    final order = entry.order!;
-    final prCtrl = TextEditingController(text: order.pr);
-    final poCtrl = TextEditingController(text: order.po);
-    final descCtrl = TextEditingController(text: order.description);
-    final quoteCtrl = TextEditingController(text: order.vendorQuoteNumber);
-    final trackingCtrl = TextEditingController(text: order.trackingUrl);
-    final priceCtrl =
-        TextEditingController(text: order.price > 0 ? order.price.toStringAsFixed(2) : '');
-    String? selectedVendorId = order.vendorId;
-    String selectedVendorName = order.vendorName;
-    DateTime? eta = order.eta;
-    bool delivered = order.delivered;
-    List<String> bammWorkOrders = List.from(order.bammWorkOrders);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final vendors = ref.read(projectProvider).vendors;
-          final etaText = eta != null ? DateFormat('MMM d, y').format(eta!) : 'No ETA Date';
-          return AlertDialog(
-            title: const Text('Edit Purchase Order'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Part / Material Description *')),
-                  const SizedBox(height: 12),
-                  if (vendors.isNotEmpty) ...[
-                    DropdownButtonFormField<String>(
-                      value: vendors.any((v) => v.id == selectedVendorId) ? selectedVendorId : null,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Vendor / Supplier',
-                        prefixIcon: Icon(Icons.storefront_rounded, size: 18),
-                      ),
-                      items: [
-                        const DropdownMenuItem(value: null, child: Text('None / Unspecified')),
-                        ...vendors.map((v) => DropdownMenuItem(
-                              value: v.id,
-                              child: Text(v.name),
-                            )),
-                      ],
-                      onChanged: (val) {
-                        setDialogState(() {
-                          selectedVendorId = val;
-                          final v = vendors.where((vend) => vend.id == val).firstOrNull;
-                          selectedVendorName = v?.name ?? '';
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  Row(children: [
-                    Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR (Requisition)'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO Number'))),
-                  ]),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price / Cost (\$)', prefixText: '\$ '))),
-                    const SizedBox(width: 10),
-                    Expanded(child: TextField(controller: quoteCtrl, decoration: const InputDecoration(labelText: 'Quote #'))),
-                  ]),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: trackingCtrl,
-                    keyboardType: TextInputType.url,
-                    decoration: const InputDecoration(
-                      labelText: 'Tracking Link / URL',
-                      prefixIcon: Icon(Icons.track_changes_rounded, size: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.calendar_today_rounded, color: AppTheme.of(context).primary),
-                    title: Text(etaText, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Estimated Delivery (ETA)', style: TextStyle(fontSize: 11)),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (eta != null)
-                        IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => setDialogState(() => eta = null)),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final picked = await showDatePicker(context: ctx, initialDate: eta ?? DateTime.now().add(const Duration(days: 3)), firstDate: DateTime(2020), lastDate: DateTime(2035));
-                          if (picked != null) setDialogState(() => eta = picked);
-                        },
-                        child: const Text('Set ETA'),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.build_circle_rounded, size: 16, color: AppTheme.primaryBlue),
-                      const SizedBox(width: 6),
-                      Text(
-                        'BAMM Work Orders',
-                        style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final selected = await showDialog<List<String>>(
-                            context: ctx,
-                            builder: (c) => BammAssignDialog(
-                              initialSelected: bammWorkOrders,
-                              title: 'Assign BAMM to Order',
-                            ),
-                          );
-                          if (selected != null) {
-                            setDialogState(() {
-                              bammWorkOrders = selected;
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.add_link_rounded, size: 16),
-                        label: const Text('Assign BAMM'),
-                      ),
-                    ],
-                  ),
-                  if (bammWorkOrders.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 8),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: bammWorkOrders.map((wo) {
-                          return BammChip(
-                            workOrderNo: wo,
-                            onDeleted: () {
-                              setDialogState(() {
-                                bammWorkOrders = bammWorkOrders.where((w) => w != wo).toList();
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Marked as Delivered', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Part has arrived at plant/crib', style: TextStyle(fontSize: 11)),
-                    value: delivered,
-                    activeColor: AppTheme.of(context).emerald,
-                    onChanged: (val) { if (val != null) setDialogState(() => delivered = val); },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: () async {
-                  final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
-                  final updated = order.copyWith(
-                    pr: prCtrl.text.trim(),
-                    po: poCtrl.text.trim(),
-                    description: descCtrl.text.trim(),
-                    price: price,
-                    eta: eta,
-                    clearEta: eta == null,
-                    delivered: delivered,
-                    vendorId: selectedVendorId,
-                    clearVendorId: selectedVendorId == null,
-                    vendorName: selectedVendorName,
-                    vendorQuoteNumber: quoteCtrl.text.trim(),
-                    trackingUrl: trackingCtrl.text.trim(),
-                    bammWorkOrders: bammWorkOrders,
-                  );
-                  await ref.read(projectProvider.notifier).updateOrder(projectId, updated);
-                  if (context.mounted) Navigator.pop(ctx);
-                },
-                child: const Text('Update Order'),
-              ),
-            ],
-          );
-        },
-      ),
+    showOrderDialog(
+      context,
+      ref,
+      existingOrder: entry.order!,
+      existingOrderProjectId: entry.project!.id,
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +293,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                   ElevatedButton.icon(
                     onPressed: () => _showAddStandaloneOrderDialog(context),
                     icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
-                    label: const Text('Unlinked Order'),
+                    label: const Text('Add Order'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.of(context).amber,
                       foregroundColor: Colors.black87,
@@ -540,7 +362,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     const Text('No Orders Found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(_filterTab == 4
-                        ? 'Tap + Unlinked Order to add a purchase order not yet tied to a project.'
+                        ? 'Tap + Add Order to add a purchase order not yet tied to a project.'
                         : 'No orders match this filter.',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 12, color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
@@ -560,7 +382,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           : FloatingActionButton.extended(
               onPressed: () => _showAddStandaloneOrderDialog(context),
               icon: const Icon(Icons.add_shopping_cart_rounded),
-              label: const Text('Unlinked Order'),
+              label: const Text('Add Order'),
               backgroundColor: AppTheme.of(context).amber,
               foregroundColor: Colors.black87,
             ),
@@ -761,16 +583,29 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           ),
           const SizedBox(width: 8),
 
-          // Stores Badge
+          // Stores badge / quick toggle (works for linked + unlinked orders)
           SizedBox(
-            width: 90,
+            width: 100,
             child: e.addToStores
-                ? (e.storeRequestNumber.isNotEmpty
-                    ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.of(context).emerald, fontSize: 9)
-                    : e.storeRequested
-                        ? ExpressiveBadge(label: 'Stores: Req', color: AppTheme.of(context).amber, fontSize: 9)
-                        : ExpressiveBadge(label: 'Stores: Pend', color: AppTheme.of(context).amber, fontSize: 9))
-                : const SizedBox.shrink(),
+                ? InkWell(
+                    onTap: () => _toggleStores(e, notifier, false),
+                    child: e.storeRequestNumber.isNotEmpty
+                        ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.of(context).emerald, fontSize: 9)
+                        : e.storeRequested
+                            ? ExpressiveBadge(label: 'Stores: Req', color: AppTheme.of(context).amber, fontSize: 9)
+                            : ExpressiveBadge(label: 'Stores: Pend', color: AppTheme.of(context).amber, fontSize: 9),
+                  )
+                : TextButton.icon(
+                    onPressed: () => _toggleStores(e, notifier, true),
+                    icon: const Icon(Icons.warehouse_outlined, size: 13),
+                    label: const Text('Stores', style: TextStyle(fontSize: 10)),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: Colors.grey,
+                    ),
+                  ),
           ),
           const SizedBox(width: 8),
 
@@ -951,6 +786,14 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
     );
   }
 
+  void _toggleStores(_OrderEntry e, dynamic notifier, bool value) {
+    if (e.isStandalone) {
+      notifier.setStandaloneOrderAddToStores(e.standalone!.id, value);
+    } else {
+      notifier.setOrderAddToStores(e.project!.id, e.order!.id, value);
+    }
+  }
+
   Widget _buildStoresSection(_OrderEntry e, dynamic notifier) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Divider(height: 16),
@@ -1036,117 +879,13 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   }
 
   void _showAddStandaloneOrderDialog(BuildContext context) {
-    showStandaloneOrderDialog(context, ref, onAdded: () {
-      if (mounted) setState(() => _filterTab = 4);
+    showOrderDialog(context, ref, onAdded: () {
+      if (mounted) setState(() => _filterTab = 2);
     });
   }
 
   void _showEditStandaloneOrderDialog(BuildContext context, StandaloneOrder o) {
-    final descCtrl = TextEditingController(text: o.description);
-    final prCtrl = TextEditingController(text: o.pr);
-    final poCtrl = TextEditingController(text: o.po);
-    final priceCtrl = TextEditingController(text: o.price > 0 ? o.price.toStringAsFixed(2) : '');
-    final notesCtrl = TextEditingController(text: o.notes);
-    DateTime? eta = o.eta;
-    List<String> bammWorkOrders = List.from(o.bammWorkOrders);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
-        return AlertDialog(
-          title: const Text('Edit Unlinked Order'),
-          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description *')),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: TextField(controller: prCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PR #'))),
-              const SizedBox(width: 10),
-              Expanded(child: TextField(controller: poCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PO #'))),
-            ]),
-            const SizedBox(height: 10),
-            TextField(controller: priceCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price (\$)', prefixText: '\$ ')),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(eta != null ? 'ETA: ${DateFormat('MMM d, y').format(eta!)}' : 'No ETA', style: const TextStyle(fontSize: 13)),
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (eta != null) IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => setDialogState(() => eta = null)),
-                ElevatedButton(
-                  onPressed: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: eta ?? DateTime.now().add(const Duration(days: 3)), firstDate: DateTime(2020), lastDate: DateTime(2035));
-                    if (picked != null) setDialogState(() => eta = picked);
-                  },
-                  child: const Text('Pick ETA'),
-                ),
-              ]),
-            ),
-            TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: 'Notes'), maxLines: 2),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.build_circle_rounded, size: 16, color: AppTheme.primaryBlue),
-                const SizedBox(width: 6),
-                Text(
-                  'BAMM Work Orders',
-                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () async {
-                    final selected = await showDialog<List<String>>(
-                      context: ctx,
-                      builder: (c) => BammAssignDialog(
-                        initialSelected: bammWorkOrders,
-                        title: 'Assign BAMM to Order',
-                      ),
-                    );
-                    if (selected != null) {
-                      setDialogState(() {
-                        bammWorkOrders = selected;
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.add_link_rounded, size: 16),
-                  label: const Text('Assign BAMM'),
-                ),
-              ],
-            ),
-            if (bammWorkOrders.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: bammWorkOrders.map((wo) {
-                    return BammChip(
-                      workOrderNo: wo,
-                      onDeleted: () {
-                        setDialogState(() {
-                          bammWorkOrders = bammWorkOrders.where((w) => w != wo).toList();
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-          ])),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(projectProvider.notifier).updateStandaloneOrder(o.copyWith(
-                  description: descCtrl.text.trim(), pr: prCtrl.text.trim(), po: poCtrl.text.trim(),
-                  price: double.tryParse(priceCtrl.text) ?? 0.0, eta: eta, clearEta: eta == null, notes: notesCtrl.text.trim(),
-                  bammWorkOrders: bammWorkOrders,
-                ));
-                Navigator.pop(ctx);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      }),
-    );
+    showOrderDialog(context, ref, existingStandalone: o);
   }
 
   /// Type-ahead attach dialog: matches projects as you type and shows a card list.
