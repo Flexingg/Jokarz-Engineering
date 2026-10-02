@@ -45,9 +45,41 @@ class DayScheduleScreen extends ConsumerWidget {
         children: [
           _SummaryBar(summaryLine: summary.summaryLine, cascadeEnabled: timeBlockState.cascadeEnabled),
           Expanded(
-            child: dayBlocks.isEmpty
-                ? const Center(child: Text('No blocks scheduled today - drag a task in below'))
-                : _Timeline(blocks: dayBlocks, timeFmt: _timeFmt),
+            // The whole timeline area accepts drops (gaps between blocks are
+            // more specific targets inside it). A drop anywhere else lands in
+            // the next free slot, so a drag never just snaps back.
+            child: DragTarget<String>(
+              onAcceptWithDetails: (details) =>
+                  _scheduleTaskById(ref, details.data, _nextFreeSlot(dayBlocks, today)),
+              builder: (context, candidateData, rejectedData) {
+                final hovering = candidateData.isNotEmpty;
+                return Container(
+                  key: const Key('timeline_drop_zone'),
+                  decoration: BoxDecoration(
+                    color: hovering ? Colors.green.withValues(alpha: 0.08) : null,
+                    border: hovering ? Border.all(color: Colors.green, width: 2) : null,
+                  ),
+                  child: dayBlocks.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.event_available_rounded,
+                                  size: 48, color: hovering ? Colors.green : Colors.grey),
+                              const SizedBox(height: 8),
+                              Text(
+                                hovering
+                                    ? 'Drop to schedule'
+                                    : 'No blocks scheduled today - drag a task in from below',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _Timeline(blocks: dayBlocks, timeFmt: _timeFmt, today: today),
+                );
+              },
+            ),
           ),
           _Tray(entries: tray, dayBlocks: dayBlocks, today: today),
         ],
@@ -85,10 +117,20 @@ class _SummaryBar extends ConsumerWidget {
   }
 }
 
+/// First sensible start for a task dropped without naming a slot: right after
+/// the last block today, or the next quarter hour when the day is empty.
+DateTime _nextFreeSlot(List<TimeBlock> dayBlocks, DateTime now) {
+  if (dayBlocks.isNotEmpty) return dayBlocks.last.end;
+  final rounded = DateTime(now.year, now.month, now.day, now.hour, (now.minute ~/ 15) * 15)
+      .add(const Duration(minutes: 15));
+  return rounded;
+}
+
 class _Timeline extends StatelessWidget {
   final List<TimeBlock> blocks;
   final DateFormat timeFmt;
-  const _Timeline({required this.blocks, required this.timeFmt});
+  final DateTime today;
+  const _Timeline({required this.blocks, required this.timeFmt, required this.today});
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +143,14 @@ class _Timeline extends StatelessWidget {
         children.add(_GapStrip(gapStart: block.end, minutes: gapMinutes, index: i));
       }
     }
+    // Open slot after the last block: tap or drop to add to the end of the day.
+    children.add(_GapStrip(
+      gapStart: _nextFreeSlot(blocks, today),
+      minutes: 30,
+      index: blocks.length - 1,
+      label: 'Add to end of day - tap or drop a task here',
+      key: const Key('gap_end'),
+    ));
     return ListView(padding: const EdgeInsets.all(12), children: children);
   }
 }
@@ -109,7 +159,8 @@ class _GapStrip extends ConsumerWidget {
   final DateTime gapStart;
   final int minutes;
   final int index;
-  const _GapStrip({required this.gapStart, required this.minutes, required this.index});
+  final String? label;
+  const _GapStrip({super.key, required this.gapStart, required this.minutes, required this.index, this.label});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -118,7 +169,7 @@ class _GapStrip extends ConsumerWidget {
       onAcceptWithDetails: (details) => _scheduleTaskById(ref, details.data, gapStart),
       builder: (context, candidateData, rejectedData) {
         return InkWell(
-          key: Key('gap_$index'),
+          key: label != null ? null : Key('gap_$index'),
           onTap: () => _openTrayPickerForSlot(context, ref, gapStart),
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 4),
@@ -129,7 +180,7 @@ class _GapStrip extends ConsumerWidget {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid, width: 1),
             ),
-            child: Text('$minutes min free - tap to schedule', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            child: Text(label ?? '$minutes min free - tap to schedule', style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ),
         );
       },

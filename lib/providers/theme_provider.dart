@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 
-/// The user-selected app-wide theme family (Vibes Dark/White, Material
+/// The user-selected app-wide theme family (Bridgestone Dark/Light, Vibes Dark/White, Material
 /// Light/Dark, Bridgestone Brutalist).
 final themeProvider =
     StateNotifierProvider<ThemeNotifier, AppThemeFamily>((ref) {
@@ -9,7 +9,7 @@ final themeProvider =
 });
 
 class ThemeNotifier extends StateNotifier<AppThemeFamily> {
-  ThemeNotifier() : super(AppThemeFamily.vibesDark);
+  ThemeNotifier() : super(AppThemeFamily.bridgestoneDark);
 
   void setTheme(AppThemeFamily family) {
     state = family;

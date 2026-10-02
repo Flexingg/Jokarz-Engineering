@@ -18,6 +18,7 @@ class OrderItem {
   final String vendorName;
   final String vendorQuoteNumber;
   final String trackingUrl;
+  final String notes;
   /// Assigned BAMM Work Order numbers (e.g. ['185586'])
   final List<String> bammWorkOrders;
 
@@ -36,6 +37,7 @@ class OrderItem {
     this.vendorName = '',
     this.vendorQuoteNumber = '',
     this.trackingUrl = '',
+    this.notes = '',
     List<String>? bammWorkOrders,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         bammWorkOrders = bammWorkOrders ?? [];
@@ -56,6 +58,7 @@ class OrderItem {
     String? vendorName,
     String? vendorQuoteNumber,
     String? trackingUrl,
+    String? notes,
     List<String>? bammWorkOrders,
   }) {
     return OrderItem(
@@ -74,6 +77,7 @@ class OrderItem {
       vendorName: vendorName ?? this.vendorName,
       vendorQuoteNumber: vendorQuoteNumber ?? this.vendorQuoteNumber,
       trackingUrl: trackingUrl ?? this.trackingUrl,
+      notes: notes ?? this.notes,
       bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
     );
   }
@@ -94,6 +98,7 @@ class OrderItem {
       'vendorName': vendorName,
       'vendorQuoteNumber': vendorQuoteNumber,
       'trackingUrl': trackingUrl,
+      'notes': notes,
       'bammWorkOrders': bammWorkOrders,
     };
   }
@@ -114,6 +119,7 @@ class OrderItem {
       vendorName: json['vendorName'] as String? ?? '',
       vendorQuoteNumber: json['vendorQuoteNumber'] as String? ?? '',
       trackingUrl: json['trackingUrl'] as String? ?? '',
+      notes: json['notes'] as String? ?? '',
       bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
