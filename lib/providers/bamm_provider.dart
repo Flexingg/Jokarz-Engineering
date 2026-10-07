@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bamm_models.dart';
 import '../services/bamm_adapter.dart' show resolveWorkOrderLabels;
 import '../services/bamm_service.dart';
+import '../services/app_logger.dart';
 
 final bammServiceProvider = Provider<BammService>((ref) {
   return BammService();
@@ -289,7 +289,7 @@ class BammNotifier extends StateNotifier<BammState> {
         execLookups: execs,
       );
     } catch (e) {
-      debugPrint('Error loading BAMM lookups: $e');
+      log.error('bamm', 'Error loading BAMM lookups: $e');
     }
   }
 

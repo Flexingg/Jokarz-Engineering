@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/project.dart';
 import '../models/voice_note.dart';
@@ -13,8 +12,16 @@ import '../models/vendor.dart';
 import '../models/project_template.dart';
 import '../models/time_block.dart';
 import '../models/slip_log_entry.dart';
+import 'app_logger.dart';
 
 class StorageService {
+  /// [docsDir] overrides where data files live (tests point this at a temp dir).
+  StorageService({Future<Directory> Function()? docsDir})
+      : _docsDirOverride = docsDir;
+
+  final Future<Directory> Function()? _docsDirOverride;
+  Future<Directory> _docs() => (_docsDirOverride ?? getApplicationDocumentsDirectory)();
+
   static const String _downtimesFile = 'jokarz_downtimes.json';
   static const String _dataFile = 'jokarz_engineering_data.json';
 
@@ -32,112 +39,97 @@ class StorageService {
   }
 
   Future<File> _getFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_dataFile');
   }
 
+  Map<String, dynamic> _blankDataMap() {
+    final d = _generateBlankData();
+    return {
+      'projects': d.projects,
+      'voiceNotes': d.voiceNotes,
+      'filaments': d.filaments,
+      'standaloneOrders': d.standaloneOrders,
+      'inboxItems': d.inboxItems,
+      'vendors': d.vendors,
+      'customTemplates': d.customTemplates,
+      'snoozedProjects': d.snoozedProjects,
+    };
+  }
+
+  /// Parses the main data document. Throws on malformed content so callers can
+  /// fall back to the last-good backup instead of silently starting blank.
+  Map<String, dynamic> parseData(String content) {
+    final jsonMap = jsonDecode(content) as Map<String, dynamic>;
+
+    List<T> list<T>(String key, T Function(Map<String, dynamic>) f) =>
+        (jsonMap[key] as List<dynamic>?)
+            ?.map((e) => f(e as Map<String, dynamic>))
+            .toList() ??
+        <T>[];
+
+    return {
+      'projects': list('projects', Project.fromJson),
+      'voiceNotes': list('voiceNotes', VoiceNote.fromJson),
+      'filaments': FilamentProfile.defaultProfiles,
+      'standaloneOrders': list('standaloneOrders', StandaloneOrder.fromJson),
+      'inboxItems': list('inboxItems', InboxItem.fromJson),
+      'vendors': list('vendors', Vendor.fromJson),
+      'customTemplates': list('customTemplates', ProjectTemplate.fromJson),
+      'snoozedProjects': (jsonMap['snoozedProjects'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v.toString())) ??
+          <String, String>{},
+    };
+  }
+
   Future<Map<String, dynamic>> loadData() async {
+    File? file;
     try {
-      final file = await _getFile();
+      file = await _getFile();
       if (!await file.exists()) {
-        final initialData = _generateBlankData();
+        final blank = _blankDataMap();
         await saveData(
-          projects: initialData.projects,
-          voiceNotes: initialData.voiceNotes,
-          customFilaments: initialData.filaments,
-          standaloneOrders: initialData.standaloneOrders,
-          inboxItems: initialData.inboxItems,
-          vendors: initialData.vendors,
-          customTemplates: initialData.customTemplates,
-          snoozedProjects: initialData.snoozedProjects,
+          projects: blank['projects'] as List<Project>,
+          voiceNotes: blank['voiceNotes'] as List<VoiceNote>,
+          customFilaments: blank['filaments'] as List<FilamentProfile>,
         );
-        return {
-          'projects': initialData.projects,
-          'voiceNotes': initialData.voiceNotes,
-          'filaments': initialData.filaments,
-          'standaloneOrders': initialData.standaloneOrders,
-          'inboxItems': initialData.inboxItems,
-          'vendors': initialData.vendors,
-          'customTemplates': initialData.customTemplates,
-          'snoozedProjects': initialData.snoozedProjects,
-        };
+        return blank;
       }
 
       final content = await file.readAsString();
-      if (content.trim().isEmpty) {
-        final initialData = _generateBlankData();
-        return {
-          'projects': initialData.projects,
-          'voiceNotes': initialData.voiceNotes,
-          'filaments': initialData.filaments,
-          'standaloneOrders': initialData.standaloneOrders,
-          'inboxItems': initialData.inboxItems,
-          'vendors': initialData.vendors,
-          'customTemplates': initialData.customTemplates,
-          'snoozedProjects': initialData.snoozedProjects,
-        };
-      }
-
-      final jsonMap = jsonDecode(content) as Map<String, dynamic>;
-
-      final projects = (jsonMap['projects'] as List<dynamic>?)
-              ?.map((e) => Project.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final voiceNotes = (jsonMap['voiceNotes'] as List<dynamic>?)
-              ?.map((e) => VoiceNote.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final standaloneOrders = (jsonMap['standaloneOrders'] as List<dynamic>?)
-              ?.map((e) => StandaloneOrder.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final inboxItems = (jsonMap['inboxItems'] as List<dynamic>?)
-              ?.map((e) => InboxItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final vendors = (jsonMap['vendors'] as List<dynamic>?)
-              ?.map((e) => Vendor.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final customTemplates = (jsonMap['customTemplates'] as List<dynamic>?)
-              ?.map((e) => ProjectTemplate.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-
-      final snoozedProjects = (jsonMap['snoozedProjects'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v.toString())) ??
-          <String, String>{};
-
-      return {
-        'projects': projects,
-        'voiceNotes': voiceNotes,
-        'filaments': FilamentProfile.defaultProfiles,
-        'standaloneOrders': standaloneOrders,
-        'inboxItems': inboxItems,
-        'vendors': vendors,
-        'customTemplates': customTemplates,
-        'snoozedProjects': snoozedProjects,
-      };
+      if (content.trim().isEmpty) return _blankDataMap();
+      return parseData(content);
     } catch (e, stack) {
-      debugPrint('Error loading storage data: $e\n$stack');
-      final initialData = _generateBlankData();
-      return {
-        'projects': initialData.projects,
-        'voiceNotes': initialData.voiceNotes,
-        'filaments': initialData.filaments,
-        'standaloneOrders': initialData.standaloneOrders,
-        'inboxItems': initialData.inboxItems,
-        'vendors': initialData.vendors,
-        'customTemplates': initialData.customTemplates,
-        'snoozedProjects': initialData.snoozedProjects,
-      };
+      log.error('storage', 'Main data file failed to load', e, stack);
+      return _recoverFromCorruption(file);
     }
+  }
+
+  /// The live data file could not be parsed. Never fall through to a blank
+  /// state without first preserving the bad file (the next save would
+  /// otherwise overwrite the user's only copy) and trying the last-good
+  /// `.bak` written before every save.
+  Future<Map<String, dynamic>> _recoverFromCorruption(File? file) async {
+    if (file == null) return _blankDataMap();
+    try {
+      if (await file.exists()) {
+        final quarantine = File(
+            '${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+        await file.rename(quarantine.path);
+        log.warn('storage', 'Quarantined unreadable data file',
+            quarantine.path);
+      }
+      final bak = File('${file.path}.bak');
+      if (await bak.exists()) {
+        final restored = parseData(await bak.readAsString());
+        await bak.copy(file.path);
+        log.warn('storage', 'Restored data from last-good backup');
+        return restored;
+      }
+    } catch (e, stack) {
+      log.error('storage', 'Backup recovery failed', e, stack);
+    }
+    return _blankDataMap();
   }
 
   Future<void> clearAllData() async {
@@ -151,7 +143,7 @@ class StorageService {
   static const String _bindingsFile = 'jokarz_keybindings.json';
 
   Future<File> _getBindingsFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_bindingsFile');
   }
 
@@ -164,7 +156,7 @@ class StorageService {
       final jsonMap = jsonDecode(content) as Map<String, dynamic>;
       return jsonMap.map((k, v) => MapEntry(k, v.toString()));
     } catch (e) {
-      debugPrint('Error loading keybindings: $e');
+      log.error('storage', 'Error loading keybindings', e);
       return {};
     }
   }
@@ -174,7 +166,7 @@ class StorageService {
       final file = await _getBindingsFile();
       await _atomicWrite(file, jsonEncode(bindings));
     } catch (e) {
-      debugPrint('Error saving keybindings: $e');
+      log.error('storage', 'Error saving keybindings', e);
     }
   }
 
@@ -182,7 +174,7 @@ class StorageService {
   static const String _reportFile = 'jokarz_report_config.json';
 
   Future<File> _getReportFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_reportFile');
   }
 
@@ -191,7 +183,8 @@ class StorageService {
       final file = await _getReportFile();
       if (!await file.exists()) return null;
       return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      log.warn('storage', 'Failed to read file; using defaults', e);
       return null;
     }
   }
@@ -201,7 +194,7 @@ class StorageService {
       final file = await _getReportFile();
       await _atomicWrite(file, jsonEncode(data));
     } catch (e) {
-      debugPrint('Error saving report settings: $e');
+      log.error('storage', 'Error saving report settings', e);
     }
   }
 
@@ -209,7 +202,7 @@ class StorageService {
   static const String _bammReportFile = 'jokarz_bamm_report_templates.json';
 
   Future<File> _getBammReportFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_bammReportFile');
   }
 
@@ -218,7 +211,8 @@ class StorageService {
       final file = await _getBammReportFile();
       if (!await file.exists()) return null;
       return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      log.warn('storage', 'Failed to read file; using defaults', e);
       return null;
     }
   }
@@ -228,7 +222,7 @@ class StorageService {
       final file = await _getBammReportFile();
       await _atomicWrite(file, jsonEncode(data));
     } catch (e) {
-      debugPrint('Error saving BAMM report templates: $e');
+      log.error('storage', 'Error saving BAMM report templates', e);
     }
   }
 
@@ -236,12 +230,12 @@ class StorageService {
   static const String _activityFile = 'jokarz_activity_log.json';
 
   Future<File> _getActivityFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_activityFile');
   }
 
   Future<File> _getDowntimesFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_downtimesFile');
   }
 
@@ -253,7 +247,8 @@ class StorageService {
       return list
           .map((e) => ActivityLog.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      log.warn('storage', 'Failed to read file; using defaults', e);
       return [];
     }
   }
@@ -264,7 +259,7 @@ class StorageService {
       await _atomicWrite(
           file, jsonEncode(logs.map((l) => l.toJson()).toList()));
     } catch (e) {
-      debugPrint('Error saving activity log: $e');
+      log.error('storage', 'Error saving activity log', e);
     }
   }
 
@@ -276,7 +271,8 @@ class StorageService {
       return list
           .map((e) => DowntimeEvent.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      log.warn('storage', 'Failed to read file; using defaults', e);
       return [];
     }
   }
@@ -287,7 +283,7 @@ class StorageService {
       await _atomicWrite(
           file, jsonEncode(downtimes.map((l) => l.toJson()).toList()));
     } catch (e) {
-      debugPrint('Error saving downtimes: $e');
+      log.error('storage', 'Error saving downtimes', e);
     }
   }
 
@@ -314,9 +310,17 @@ class StorageService {
         'customTemplates': customTemplates.map((e) => e.toJson()).toList(),
         'snoozedProjects': snoozedProjects,
       };
+      // Keep the previous good copy so a bad write/parse can be rolled back.
+      if (await file.exists()) {
+        try {
+          await file.copy('${file.path}.bak');
+        } catch (e) {
+          log.warn('storage', 'Could not refresh .bak', e);
+        }
+      }
       await _atomicWrite(file, jsonEncode(data));
-    } catch (e) {
-      debugPrint('Error saving storage data: $e');
+    } catch (e, stack) {
+      log.error('storage', 'Error saving storage data', e, stack);
     }
   }
 
@@ -326,17 +330,17 @@ class StorageService {
   static const String _scheduleSettingsFile = 'jokarz_schedule_settings.json';
 
   Future<File> _getTimeBlocksFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_timeBlocksFile');
   }
 
   Future<File> _getSlipLogFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_slipLogFile');
   }
 
   Future<File> _getScheduleSettingsFile() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _docs();
     return File('${dir.path}/$_scheduleSettingsFile');
   }
 
@@ -349,7 +353,7 @@ class StorageService {
       final list = jsonDecode(content) as List;
       return list.map((e) => TimeBlock.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
-      debugPrint('Error loading time blocks: $e');
+      log.error('storage', 'Error loading time blocks', e);
       return [];
     }
   }
@@ -359,7 +363,7 @@ class StorageService {
       final file = await _getTimeBlocksFile();
       await _atomicWrite(file, jsonEncode(blocks.map((b) => b.toJson()).toList()));
     } catch (e) {
-      debugPrint('Error saving time blocks: $e');
+      log.error('storage', 'Error saving time blocks', e);
     }
   }
 
@@ -372,7 +376,7 @@ class StorageService {
       final list = jsonDecode(content) as List;
       return list.map((e) => SlipLogEntry.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
-      debugPrint('Error loading slip log: $e');
+      log.error('storage', 'Error loading slip log', e);
       return [];
     }
   }
@@ -382,7 +386,7 @@ class StorageService {
       final file = await _getSlipLogFile();
       await _atomicWrite(file, jsonEncode(entries.map((e) => e.toJson()).toList()));
     } catch (e) {
-      debugPrint('Error saving slip log: $e');
+      log.error('storage', 'Error saving slip log', e);
     }
   }
 
@@ -397,7 +401,8 @@ class StorageService {
       if (content.trim().isEmpty) return true;
       final json = jsonDecode(content) as Map<String, dynamic>;
       return json['cascadeEnabled'] as bool? ?? true;
-    } catch (_) {
+    } catch (e) {
+      log.warn('storage', 'Failed to read file; using defaults', e);
       return true;
     }
   }
@@ -407,7 +412,7 @@ class StorageService {
       final file = await _getScheduleSettingsFile();
       await _atomicWrite(file, jsonEncode({'cascadeEnabled': enabled}));
     } catch (e) {
-      debugPrint('Error saving schedule settings: $e');
+      log.error('storage', 'Error saving schedule settings', e);
     }
   }
 

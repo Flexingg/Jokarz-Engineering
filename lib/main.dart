@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,15 +9,21 @@ import 'services/sync_service.dart';
 import 'router/app_router.dart';
 import 'services/deep_link_service.dart';
 import 'ui/widgets/app_shortcuts.dart';
+import 'services/app_logger.dart';
+import 'services/backup_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installGlobalErrorHandlers();
+  await log.attachFile();
+  // Daily rolling safety net; never blocks or throws.
+  unawaited(BackupService().runAutoBackupIfDue());
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase initialization note: $e');
+    log.info('startup', 'Firebase initialization note: $e');
   }
 
   runApp(
@@ -27,7 +34,7 @@ Future<void> main() async {
 
   // Fire-and-forget: a scanned report QR (or a cold start from one) routes
   // straight to that work order. Never blocks app startup.
-  initDeepLinks(appRouter).catchError((e) => debugPrint('Deep link init note: $e'));
+  initDeepLinks(appRouter).catchError((e) => log.error('startup', 'Deep link init note: $e'));
 }
 
 class JokarzEngineeringApp extends ConsumerWidget {

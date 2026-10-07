@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import './app_logger.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
@@ -108,7 +109,7 @@ class AuthService {
         return await auth.signInWithCredential(credential);
       }
     } catch (e) {
-      debugPrint('AuthService Google Sign-In Error: $e');
+      log.error('auth', 'AuthService Google Sign-In Error: $e');
       rethrow;
     }
   }
@@ -130,7 +131,7 @@ class AuthService {
       }
       await _auth?.signOut();
     } catch (e) {
-      debugPrint('AuthService Sign-Out Error: $e');
+      log.error('auth', 'AuthService Sign-Out Error: $e');
     }
   }
 
@@ -150,15 +151,15 @@ class AuthService {
   /// Launch URL in system browser on Windows with robust fallbacks
   Future<void> openBrowser(Uri url) async {
     final urlStr = url.toString();
-    debugPrint('AuthService: Launching browser for: $urlStr');
+    log.info('auth', 'AuthService: Launching browser for: $urlStr');
 
     // Method 1: cmd /c start "" "url"
     try {
       final res = await Process.run('cmd', ['/c', 'start', '', urlStr]);
-      debugPrint('AuthService: cmd /c start exitCode=${res.exitCode}');
+      log.info('auth', 'AuthService: cmd /c start exitCode=${res.exitCode}');
       if (res.exitCode == 0) return;
     } catch (e) {
-      debugPrint('AuthService: cmd error: $e');
+      log.error('auth', 'AuthService: cmd error: $e');
     }
 
     // Method 2: Flutter launchUrl
@@ -166,12 +167,12 @@ class AuthService {
       if (await canLaunchUrl(url)) {
         final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
         if (launched) {
-          debugPrint('AuthService: launchUrl succeeded');
+          log.info('auth', 'AuthService: launchUrl succeeded');
           return;
         }
       }
     } catch (e) {
-      debugPrint('AuthService: launchUrl failed: $e');
+      log.error('auth', 'AuthService: launchUrl failed: $e');
     }
 
     // Method 3: PowerShell Start-Process
@@ -183,9 +184,9 @@ class AuthService {
         'Start-Process',
         '"$urlStr"',
       ]);
-      debugPrint('AuthService: powershell Start-Process triggered');
+      log.info('auth', 'AuthService: powershell Start-Process triggered');
     } catch (e) {
-      debugPrint('AuthService: powershell error: $e');
+      log.error('auth', 'AuthService: powershell error: $e');
     }
   }
 
@@ -194,7 +195,7 @@ class AuthService {
     FirebaseAuth auth, {
     Function(Uri authUri)? onAuthUrl,
   }) async {
-    debugPrint('AuthService: Starting Windows Google Sign-In loopback flow...');
+    log.info('auth', 'AuthService: Starting Windows Google Sign-In loopback flow...');
     final codeVerifier = _randomString(64);
     final codeChallenge = _deriveCodeChallenge(codeVerifier);
 
@@ -206,7 +207,7 @@ class AuthService {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final port = server.port;
       final redirectUri = 'http://127.0.0.1:$port';
-      debugPrint('AuthService: Listening for OAuth callback on $redirectUri');
+      log.info('auth', 'AuthService: Listening for OAuth callback on $redirectUri');
 
       final authUri = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
         'client_id': _desktopClientId,
@@ -298,7 +299,7 @@ class AuthService {
             throw TimeoutException('Sign in timed out waiting for browser response.'),
       );
 
-      debugPrint('AuthService: Received auth code, exchanging for tokens...');
+      log.info('auth', 'AuthService: Received auth code, exchanging for tokens...');
 
       // Exchange authorization code for OAuth ID & Access tokens (RFC 7636 PKCE)
       final tokenResponse = await http.post(
@@ -314,7 +315,7 @@ class AuthService {
         },
       );
 
-      debugPrint('AuthService: Token response status ${tokenResponse.statusCode}');
+      log.info('auth', 'AuthService: Token response status ${tokenResponse.statusCode}');
       if (tokenResponse.statusCode != 200) {
         throw Exception('Failed to exchange auth code: ${tokenResponse.body}');
       }
@@ -332,7 +333,7 @@ class AuthService {
         accessToken: accessToken,
       );
 
-      debugPrint('AuthService: Signing into Firebase Auth with credential...');
+      log.info('auth', 'AuthService: Signing into Firebase Auth with credential...');
       return await auth.signInWithCredential(credential);
     } finally {
       await sub?.cancel();

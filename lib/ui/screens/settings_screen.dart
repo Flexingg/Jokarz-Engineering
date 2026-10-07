@@ -13,6 +13,9 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/auth_account_modal.dart';
+import '../widgets/backup_tiles.dart';
+import '../../providers/backup_provider.dart';
+import '../../services/app_logger.dart';
 import '../widgets/key_bind_recorder.dart';
 import '../adaptive/breakpoints.dart';
 import '../adaptive/dialog_to_sheet.dart';
@@ -292,6 +295,7 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 16),
+                const BackupTiles(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.file_upload_outlined, color: AppTheme.of(context).emerald),
@@ -394,6 +398,11 @@ class SettingsScreen extends ConsumerWidget {
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).coral),
                             onPressed: () async {
+                              try {
+                                await ref.read(backupServiceProvider).writeBackupFile(prefix: 'pre-clear');
+                              } catch (e) {
+                                log.warn('backup', 'Pre-clear snapshot failed', e);
+                              }
                               await ref.read(projectProvider.notifier).clearAllData();
                               if (context.mounted) {
                                 Navigator.pop(ctx);

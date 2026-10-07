@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
@@ -9,6 +8,7 @@ import '../models/inbox_item.dart';
 import '../models/vendor.dart';
 import '../models/project_template.dart';
 import '../providers/project_provider.dart';
+import 'app_logger.dart';
 import 'auth_service.dart';
 
 enum SyncStatus {
@@ -104,7 +104,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleProjectsSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore projects sync error: $e');
+        log.error('sync', 'Firestore projects sync error: $e');
         state = state.copyWith(
           status: SyncStatus.error,
           errorMessage: e.toString(),
@@ -123,7 +123,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleNotesSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore voice notes sync error: $e');
+        log.error('sync', 'Firestore voice notes sync error: $e');
       },
     );
 
@@ -138,7 +138,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleOrdersSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore standalone orders sync error: $e');
+        log.error('sync', 'Firestore standalone orders sync error: $e');
       },
     );
 
@@ -153,7 +153,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleInboxSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore inbox sync error: $e');
+        log.error('sync', 'Firestore inbox sync error: $e');
       },
     );
 
@@ -168,7 +168,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleVendorsSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore vendors sync error: $e');
+        log.error('sync', 'Firestore vendors sync error: $e');
       },
     );
 
@@ -183,7 +183,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         _handleTemplatesSnapshot(snapshot);
       },
       onError: (e) {
-        debugPrint('Firestore templates sync error: $e');
+        log.error('sync', 'Firestore templates sync error: $e');
       },
     );
 
@@ -242,7 +242,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         lastSyncedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('Error merging remote projects: $e');
+      log.error('sync', 'Error merging remote projects: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -290,7 +290,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         lastSyncedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('Error merging remote notes: $e');
+      log.error('sync', 'Error merging remote notes: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -322,7 +322,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         }
       }
     } catch (e) {
-      debugPrint('Error merging remote standalone orders: $e');
+      log.error('sync', 'Error merging remote standalone orders: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -354,7 +354,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         }
       }
     } catch (e) {
-      debugPrint('Error merging remote inbox items: $e');
+      log.error('sync', 'Error merging remote inbox items: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -386,7 +386,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         }
       }
     } catch (e) {
-      debugPrint('Error merging remote vendors: $e');
+      log.error('sync', 'Error merging remote vendors: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -418,7 +418,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         }
       }
     } catch (e) {
-      debugPrint('Error merging remote templates: $e');
+      log.error('sync', 'Error merging remote templates: $e');
     } finally {
       _isProcessingRemoteUpdate = false;
     }
@@ -444,7 +444,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         lastSyncedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('Error uploading project: $e');
+      log.error('sync', 'Error uploading project: $e');
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: e.toString(),
@@ -466,7 +466,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(projectId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud project: $e');
+      log.error('sync', 'Error deleting cloud project: $e');
     }
   }
 
@@ -484,7 +484,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(note.id)
           .set(note.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error uploading note: $e');
+      log.error('sync', 'Error uploading note: $e');
     }
   }
 
@@ -502,7 +502,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(noteId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud note: $e');
+      log.error('sync', 'Error deleting cloud note: $e');
     }
   }
 
@@ -520,7 +520,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(order.id)
           .set(order.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error uploading standalone order: $e');
+      log.error('sync', 'Error uploading standalone order: $e');
     }
   }
 
@@ -537,7 +537,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(orderId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud standalone order: $e');
+      log.error('sync', 'Error deleting cloud standalone order: $e');
     }
   }
 
@@ -555,7 +555,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(item.id)
           .set(item.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error uploading inbox item: $e');
+      log.error('sync', 'Error uploading inbox item: $e');
     }
   }
 
@@ -572,7 +572,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(itemId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud inbox item: $e');
+      log.error('sync', 'Error deleting cloud inbox item: $e');
     }
   }
 
@@ -590,7 +590,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(vendor.id)
           .set(vendor.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error uploading vendor: $e');
+      log.error('sync', 'Error uploading vendor: $e');
     }
   }
 
@@ -607,7 +607,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(vendorId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud vendor: $e');
+      log.error('sync', 'Error deleting cloud vendor: $e');
     }
   }
 
@@ -625,7 +625,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(template.id)
           .set(template.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error uploading template: $e');
+      log.error('sync', 'Error uploading template: $e');
     }
   }
 
@@ -642,7 +642,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
           .doc(templateId)
           .delete();
     } catch (e) {
-      debugPrint('Error deleting cloud template: $e');
+      log.error('sync', 'Error deleting cloud template: $e');
     }
   }
 
@@ -731,7 +731,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
         lastSyncedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('Error pushing local data to cloud: $e');
+      log.error('sync', 'Error pushing local data to cloud: $e');
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: e.toString(),

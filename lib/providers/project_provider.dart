@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../models/task_item.dart';
@@ -16,6 +15,7 @@ import '../models/project_template.dart';
 import '../models/machine_asset.dart';
 import '../models/search_result.dart';
 import '../services/storage_service.dart';
+import '../services/app_logger.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
@@ -1286,7 +1286,7 @@ class ProjectNotifier extends StateNotifier<EngineeringState> {
       await _persist();
       return true;
     } catch (e) {
-      debugPrint('JSON Import Error: $e');
+      log.error('project', 'JSON Import Error: $e');
       return false;
     }
   }
