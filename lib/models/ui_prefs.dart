@@ -17,6 +17,8 @@ const List<({String label, Color color})> graphiteAccents = [
   (label: 'Amber', color: Color(0xFFFFB020)),
   (label: 'Green', color: Color(0xFF2FD39A)),
   (label: 'Violet', color: Color(0xFFB48CFF)),
+  (label: 'Red', color: Color(0xFFF2545B)),
+  (label: 'Bridgestone red', color: Color(0xFFE4002B)),
 ];
 
 /// Everything about the app's look and layout that the user can change and

@@ -420,13 +420,17 @@ class AppTheme {
   /// On a light background an accent needs to be darker to stay readable as
   /// text and on white buttons.
   static Color _accentFor(Brightness b, Color accent) {
-    if (b == Brightness.dark) return accent;
-    // Darken until it reaches 4.6:1 against the white surface (HSL lightness
-    // alone is not enough for yellows and greens, which look light anyway).
+    // The accent is used both as a fill and as text/icon color on the surface,
+    // so nudge it (only as far as needed) until it reads at 4.5:1 there.
+    final surface =
+        b == Brightness.dark ? const Color(0xFF15181D) : Colors.white;
     var hsl = HSLColor.fromColor(accent);
     var c = accent;
-    while (_contrast(c, Colors.white) < 4.6 && hsl.lightness > 0.05) {
-      hsl = hsl.withLightness(hsl.lightness - 0.02);
+    final step = b == Brightness.dark ? 0.02 : -0.02;
+    while (_contrast(c, surface) < 4.6 &&
+        hsl.lightness > 0.05 &&
+        hsl.lightness < 0.95) {
+      hsl = hsl.withLightness((hsl.lightness + step).clamp(0.0, 1.0));
       c = hsl.toColor();
     }
     return c;
@@ -446,7 +450,8 @@ class AppTheme {
         primaryBlue: a,
         amber: const Color(0xFFF5B841),
         emerald: const Color(0xFF3DD68C),
-        coral: const Color(0xFFFF7A7A),
+        // Alerts are orange, not red, so a red accent never looks like an error.
+        coral: const Color(0xFFFF8C42),
         background: const Color(0xFF0D0F12),
         surface: const Color(0xFF15181D),
         surfaceCard: const Color(0xFF15181D),
@@ -462,7 +467,7 @@ class AppTheme {
       primaryBlue: a,
       amber: const Color(0xFF9A6200),
       emerald: const Color(0xFF13804F),
-      coral: const Color(0xFFC2363A),
+      coral: const Color(0xFFB8470A),
       background: const Color(0xFFF3F4F6),
       surface: const Color(0xFFFFFFFF),
       surfaceCard: const Color(0xFFFFFFFF),
@@ -477,7 +482,11 @@ class AppTheme {
   static ThemeData _buildGraphite(Brightness brightness, Color accent) {
     final c = _graphiteColors(brightness, accent);
     final isDark = brightness == Brightness.dark;
-    final ink = isDark ? const Color(0xFF081019) : Colors.white;
+    // Text on accent-filled buttons: whichever of dark/white reads better.
+    const darkInk = Color(0xFF081019);
+    final ink = _contrast(c.primary, darkInk) >= _contrast(c.primary, Colors.white)
+        ? darkInk
+        : Colors.white;
     final scheme = ColorScheme.fromSeed(seedColor: c.primary, brightness: brightness).copyWith(
       primary: c.primary,
       onPrimary: ink,

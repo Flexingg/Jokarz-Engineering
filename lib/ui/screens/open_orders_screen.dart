@@ -14,6 +14,7 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/order_dialogs.dart';
 import '../widgets/bamm_chip.dart';
+import '../widgets/sap_code_chip.dart';
 import '../motion/motion.dart';
 
 part 'open_orders_parts/dialogs.dart';
@@ -39,6 +40,7 @@ class _OrderEntry {
   bool get storeRequested => order?.storeRequested ?? standalone?.storeRequested ?? false;
   String get storeRequestNumber => order?.storeRequestNumber ?? standalone?.storeRequestNumber ?? '';
   String get vendorName => order?.vendorName ?? standalone?.vendorName ?? '';
+  String? get vendorId => order?.vendorId ?? standalone?.vendorId;
   String get vendorQuoteNumber => order?.vendorQuoteNumber ?? standalone?.vendorQuoteNumber ?? '';
   String get trackingUrl => order?.trackingUrl ?? standalone?.trackingUrl ?? '';
   String get projectTitle => project?.title ?? 'Unlinked';

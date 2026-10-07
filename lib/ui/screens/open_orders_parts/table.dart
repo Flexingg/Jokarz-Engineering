@@ -5,6 +5,21 @@ part of '../open_orders_screen.dart';
 extension _OpenOrdersTable on _OpenOrdersScreenState {
   static const double _tableMinWidth = 1020;
 
+  /// SAP vendor code for an order's vendor (matched by id, else by name).
+  String _sapCode(_OrderEntry e) {
+    final vendors = ref.read(projectProvider).vendors;
+    final v =
+        vendors.where((v) => v.id == e.vendorId).firstOrNull ??
+        (e.vendorName.isEmpty
+            ? null
+            : vendors
+                  .where(
+                    (v) => v.name.toLowerCase() == e.vendorName.toLowerCase(),
+                  )
+                  .firstOrNull);
+    return v?.accountNumber.trim() ?? '';
+  }
+
   List<_OrderEntry> _sortedEntries(List<_OrderEntry> list) {
     final key = _sortKey;
     if (key == null) return list;
@@ -256,16 +271,18 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   Widget _etaChip(DateTime eta) {
     final colors = AppTheme.of(context);
     final now = DateTime.now();
-    final days = DateTime(eta.year, eta.month, eta.day)
-        .difference(DateTime(now.year, now.month, now.day))
-        .inDays;
+    final days = DateTime(
+      eta.year,
+      eta.month,
+      eta.day,
+    ).difference(DateTime(now.year, now.month, now.day)).inDays;
     final (label, color) = days < 0
         ? ('Overdue ${-days}d', colors.coral)
         : days == 0
-            ? ('Due today', colors.amber)
-            : days <= 3
-                ? ('In ${days}d', colors.amber)
-                : ('In ${days}d', colors.primary);
+        ? ('Due today', colors.amber)
+        : days <= 3
+        ? ('In ${days}d', colors.amber)
+        : ('In ${days}d', colors.primary);
     return Tooltip(
       message: DateFormat('EEE, MMM d, y').format(eta),
       child: ExpressiveBadge(label: label, color: color, fontSize: 11),
@@ -437,11 +454,27 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
                 width: 150,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    e.vendorName.isEmpty ? '-' : e.vendorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.vendorName.isEmpty ? '-' : e.vendorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      if (_sapCode(e).isNotEmpty)
+                        Text(
+                          'SAP ${_sapCode(e)}',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -758,7 +791,33 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
               spacing: 12,
               runSpacing: 14,
               children: [
-                field('Vendor', e.vendorName),
+                SizedBox(
+                  width: 150,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Vendor',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        e.vendorName.isEmpty ? '-' : e.vendorName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_sapCode(e).isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        SapCodeChip(_sapCode(e), dense: true),
+                      ],
+                    ],
+                  ),
+                ),
                 field('Price', currency.format(e.price)),
                 field('Project', e.projectTitle),
                 field('PR', e.pr),

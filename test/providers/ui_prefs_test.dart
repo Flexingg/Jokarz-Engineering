@@ -111,6 +111,26 @@ void main() {
       }
     });
 
+    test('red is offered, twice (a nice red and Bridgestone red)', () {
+      final labels = graphiteAccents.map((a) => a.label).toList();
+      expect(labels, containsAll(['Red', 'Bridgestone red']));
+      expect(graphiteAccents.firstWhere((a) => a.label == 'Bridgestone red').color,
+          const Color(0xFFE4002B));
+    });
+
+    test('alert color is never the accent, never red, and stays readable', () {
+      for (final family in [AppThemeFamily.graphiteDark, AppThemeFamily.graphiteLight]) {
+        for (final a in graphiteAccents) {
+          final colors = AppTheme.themeFor(family, accent: a.color).extension<AppColors>()!;
+          final hue = HSLColor.fromColor(colors.coral).hue;
+          expect(hue, inInclusiveRange(15, 40), reason: 'orange family, ${family.name}');
+          expect(contrast(colors.coral, colors.surface), greaterThanOrEqualTo(4.5),
+              reason: 'alert text on surface, ${family.name}');
+          expect(colors.coral, isNot(colors.primary), reason: '${family.name} / ${a.label}');
+        }
+      }
+    });
+
     test('buttons have readable text on the accent fill', () {
       for (final family in [
         AppThemeFamily.graphiteDark,

@@ -9,6 +9,7 @@ import '../../models/vendor.dart';
 import '../../providers/project_provider.dart';
 import '../adaptive/master_detail.dart';
 import '../widgets/context_menu.dart';
+import '../widgets/sap_code_chip.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/vendor_dialog.dart';
 import '../widgets/expressive_badge.dart';
@@ -90,7 +91,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search vendors, contact reps, account #...',
+                  hintText: 'Search vendors, contact reps, SAP code...',
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _search.isNotEmpty
                       ? IconButton(
@@ -243,7 +244,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                 children: [
                                   if (v.accountNumber.isNotEmpty)
                                     ExpressiveBadge(
-                                      label: 'Acct: ${v.accountNumber}',
+                                      label: 'SAP ${v.accountNumber}',
                                       icon: Icons.badge_rounded,
                                       color: AppTheme.of(context).emerald,
                                       fontSize: 10,
@@ -426,14 +427,19 @@ class _VendorDetail extends ConsumerWidget {
             ),
           ],
         ),
-        if (v.contactPerson.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              v.contactPerson,
-              style: TextStyle(color: colors.textSecondary),
-            ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (v.contactPerson.isNotEmpty)
+                Text(v.contactPerson, style: TextStyle(color: colors.textSecondary)),
+              SapCodeChip(v.accountNumber),
+            ],
           ),
+        ),
         const SizedBox(height: 18),
         Row(
           children: [

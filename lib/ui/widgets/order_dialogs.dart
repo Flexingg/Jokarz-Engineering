@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/order_item.dart';
 import '../../models/standalone_order.dart';
+import '../../models/vendor.dart';
 import '../../providers/project_provider.dart';
 import '../../theme/app_theme.dart';
 import 'searchable_dropdown.dart';
 import 'bamm_chip.dart';
 import 'bamm_assign_dialog.dart';
+import 'sap_code_chip.dart';
 import 'vendor_dialog.dart';
+
+/// SAP vendor code of the vendor with [id], or '' when none is selected/known.
+String selectedVendorCode(List<Vendor> vendors, String? id) =>
+    vendors.where((v) => v.id == id).firstOrNull?.accountNumber.trim() ?? '';
 
 /// The single order dialog used everywhere (Open Orders, project Orders tab,
 /// universal search quick-add, keyboard shortcut) for BOTH project-attached
@@ -136,6 +142,13 @@ Future<void> showOrderDialog(
                                 },
                               ),
                       ),
+                      if (selectedVendorCode(vendors, selectedVendorId).isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: SapCodeChip(selectedVendorCode(vendors, selectedVendorId)),
+                        ),
+                      ],
                       const SizedBox(width: 8),
                       Tooltip(
                         message: 'Quick add vendor',

@@ -58,6 +58,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(AlertDialog), findsOneWidget, reason: 'the order dialog must survive the vendor pick');
     expect(find.text('Rexel'), findsWidgets, reason: 'the chosen vendor is shown');
+    expect(find.text('100234'), findsOneWidget, reason: 'SAP code appears beside the vendor field');
   });
 
   testWidgets('palette -> New order -> Set ETA keeps the dialog usable', (tester) async {
