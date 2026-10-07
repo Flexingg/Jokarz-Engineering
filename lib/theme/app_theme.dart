@@ -421,8 +421,21 @@ class AppTheme {
   /// text and on white buttons.
   static Color _accentFor(Brightness b, Color accent) {
     if (b == Brightness.dark) return accent;
-    final hsl = HSLColor.fromColor(accent);
-    return hsl.withLightness(hsl.lightness.clamp(0.0, 0.38)).toColor();
+    // Darken until it reaches 4.6:1 against the white surface (HSL lightness
+    // alone is not enough for yellows and greens, which look light anyway).
+    var hsl = HSLColor.fromColor(accent);
+    var c = accent;
+    while (_contrast(c, Colors.white) < 4.6 && hsl.lightness > 0.05) {
+      hsl = hsl.withLightness(hsl.lightness - 0.02);
+      c = hsl.toColor();
+    }
+    return c;
+  }
+
+  static double _contrast(Color a, Color b) {
+    final la = a.computeLuminance(), lb = b.computeLuminance();
+    final hi = la > lb ? la : lb, lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
   }
 
   static AppColors _graphiteColors(Brightness b, Color accent) {

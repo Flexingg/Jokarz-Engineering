@@ -55,7 +55,14 @@ class _Entry {
   final String? hint;
   final IconData icon;
   final void Function(WidgetRef ref) run;
-  const _Entry(this.kind, this.label, this.icon, this.run, {this.sub, this.hint});
+  const _Entry(
+    this.kind,
+    this.label,
+    this.icon,
+    this.run, {
+    this.sub,
+    this.hint,
+  });
 }
 
 class _CommandPalette extends ConsumerStatefulWidget {
@@ -83,8 +90,13 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
 
   List<_Entry> _commands(Map<String, String> keys) {
     String? hint(String id) => keys[id] == null ? null : prettyCombo(keys[id]!);
-    _Entry go(String label, IconData icon, String id) =>
-        _Entry('Go to', label, icon, (r) => dispatchAppAction(r, id), hint: hint(id));
+    _Entry go(String label, IconData icon, String id) => _Entry(
+      'Go to',
+      label,
+      icon,
+      (r) => dispatchAppAction(r, id),
+      hint: hint(id),
+    );
     return [
       go('Dashboard', Icons.dashboard_rounded, 'tabDashboard'),
       go('Projects', Icons.assignment_outlined, 'tabProjects'),
@@ -93,24 +105,77 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
       go('BAMM Orders', Icons.precision_manufacturing_rounded, 'tabBamm'),
       go('Notes', Icons.edit_note_rounded, 'tabNotes'),
       go('Settings', Icons.settings_rounded, 'tabSettings'),
-      _Entry('Create', 'New project', Icons.add_box_outlined,
-          (r) => dispatchAppAction(r, 'createProject'), hint: hint('createProject')),
-      _Entry('Create', 'New order', Icons.add_shopping_cart_rounded,
-          (r) => dispatchAppAction(r, 'createOrder'), hint: hint('createOrder')),
-      _Entry('Create', 'New note', Icons.note_add_outlined,
-          (r) => dispatchAppAction(r, 'createNote'), hint: hint('createNote')),
-      _Entry('Action', 'Toggle sidebar', Icons.view_sidebar_outlined,
-          (r) => dispatchAppAction(r, 'toggleSidebar'), hint: hint('toggleSidebar')),
-      _Entry('Action', 'Search everything (full page)', Icons.search_rounded,
-          (r) => dispatchAppAction(r, 'search'), hint: hint('search')),
-      _Entry('Action', 'Calendar', Icons.calendar_month_rounded,
-          (_) => appRouter.push('/calendar')),
-      _Entry('Action', 'Inbox', Icons.inbox_rounded, (_) => appRouter.push('/inbox')),
-      _Entry('Action', 'Machines', Icons.settings_applications_rounded,
-          (_) => appRouter.push('/machines')),
-      _Entry('Action', 'Vendors', Icons.storefront_outlined, (_) => appRouter.push('/vendors')),
-      _Entry('Action', 'Export or restore a backup', Icons.archive_outlined,
-          (_) => appRouter.go('/settings')),
+      _Entry(
+        'Create',
+        'New project',
+        Icons.add_box_outlined,
+        (r) => dispatchAppAction(r, 'createProject'),
+        hint: hint('createProject'),
+      ),
+      _Entry(
+        'Create',
+        'New order',
+        Icons.add_shopping_cart_rounded,
+        (r) => dispatchAppAction(r, 'createOrder'),
+        hint: hint('createOrder'),
+      ),
+      _Entry(
+        'Create',
+        'New note',
+        Icons.note_add_outlined,
+        (r) => dispatchAppAction(r, 'createNote'),
+        hint: hint('createNote'),
+      ),
+      _Entry(
+        'Action',
+        'Toggle sidebar',
+        Icons.view_sidebar_outlined,
+        (r) => dispatchAppAction(r, 'toggleSidebar'),
+        hint: hint('toggleSidebar'),
+      ),
+      _Entry(
+        'Action',
+        'Customize dashboard',
+        Icons.tune_rounded,
+        (r) => dispatchAppAction(r, 'customizeDashboard'),
+      ),
+      _Entry(
+        'Action',
+        'Search everything (full page)',
+        Icons.search_rounded,
+        (r) => dispatchAppAction(r, 'search'),
+        hint: hint('search'),
+      ),
+      _Entry(
+        'Action',
+        'Calendar',
+        Icons.calendar_month_rounded,
+        (_) => appRouter.push('/calendar'),
+      ),
+      _Entry(
+        'Action',
+        'Inbox',
+        Icons.inbox_rounded,
+        (_) => appRouter.push('/inbox'),
+      ),
+      _Entry(
+        'Action',
+        'Machines',
+        Icons.settings_applications_rounded,
+        (_) => appRouter.push('/machines'),
+      ),
+      _Entry(
+        'Action',
+        'Vendors',
+        Icons.storefront_outlined,
+        (_) => appRouter.push('/vendors'),
+      ),
+      _Entry(
+        'Action',
+        'Export or restore a backup',
+        Icons.archive_outlined,
+        (_) => appRouter.go('/settings'),
+      ),
     ];
   }
 
@@ -120,39 +185,74 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
     if (q.isEmpty) return commands.take(10).toList();
 
     final out = <_Entry>[
-      ...commands.where((c) => ('${c.kind} ${c.label}').toLowerCase().contains(q)),
+      ...commands.where(
+        (c) => ('${c.kind} ${c.label}').toLowerCase().contains(q),
+      ),
     ];
     final hits = ref.read(projectProvider).searchAll(_query);
     for (final h in hits.projects.take(5)) {
-      out.add(_Entry('Project', h.project.title, Icons.assignment_outlined,
+      out.add(
+        _Entry(
+          'Project',
+          h.project.title,
+          Icons.assignment_outlined,
           (_) => appRouter.push('/projects/${h.project.id}'),
-          sub: '#${h.project.priority}  ${h.project.machine}'.trim()));
+          sub: '#${h.project.priority}  ${h.project.machine}'.trim(),
+        ),
+      );
     }
     for (final h in hits.tasks.take(4)) {
-      out.add(_Entry('Task', h.task.description, Icons.check_circle_outline_rounded,
-          (_) => appRouter.push('/projects/${h.project.id}?taskId=${h.task.id}'),
-          sub: h.project.title));
+      out.add(
+        _Entry(
+          'Task',
+          h.task.description,
+          Icons.check_circle_outline_rounded,
+          (_) =>
+              appRouter.push('/projects/${h.project.id}?taskId=${h.task.id}'),
+          sub: h.project.title,
+        ),
+      );
     }
     for (final h in hits.orders.take(5)) {
-      out.add(_Entry('Order', h.description.isEmpty ? 'PO ${h.po}' : h.description,
-          Icons.local_shipping_outlined, (_) {
-        if (h.project != null) {
-          final o = h.id != null ? '&orderId=${h.id}' : '';
-          appRouter.push('/projects/${h.project!.id}?tab=orders$o');
-        } else {
-          appRouter.go(h.id != null ? '/orders?orderId=${h.id}' : '/orders');
-        }
-      }, sub: h.po.isEmpty ? h.projectTitle : 'PO ${h.po}  ·  ${h.projectTitle}'));
+      out.add(
+        _Entry(
+          'Order',
+          h.description.isEmpty ? 'PO ${h.po}' : h.description,
+          Icons.local_shipping_outlined,
+          (_) {
+            if (h.project != null) {
+              final o = h.id != null ? '&orderId=${h.id}' : '';
+              appRouter.push('/projects/${h.project!.id}?tab=orders$o');
+            } else {
+              appRouter.go(
+                h.id != null ? '/orders?orderId=${h.id}' : '/orders',
+              );
+            }
+          },
+          sub: h.po.isEmpty
+              ? h.projectTitle
+              : 'PO ${h.po}  ·  ${h.projectTitle}',
+        ),
+      );
     }
     for (final h in hits.notes.take(4)) {
-      out.add(_Entry('Note', h.title.isEmpty ? 'Untitled note' : h.title,
-          Icons.edit_note_rounded, (_) {
-        if (h.projectId != null && h.isProjectNote) {
-          appRouter.push('/projects/${h.projectId}?tab=logs');
-        } else {
-          appRouter.go(h.id != null ? '/voice-notes?noteId=${h.id}' : '/voice-notes');
-        }
-      }, sub: h.projectTitle));
+      out.add(
+        _Entry(
+          'Note',
+          h.title.isEmpty ? 'Untitled note' : h.title,
+          Icons.edit_note_rounded,
+          (_) {
+            if (h.projectId != null && h.isProjectNote) {
+              appRouter.push('/projects/${h.projectId}?tab=logs');
+            } else {
+              appRouter.go(
+                h.id != null ? '/voice-notes?noteId=${h.id}' : '/voice-notes',
+              );
+            }
+          },
+          sub: h.projectTitle,
+        ),
+      );
     }
     return out;
   }
@@ -170,10 +270,17 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
     if (!_scroll.hasClients) return;
     final viewport = _scroll.position.viewportDimension;
     if (top < _scroll.offset) {
-      _scroll.animateTo(top, duration: const Duration(milliseconds: 120), curve: Curves.easeOut);
+      _scroll.animateTo(
+        top,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      );
     } else if (top + _rowHeight > _scroll.offset + viewport) {
-      _scroll.animateTo(top + _rowHeight - viewport,
-          duration: const Duration(milliseconds: 120), curve: Curves.easeOut);
+      _scroll.animateTo(
+        top + _rowHeight - viewport,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -202,12 +309,15 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
               clipBehavior: Clip.antiAlias,
               child: CallbackShortcuts(
                 bindings: {
-                  const SingleActivator(LogicalKeyboardKey.arrowDown): () => _move(1, results.length),
-                  const SingleActivator(LogicalKeyboardKey.arrowUp): () => _move(-1, results.length),
+                  const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                      _move(1, results.length),
+                  const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                      _move(-1, results.length),
                   const SingleActivator(LogicalKeyboardKey.enter): () {
                     if (results.isNotEmpty) _run(results[index]);
                   },
-                  const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).pop(),
+                  const SingleActivator(LogicalKeyboardKey.escape): () =>
+                      Navigator.of(context).pop(),
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -216,7 +326,10 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                       padding: const EdgeInsets.fromLTRB(18, 6, 12, 6),
                       child: Row(
                         children: [
-                          Icon(Icons.search_rounded, color: colors.textSecondary),
+                          Icon(
+                            Icons.search_rounded,
+                            color: colors.textSecondary,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
@@ -230,7 +343,9 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
                                 focusedBorder: InputBorder.none,
-                                hintStyle: TextStyle(color: colors.textSecondary),
+                                hintStyle: TextStyle(
+                                  color: colors.textSecondary,
+                                ),
                               ),
                               onChanged: (v) => setState(() {
                                 _query = v;
@@ -244,12 +359,16 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                     ),
                     Divider(height: 1, color: colors.border),
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: _rowHeight * 8),
+                      constraints: const BoxConstraints(
+                        maxHeight: _rowHeight * 8,
+                      ),
                       child: results.isEmpty
                           ? Padding(
                               padding: const EdgeInsets.all(24),
-                              child: Text('Nothing matches "$_query".',
-                                  style: TextStyle(color: colors.textSecondary)),
+                              child: Text(
+                                'Nothing matches "$_query".',
+                                style: TextStyle(color: colors.textSecondary),
+                              ),
                             )
                           : ListView.builder(
                               controller: _scroll,
@@ -266,40 +385,65 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                                     borderRadius: BorderRadius.circular(10),
                                     onTap: () => _run(e),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: selected
-                                            ? colors.primary.withValues(alpha: 0.14)
+                                            ? colors.primary.withValues(
+                                                alpha: 0.14,
+                                              )
                                             : Colors.transparent,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(e.icon,
-                                              size: 20,
-                                              color: selected ? colors.primary : colors.textSecondary),
+                                          Icon(
+                                            e.icon,
+                                            size: 20,
+                                            color: selected
+                                                ? colors.primary
+                                                : colors.textSecondary,
+                                          ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Text(e.label,
+                                                Text(
+                                                  e.label,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                if (e.sub != null &&
+                                                    e.sub!.isNotEmpty)
+                                                  Text(
+                                                    e.sub!,
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                        fontSize: 14, fontWeight: FontWeight.w500)),
-                                                if (e.sub != null && e.sub!.isNotEmpty)
-                                                  Text(e.sub!,
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                          fontSize: 12, color: colors.textSecondary)),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          colors.textSecondary,
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          if (e.hint != null) _Kbd(e.hint!, colors) else _Tag(e.kind, colors),
+                                          if (e.hint != null)
+                                            _Kbd(e.hint!, colors)
+                                          else
+                                            _Tag(e.kind, colors),
                                         ],
                                       ),
                                     ),
@@ -310,16 +454,31 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                     ),
                     Divider(height: 1, color: colors.border),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
                           _Kbd('Up/Down', colors),
                           const SizedBox(width: 6),
-                          Text('move', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+                          Text(
+                            'move',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.textSecondary,
+                            ),
+                          ),
                           const SizedBox(width: 16),
                           _Kbd('Enter', colors),
                           const SizedBox(width: 6),
-                          Text('open', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+                          Text(
+                            'open',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -341,18 +500,21 @@ class _Kbd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: colors.surfaceHighlight,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: colors.border),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 11,
-                color: colors.textSecondary,
-                fontFeatures: const [FontFeature.tabularFigures()])),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: colors.surfaceHighlight,
+      borderRadius: BorderRadius.circular(5),
+      border: Border.all(color: colors.border),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 11,
+        color: colors.textSecondary,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    ),
+  );
 }
 
 class _Tag extends StatelessWidget {
@@ -362,11 +524,14 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(
-          color: colors.surfaceHighlight,
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Text(text, style: TextStyle(fontSize: 11, color: colors.textSecondary)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    decoration: BoxDecoration(
+      color: colors.surfaceHighlight,
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 11, color: colors.textSecondary),
+    ),
+  );
 }

@@ -51,24 +51,23 @@ class UiPrefs {
     bool? railCollapsed,
     List<String>? dashboardOrder,
     List<String>? dashboardHidden,
-  }) =>
-      UiPrefs(
-        themeName: themeName ?? this.themeName,
-        accentValue: accentValue ?? this.accentValue,
-        motion: motion ?? this.motion,
-        railCollapsed: railCollapsed ?? this.railCollapsed,
-        dashboardOrder: dashboardOrder ?? this.dashboardOrder,
-        dashboardHidden: dashboardHidden ?? this.dashboardHidden,
-      );
+  }) => UiPrefs(
+    themeName: themeName ?? this.themeName,
+    accentValue: accentValue ?? this.accentValue,
+    motion: motion ?? this.motion,
+    railCollapsed: railCollapsed ?? this.railCollapsed,
+    dashboardOrder: dashboardOrder ?? this.dashboardOrder,
+    dashboardHidden: dashboardHidden ?? this.dashboardHidden,
+  );
 
   Map<String, dynamic> toJson() => {
-        'themeName': themeName,
-        'accent': accentValue,
-        'motion': motion.name,
-        'railCollapsed': railCollapsed,
-        'dashboardOrder': dashboardOrder,
-        'dashboardHidden': dashboardHidden,
-      };
+    'themeName': themeName,
+    'accent': accentValue,
+    'motion': motion.name,
+    'railCollapsed': railCollapsed,
+    'dashboardOrder': dashboardOrder,
+    'dashboardHidden': dashboardHidden,
+  };
 
   factory UiPrefs.fromJson(Map<String, dynamic> json) {
     List<String> strings(Object? v) =>

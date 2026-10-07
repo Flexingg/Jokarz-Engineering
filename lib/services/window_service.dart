@@ -54,7 +54,12 @@ class WindowService with WindowListener {
       });
       windowManager.addListener(this);
     } catch (e, stack) {
-      log.error('window', 'Window setup failed; continuing with defaults', e, stack);
+      log.error(
+        'window',
+        'Window setup failed; continuing with defaults',
+        e,
+        stack,
+      );
     }
   }
 
@@ -83,7 +88,10 @@ class WindowService with WindowListener {
       final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
       final w = (j['w'] as num?)?.toDouble();
       final h = (j['h'] as num?)?.toDouble();
-      if (w == null || h == null || w < minimumSize.width || h < minimumSize.height) {
+      if (w == null ||
+          h == null ||
+          w < minimumSize.width ||
+          h < minimumSize.height) {
         return null;
       }
       final x = (j['x'] as num?)?.toDouble();

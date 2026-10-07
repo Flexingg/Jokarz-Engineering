@@ -6,8 +6,9 @@ import 'project_provider.dart' show storageServiceProvider;
 /// Persisted look-and-layout preferences. Starts from defaults and replaces
 /// itself with the saved copy as soon as it has loaded; every [update] is
 /// written straight back to disk.
-final uiPrefsProvider =
-    NotifierProvider<UiPrefsNotifier, UiPrefs>(UiPrefsNotifier.new);
+final uiPrefsProvider = NotifierProvider<UiPrefsNotifier, UiPrefs>(
+  UiPrefsNotifier.new,
+);
 
 class UiPrefsNotifier extends Notifier<UiPrefs> {
   StorageService get _storage => ref.read(storageServiceProvider);

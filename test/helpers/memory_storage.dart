@@ -15,25 +15,27 @@ import 'package:jokarz_engineering/services/storage_service.dart';
 class MemoryStorage extends StorageService {
   final List<Project> projects;
   final List<StandaloneOrder> orders;
+  final List<Vendor> vendors;
   UiPrefs prefs;
 
   MemoryStorage({
     this.projects = const [],
     this.orders = const [],
+    this.vendors = const [],
     this.prefs = const UiPrefs(),
   });
 
   @override
   Future<Map<String, dynamic>> loadData() async => {
-        'projects': [...projects],
-        'voiceNotes': <VoiceNote>[],
-        'filaments': <FilamentProfile>[],
-        'standaloneOrders': [...orders],
-        'inboxItems': <InboxItem>[],
-        'vendors': <Vendor>[],
-        'customTemplates': <ProjectTemplate>[],
-        'snoozedProjects': <String, String>{},
-      };
+    'projects': [...projects],
+    'voiceNotes': <VoiceNote>[],
+    'filaments': <FilamentProfile>[],
+    'standaloneOrders': [...orders],
+    'inboxItems': <InboxItem>[],
+    'vendors': [...vendors],
+    'customTemplates': <ProjectTemplate>[],
+    'snoozedProjects': <String, String>{},
+  };
 
   @override
   Future<void> saveData({

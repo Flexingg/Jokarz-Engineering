@@ -19,16 +19,17 @@ class Motion {
       Motion(disableAnimations ? MotionLevel.off : prefs);
 
   static Motion of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<MotionScope>()?.motion ?? standard;
+      context.dependOnInheritedWidgetOfExactType<MotionScope>()?.motion ??
+      standard;
 
   bool get enabled => level != MotionLevel.off;
 
   /// The overshooting curve for movement the user just triggered.
   Curve get spring => switch (level) {
-        MotionLevel.off => Curves.linear,
-        MotionLevel.subtle => const Cubic(0.3, 1.25, 0.6, 1),
-        MotionLevel.bouncy => const Cubic(0.34, 1.62, 0.5, 1),
-      };
+    MotionLevel.off => Curves.linear,
+    MotionLevel.subtle => const Cubic(0.3, 1.25, 0.6, 1),
+    MotionLevel.bouncy => const Cubic(0.34, 1.62, 0.5, 1),
+  };
 
   /// A non-overshooting curve for things leaving the screen.
   Curve get exit => Curves.easeOutCubic;
@@ -78,14 +79,50 @@ class SpringPageTransitionsBuilder extends PageTransitionsBuilder {
       return FadeTransition(opacity: animation, child: child);
     }
     return FadeTransition(
-      opacity: CurvedAnimation(parent: animation, curve: const Interval(0, 0.6, curve: Curves.easeOut)),
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0, 0.6, curve: Curves.easeOut),
+      ),
       child: AnimatedBuilder(
         animation: curved,
         builder: (context, child) => Transform.translate(
           offset: Offset(0, (1 - curved.value) * 24),
-          child: Transform.scale(scale: 0.985 + 0.015 * curved.value, child: child),
+          child: Transform.scale(
+            scale: 0.985 + 0.015 * curved.value,
+            child: child,
+          ),
         ),
         child: child,
+      ),
+    );
+  }
+}
+
+/// Plays a one-time rise-and-fade the first time it is built, delayed by
+/// [index] * 50 ms so a group of cards arrives one after another. Does nothing
+/// when motion is off.
+class StaggerIn extends StatelessWidget {
+  final int index;
+  final Widget child;
+  const StaggerIn({super.key, required this.index, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = Motion.of(context);
+    if (!motion.enabled) return child;
+    final delay = index.clamp(0, 8) * 50;
+    final total = motion.page.inMilliseconds + delay;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: total),
+      curve: Interval(delay / total, 1, curve: motion.spring),
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: (t * 2).clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset(0, (1 - t) * 18),
+          child: child,
+        ),
       ),
     );
   }

@@ -19,14 +19,21 @@ class AppMenuBar extends ConsumerWidget {
     final colors = AppTheme.of(context);
     final keys = ref.watch(keyBindingsProvider);
 
-    Widget item(String label, {String? action, VoidCallback? onTap, IconData? icon}) {
+    Widget item(
+      String label, {
+      String? action,
+      VoidCallback? onTap,
+      IconData? icon,
+    }) {
       final combo = action == null ? null : keys[action];
       return MenuItemButton(
         leadingIcon: icon == null ? null : Icon(icon, size: 18),
         trailingIcon: combo == null
             ? null
-            : Text(prettyCombo(combo),
-                style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+            : Text(
+                prettyCombo(combo),
+                style: TextStyle(fontSize: 12, color: colors.textSecondary),
+              ),
         onPressed: onTap ?? () => dispatchAppAction(ref, action!),
         child: Padding(
           padding: const EdgeInsets.only(right: 24),
@@ -53,23 +60,63 @@ class AppMenuBar extends ConsumerWidget {
             children: [
               SubmenuButton(
                 menuChildren: [
-                  item('New project', action: 'createProject', icon: Icons.add_box_outlined),
-                  item('New order', action: 'createOrder', icon: Icons.add_shopping_cart_rounded),
-                  item('New note', action: 'createNote', icon: Icons.note_add_outlined),
+                  item(
+                    'New project',
+                    action: 'createProject',
+                    icon: Icons.add_box_outlined,
+                  ),
+                  item(
+                    'New order',
+                    action: 'createOrder',
+                    icon: Icons.add_shopping_cart_rounded,
+                  ),
+                  item(
+                    'New note',
+                    action: 'createNote',
+                    icon: Icons.note_add_outlined,
+                  ),
                   const Divider(height: 8),
-                  item('Backup and restore...',
-                      icon: Icons.archive_outlined, onTap: () => appRouter.go('/settings')),
+                  item(
+                    'Backup and restore...',
+                    icon: Icons.archive_outlined,
+                    onTap: () => appRouter.go('/settings'),
+                  ),
                 ],
                 child: const Text('File'),
               ),
               SubmenuButton(
                 menuChildren: [
-                  item('Command palette', action: 'palette', icon: Icons.keyboard_command_key_rounded),
-                  item('Search everything', action: 'search', icon: Icons.search_rounded),
-                  item('Toggle sidebar', action: 'toggleSidebar', icon: Icons.view_sidebar_outlined),
+                  item(
+                    'Command palette',
+                    action: 'palette',
+                    icon: Icons.keyboard_command_key_rounded,
+                  ),
+                  item(
+                    'Search everything',
+                    action: 'search',
+                    icon: Icons.search_rounded,
+                  ),
+                  item(
+                    'Toggle sidebar',
+                    action: 'toggleSidebar',
+                    icon: Icons.view_sidebar_outlined,
+                  ),
+                  item(
+                    'Customize dashboard...',
+                    action: 'customizeDashboard',
+                    icon: Icons.tune_rounded,
+                  ),
                   const Divider(height: 8),
-                  item('Calendar', icon: Icons.calendar_month_rounded, onTap: () => appRouter.push('/calendar')),
-                  item('Inbox', icon: Icons.inbox_rounded, onTap: () => appRouter.push('/inbox')),
+                  item(
+                    'Calendar',
+                    icon: Icons.calendar_month_rounded,
+                    onTap: () => appRouter.push('/calendar'),
+                  ),
+                  item(
+                    'Inbox',
+                    icon: Icons.inbox_rounded,
+                    onTap: () => appRouter.push('/inbox'),
+                  ),
                 ],
                 child: const Text('View'),
               ),
@@ -87,15 +134,25 @@ class AppMenuBar extends ConsumerWidget {
               ),
               SubmenuButton(
                 menuChildren: [
-                  item('Keyboard shortcuts', icon: Icons.keyboard_alt_outlined,
-                      onTap: () => appRouter.go('/settings')),
-                  item('Diagnostics log', icon: Icons.bug_report_outlined, onTap: () {
-                    final ctx = appRootContext;
-                    if (ctx != null) {
-                      Navigator.of(ctx).push(
-                          MaterialPageRoute(builder: (_) => const DiagnosticsScreen()));
-                    }
-                  }),
+                  item(
+                    'Keyboard shortcuts',
+                    icon: Icons.keyboard_alt_outlined,
+                    onTap: () => appRouter.go('/settings'),
+                  ),
+                  item(
+                    'Diagnostics log',
+                    icon: Icons.bug_report_outlined,
+                    onTap: () {
+                      final ctx = appRootContext;
+                      if (ctx != null) {
+                        Navigator.of(ctx).push(
+                          MaterialPageRoute(
+                            builder: (_) => const DiagnosticsScreen(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
                 ],
                 child: const Text('Help'),
               ),

@@ -17,7 +17,9 @@ class AppShortcuts extends ConsumerWidget {
     final bindings = ref.watch(keyBindingsProvider);
 
     return Focus(
-      autofocus: false,
+      // Autofocus so shortcuts work from a cold start, before anything has been
+      // clicked; key events from focused descendants still bubble up here.
+      autofocus: true,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final combo = comboForEvent(event);

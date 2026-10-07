@@ -14,6 +14,7 @@ import '../../providers/project_provider.dart';
 import '../../services/sync_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
+import '../widgets/photo_drop_zone.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/template_dialogs.dart';
 import '../widgets/bamm_chip.dart';
@@ -137,7 +138,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     final isTerminal = project.isCompletedOrCancelled;
     final nextTask = project.nextPendingTask;
 
-    return Scaffold(
+    return PhotoDropZone(
+      projectId: widget.projectId,
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           project.title,
@@ -235,6 +238,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           ),
         ],
       ),
+    ),
     );
   }
 

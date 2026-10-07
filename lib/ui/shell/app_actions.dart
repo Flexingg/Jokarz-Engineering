@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../router/app_router.dart';
 import '../widgets/command_palette.dart';
+import '../widgets/dashboard_customizer.dart';
 import '../widgets/note_dialogs.dart';
 import '../widgets/order_dialogs.dart';
 
@@ -18,7 +19,13 @@ void dispatchAppAction(WidgetRef ref, String actionId) {
     case 'palette':
       showCommandPalette(ref);
     case 'toggleSidebar':
-      ref.read(uiPrefsProvider.notifier).update((p) => p.copyWith(railCollapsed: !p.railCollapsed));
+      ref
+          .read(uiPrefsProvider.notifier)
+          .update((p) => p.copyWith(railCollapsed: !p.railCollapsed));
+    case 'customizeDashboard':
+      router.go('/');
+      final ctx = appRootContext;
+      if (ctx != null) showDashboardCustomizer(ctx);
     case 'createNote':
       final ctx = appRootContext;
       if (ctx != null) showNewFieldNoteDialog(ctx, ref);
