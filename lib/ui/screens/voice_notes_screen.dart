@@ -59,7 +59,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   }
 
   void _showNewTextNoteDialog(BuildContext context) {
-    showNewFieldNoteDialog(context, ref);
+    showNewFieldNoteDialog(context);
   }
 
   Future<void> _pickPhotoNote(BuildContext context) async {

@@ -2,10 +2,7 @@ part of '../open_orders_screen.dart';
 
 extension _OpenOrdersDialogs on _OpenOrdersScreenState {
   void _showEditOrderDialog(BuildContext context, _OrderEntry entry) {
-    showOrderDialog(
-      context,
-      ref,
-      existingOrder: entry.order!,
+    showOrderDialog(context, existingOrder: entry.order!,
       existingOrderProjectId: entry.project!.id,
     );
   }
@@ -29,13 +26,13 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
   }
 
   void _showAddStandaloneOrderDialog(BuildContext context) {
-    showOrderDialog(context, ref, onAdded: () {
+    showOrderDialog(context, onAdded: () {
       if (mounted) _rebuild(() => _filterTab = 2);
     });
   }
 
   void _showEditStandaloneOrderDialog(BuildContext context, StandaloneOrder o) {
-    showOrderDialog(context, ref, existingStandalone: o);
+    showOrderDialog(context, existingStandalone: o);
   }
 
   /// Type-ahead attach dialog: matches projects as you type and shows a card list.

@@ -28,12 +28,12 @@ void dispatchAppAction(WidgetRef ref, String actionId) {
       if (ctx != null) showDashboardCustomizer(ctx);
     case 'createNote':
       final ctx = appRootContext;
-      if (ctx != null) showNewFieldNoteDialog(ctx, ref);
+      if (ctx != null) showNewFieldNoteDialog(ctx);
     case 'createProject':
       router.push('/projects/new');
     case 'createOrder':
       final ctx = appRootContext;
-      if (ctx != null) showStandaloneOrderDialog(ctx, ref);
+      if (ctx != null) showStandaloneOrderDialog(ctx);
     case 'tabDashboard':
       router.go('/');
     case 'tabProjects':

@@ -25,7 +25,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
   String? _selectedId;
 
   void _showAddEditVendorDialog(BuildContext context, [Vendor? existing]) {
-    showVendorDialog(context, ref, existing: existing);
+    showVendorDialog(context, existing: existing);
   }
 
   void _launchUrlHelper(String urlStr) async {

@@ -23,8 +23,7 @@ import 'vendor_dialog.dart';
 /// [prefillDescription] is populated from search text when launched from the
 /// search flow. [onAdded] fires after a successful *add*.
 Future<void> showOrderDialog(
-  BuildContext context,
-  WidgetRef ref, {
+  BuildContext context, {
   OrderItem? existingOrder,
   String? existingOrderProjectId,
   StandaloneOrder? existingStandalone,
@@ -32,6 +31,10 @@ Future<void> showOrderDialog(
   String prefillDescription = '',
   VoidCallback? onAdded,
 }) {
+  // Read through the app's container, not a widget's `ref`: callers such as the
+  // command palette close right after launching this dialog, which disposes
+  // their `ref` while the dialog (and its rebuilds) is still alive.
+  final container = ProviderScope.containerOf(context, listen: false);
   final isEdit = existingOrder != null || existingStandalone != null;
   final descCtrl = TextEditingController(
       text: existingOrder?.description ?? existingStandalone?.description ?? prefillDescription);
@@ -68,7 +71,7 @@ Future<void> showOrderDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {
-        final state = ref.read(projectProvider);
+        final state = container.read(projectProvider);
         final vendors = state.vendors;
         final projects = state.activeProjects;
         final colors = AppTheme.of(ctx);
@@ -138,7 +141,7 @@ Future<void> showOrderDialog(
                         message: 'Quick add vendor',
                         child: IconButton.filledTonal(
                           onPressed: () async {
-                            final created = await showVendorDialog(ctx, ref);
+                            final created = await showVendorDialog(ctx);
                             if (created != null) {
                               setDialogState(() {
                                 selectedVendorId = created.id;
@@ -317,7 +320,7 @@ Future<void> showOrderDialog(
               onPressed: () async {
                 final desc = descCtrl.text.trim();
                 if (desc.isEmpty) return;
-                final notifier = ref.read(projectProvider.notifier);
+                final notifier = container.read(projectProvider.notifier);
                 final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
                 final vendorId = vendors.any((v) => v.id == selectedVendorId) ? selectedVendorId : null;
                 final vendorName = vendorId == null ? '' : selectedVendorName;
@@ -415,9 +418,8 @@ Future<void> showOrderDialog(
 
 /// Back-compat entry point for the search quick-add and keyboard shortcut.
 Future<void> showStandaloneOrderDialog(
-  BuildContext context,
-  WidgetRef ref, {
+  BuildContext context, {
   String prefillDescription = '',
   VoidCallback? onAdded,
 }) =>
-    showOrderDialog(context, ref, prefillDescription: prefillDescription, onAdded: onAdded);
+    showOrderDialog(context, prefillDescription: prefillDescription, onAdded: onAdded);

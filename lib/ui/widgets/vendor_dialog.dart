@@ -6,7 +6,11 @@ import '../../providers/project_provider.dart';
 /// Shared add/edit vendor dialog. Returns the saved [Vendor] (or null if
 /// cancelled) so callers like the order dialog can select a freshly added
 /// vendor immediately.
-Future<Vendor?> showVendorDialog(BuildContext context, WidgetRef ref, {Vendor? existing, String prefillName = ''}) {
+Future<Vendor?> showVendorDialog(BuildContext context, {Vendor? existing, String prefillName = ''}) {
+  // Read through the app's container, not a widget's `ref`: callers such as the
+  // command palette close right after launching this dialog, which disposes
+  // their `ref` while the dialog (and its rebuilds) is still alive.
+  final container = ProviderScope.containerOf(context, listen: false);
   final nameCtrl = TextEditingController(text: existing?.name ?? prefillName);
   final contactCtrl = TextEditingController(text: existing?.contactPerson ?? '');
   final emailCtrl = TextEditingController(text: existing?.email ?? '');
@@ -22,7 +26,7 @@ Future<Vendor?> showVendorDialog(BuildContext context, WidgetRef ref, {Vendor? e
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {
         // Unique, non-empty types already used across vendors (for the dropdown).
-        final vendors = ref.read(projectProvider).vendors;
+        final vendors = container.read(projectProvider).vendors;
         final typeOptions = <String>{
           for (final v in vendors)
             if (v.type.trim().isNotEmpty) v.type.trim(),
@@ -158,7 +162,7 @@ Future<Vendor?> showVendorDialog(BuildContext context, WidgetRef ref, {Vendor? e
                     accountNumber: accountCtrl.text.trim(),
                     notes: notesCtrl.text.trim(),
                   );
-                  await ref.read(projectProvider.notifier).addVendor(v);
+                  await container.read(projectProvider.notifier).addVendor(v);
                   saved = v;
                 } else {
                   final updated = existing.copyWith(
@@ -170,7 +174,7 @@ Future<Vendor?> showVendorDialog(BuildContext context, WidgetRef ref, {Vendor? e
                     accountNumber: accountCtrl.text.trim(),
                     notes: notesCtrl.text.trim(),
                   );
-                  await ref.read(projectProvider.notifier).updateVendor(updated);
+                  await container.read(projectProvider.notifier).updateVendor(updated);
                   saved = updated;
                 }
                 if (ctx.mounted) Navigator.pop(ctx, saved);

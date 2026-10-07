@@ -22,7 +22,7 @@ Future<void> showCommandPalette(WidgetRef ref) async {
     barrierLabel: 'Close command palette',
     barrierColor: const Color(0x8C06080B),
     transitionDuration: motion.sheet,
-    pageBuilder: (context, _, __) => const _CommandPalette(),
+    pageBuilder: (context, _, __) => _CommandPalette(runRef: ref),
     transitionBuilder: (context, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -66,7 +66,10 @@ class _Entry {
 }
 
 class _CommandPalette extends ConsumerStatefulWidget {
-  const _CommandPalette();
+  /// The launcher's `ref`. Actions run after this palette has closed (and its
+  /// own `ref` is disposed), so they must use one that outlives it.
+  final WidgetRef runRef;
+  const _CommandPalette({required this.runRef});
 
   @override
   ConsumerState<_CommandPalette> createState() => _CommandPaletteState();
@@ -260,7 +263,8 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
   void _run(_Entry e) {
     Navigator.of(context).pop();
     // Let the dialog finish closing before navigating or opening another.
-    Future.microtask(() => e.run(ref));
+    final runRef = widget.runRef;
+    Future.microtask(() => e.run(runRef));
   }
 
   void _move(int delta, int count) {

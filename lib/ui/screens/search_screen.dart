@@ -45,17 +45,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _addNote() {
     if (_query.trim().isEmpty) return;
     _quickNoteCounter++;
-    showNewFieldNoteDialog(
-      context,
-      ref,
-      prefillTitle: 'Quick Note $_quickNoteCounter',
+    showNewFieldNoteDialog(context, prefillTitle: 'Quick Note $_quickNoteCounter',
       prefillContent: _query.trim(),
     );
   }
 
   void _addOrder() {
     if (_query.trim().isEmpty) return;
-    showStandaloneOrderDialog(context, ref, prefillDescription: _query.trim());
+    showStandaloneOrderDialog(context, prefillDescription: _query.trim());
   }
 
   void _openProject(Project p) => context.push('/projects/${p.id}');
