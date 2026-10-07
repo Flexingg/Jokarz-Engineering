@@ -32,7 +32,7 @@ class DiagnosticsScreen extends StatelessWidget {
             icon: const Icon(Icons.ios_share_rounded),
             onPressed: () => Share.share(
               log.exportText(),
-              subject: 'Jokarz Engineering diagnostics',
+              subject: 'AOR Engineering diagnostics',
             ),
           ),
           IconButton(

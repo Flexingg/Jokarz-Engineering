@@ -10,10 +10,10 @@ import '../../providers/project_provider.dart';
 import '../../providers/keybindings_provider.dart';
 import '../../services/auth_service.dart';
 import '../widgets/expressive_card.dart';
-import '../widgets/expressive_badge.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/auth_account_modal.dart';
 import '../widgets/appearance_controls.dart';
+import '../widgets/app_footer.dart';
 import '../widgets/backup_tiles.dart';
 import '../../providers/backup_provider.dart';
 import '../../services/app_logger.dart';
@@ -425,78 +425,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // About Application & Plant Engineering Suite
-          const Text(
-            'About Application',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          ExpressiveCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Engineered by Jonathan Randall (Flexingg / Randall Engineering).',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Tailored for plant floor mechanical engineers managing line maintenance, Kaizen improvements, CapEx machinery projects, downtime tasks, and open purchase orders with offline persistence and workshop mechanical diagnostics.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Bottom Branding Footer (Only location in app)
-          Center(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.of(context).primary, AppTheme.of(context).primaryBlue],
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  ),
-                  child: const Icon(
-                    Icons.precision_manufacturing_rounded,
-                    color: Colors.black87,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'BATO Engineering',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Randall Engineering Suite • v1.0.3 Release',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ExpressiveBadge(
-                  label: 'v1.0.3',
-                  color: AppTheme.of(context).emerald,
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+          const AppFooter(),
         ];
   }
 
