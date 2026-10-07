@@ -24,9 +24,9 @@ class MountedProject {
 /// Mounts a fresh [ProjectNotifier] over [storage] and disposes it with the
 /// test.
 MountedProject mountProject(StorageService storage) {
-  final container = ProviderContainer(overrides: [
-    storageServiceProvider.overrideWithValue(storage),
-  ]);
+  final container = ProviderContainer(
+    overrides: [storageServiceProvider.overrideWithValue(storage)],
+  );
   addTearDown(container.dispose);
   container.read(projectProvider); // runs build()
   return MountedProject(container);

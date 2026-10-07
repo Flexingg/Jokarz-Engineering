@@ -21,16 +21,19 @@ class DiagnosticsScreen extends StatelessWidget {
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: log.exportText()));
               if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('Log copied')));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Log copied')));
               }
             },
           ),
           IconButton(
             tooltip: 'Share log',
             icon: const Icon(Icons.ios_share_rounded),
-            onPressed: () => Share.share(log.exportText(),
-                subject: 'Jokarz Engineering diagnostics'),
+            onPressed: () => Share.share(
+              log.exportText(),
+              subject: 'Jokarz Engineering diagnostics',
+            ),
           ),
           IconButton(
             tooltip: 'Clear log',
@@ -58,23 +61,30 @@ class DiagnosticsScreen extends StatelessWidget {
                 LogLevel.info => colors.textSecondary,
               };
               return SelectableText.rich(
-                TextSpan(children: [
-                  TextSpan(
-                    text: '${e.time.toIso8601String().substring(11, 19)} '
-                        '${e.level.name.toUpperCase()} ${e.tag}\n',
-                    style: TextStyle(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text:
+                          '${e.time.toIso8601String().substring(11, 19)} '
+                          '${e.level.name.toUpperCase()} ${e.tag}\n',
+                      style: TextStyle(
                         color: color,
                         fontWeight: FontWeight.bold,
-                        fontSize: 11),
-                  ),
-                  TextSpan(
-                    text: e.message +
-                        (e.error != null ? '\n${e.error}' : '') +
-                        (e.stack != null ? '\n${e.stack}' : ''),
-                    style:
-                        const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                  ),
-                ]),
+                        fontSize: 11,
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                          e.message +
+                          (e.error != null ? '\n${e.error}' : '') +
+                          (e.stack != null ? '\n${e.stack}' : ''),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );

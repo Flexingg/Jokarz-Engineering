@@ -18,10 +18,10 @@ void main() {
   tearDown(() => docs.delete(recursive: true));
 
   Future<void> save(String title) => storage.saveData(
-        projects: [Project(id: 'p1', title: title)],
-        voiceNotes: const [],
-        customFilaments: FilamentProfile.defaultProfiles,
-      );
+    projects: [Project(id: 'p1', title: title)],
+    voiceNotes: const [],
+    customFilaments: FilamentProfile.defaultProfiles,
+  );
 
   test('a save keeps the previous good copy as .bak', () async {
     await save('first');
@@ -38,10 +38,9 @@ void main() {
     final data = await storage.loadData();
     expect((data['projects'] as List<Project>).single.title, 'first');
 
-    final quarantined = docs
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.contains('.corrupt-'));
+    final quarantined = docs.listSync().whereType<File>().where(
+      (f) => f.path.contains('.corrupt-'),
+    );
     expect(quarantined, hasLength(1));
     expect(await quarantined.single.readAsString(), '{ this is not json');
     // Live file is valid again.
@@ -52,10 +51,9 @@ void main() {
     await dataFile().writeAsString('garbage');
     final data = await storage.loadData();
     expect(data['projects'], isEmpty);
-    final preserved = docs
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.contains('.corrupt-'));
+    final preserved = docs.listSync().whereType<File>().where(
+      (f) => f.path.contains('.corrupt-'),
+    );
     expect(preserved, hasLength(1));
     expect(await preserved.single.readAsString(), 'garbage');
   });

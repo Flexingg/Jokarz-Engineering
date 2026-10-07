@@ -75,25 +75,35 @@ MergeOutcome<T> mergeByUpdatedAt<T>({
       byId[id] = r;
       replaced++;
       if (lastSyncedAt != null && lt.isAfter(lastSyncedAt)) {
-        conflicts.add(SyncConflict(
+        conflicts.add(
+          SyncConflict(
             collection: collection,
             id: id,
             localUpdatedAt: lt,
             remoteUpdatedAt: rt,
-            remoteWon: true));
+            remoteWon: true,
+          ),
+        );
       }
     } else if (lt.isAfter(rt) &&
         lastSyncedAt != null &&
         rt.isAfter(lastSyncedAt)) {
-      conflicts.add(SyncConflict(
+      conflicts.add(
+        SyncConflict(
           collection: collection,
           id: id,
           localUpdatedAt: lt,
           remoteUpdatedAt: rt,
-          remoteWon: false));
+          remoteWon: false,
+        ),
+      );
     }
   }
 
   return MergeOutcome<T>(
-      [for (final id in order) byId[id] as T], conflicts, added, replaced);
+    [for (final id in order) byId[id] as T],
+    conflicts,
+    added,
+    replaced,
+  );
 }

@@ -59,28 +59,37 @@ class EngineeringState {
         ..sort((a, b) => a.priority.compareTo(b.priority));
 
   List<Project> get terminalProjects =>
-      projects.where((p) => p.isCompletedOrCancelled).toList()
-        ..sort((a, b) => (b.completedAt ?? b.updatedAt).compareTo(a.completedAt ?? a.updatedAt));
+      projects.where((p) => p.isCompletedOrCancelled).toList()..sort(
+        (a, b) => (b.completedAt ?? b.updatedAt).compareTo(
+          a.completedAt ?? a.updatedAt,
+        ),
+      );
 
   List<Project> get sortedProjects => [...activeProjects, ...terminalProjects];
 
   List<Project> get filteredProjects {
     return sortedProjects.where((p) {
-      final matchesSearch = searchQuery.isEmpty ||
+      final matchesSearch =
+          searchQuery.isEmpty ||
           p.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
           p.description.toLowerCase().contains(searchQuery.toLowerCase()) ||
           p.machine.toLowerCase().contains(searchQuery.toLowerCase()) ||
           p.subAssembly.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          p.tags.any((t) => t.toLowerCase().contains(searchQuery.toLowerCase()));
+          p.tags.any(
+            (t) => t.toLowerCase().contains(searchQuery.toLowerCase()),
+          );
 
       final matchesCategory =
           selectedCategory == null || p.category == selectedCategory;
       final matchesPhase =
-          selectedPhase == null || p.phase.toLowerCase() == selectedPhase!.toLowerCase();
+          selectedPhase == null ||
+          p.phase.toLowerCase() == selectedPhase!.toLowerCase();
       // Multi-machine: match if any segment contains the filter value
-      final matchesMachine = selectedMachine == null ||
-          p.machineList.any((m) =>
-              m.toLowerCase().contains(selectedMachine!.toLowerCase())) ||
+      final matchesMachine =
+          selectedMachine == null ||
+          p.machineList.any(
+            (m) => m.toLowerCase().contains(selectedMachine!.toLowerCase()),
+          ) ||
           p.machine.toLowerCase().contains(selectedMachine!.toLowerCase());
 
       return matchesSearch && matchesCategory && matchesPhase && matchesMachine;
@@ -144,8 +153,7 @@ class EngineeringState {
       final days = p.daysSinceLastAction.toDouble();
       final score = days / p.priority.toDouble();
       return _ScoredProject(p, score);
-    }).toList()
-      ..sort((a, b) => b.score.compareTo(a.score));
+    }).toList()..sort((a, b) => b.score.compareTo(a.score));
     return scored.map((s) => s.project).toList();
   }
 
@@ -155,8 +163,10 @@ class EngineeringState {
 
   int get unprocessedInboxCount => unprocessedInboxItems.length;
 
-  List<ProjectTemplate> get allTemplates =>
-      [...ProjectTemplate.systemTemplates, ...customTemplates];
+  List<ProjectTemplate> get allTemplates => [
+    ...ProjectTemplate.systemTemplates,
+    ...customTemplates,
+  ];
 
   List<MachineAsset> get machineAssets {
     final machines = availableMachines;
@@ -165,15 +175,23 @@ class EngineeringState {
     for (final m in machines) {
       final mLower = m.toLowerCase();
 
-      final mActiveProjects = projects.where((p) =>
-          !p.isCompletedOrCancelled &&
-          (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
-              p.machine.toLowerCase() == mLower)).toList();
+      final mActiveProjects = projects
+          .where(
+            (p) =>
+                !p.isCompletedOrCancelled &&
+                (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+                    p.machine.toLowerCase() == mLower),
+          )
+          .toList();
 
-      final mCompletedProjects = projects.where((p) =>
-          p.isCompletedOrCancelled &&
-          (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
-              p.machine.toLowerCase() == mLower)).toList();
+      final mCompletedProjects = projects
+          .where(
+            (p) =>
+                p.isCompletedOrCancelled &&
+                (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+                    p.machine.toLowerCase() == mLower),
+          )
+          .toList();
 
       final mOrders = <MachineOrderEntry>[];
       for (final p in projects) {
@@ -191,30 +209,42 @@ class EngineeringState {
         }
       }
 
-      final mDowntimes = downtimes.where((d) =>
-          d.machine.toLowerCase() == mLower ||
-          d.machine.split('/').any((dm) => dm.trim().toLowerCase() == mLower)).toList();
+      final mDowntimes = downtimes
+          .where(
+            (d) =>
+                d.machine.toLowerCase() == mLower ||
+                d.machine
+                    .split('/')
+                    .any((dm) => dm.trim().toLowerCase() == mLower),
+          )
+          .toList();
 
       final mNotes = voiceNotes.where((n) {
-        if (n.title.toLowerCase().contains(mLower) || n.transcript.toLowerCase().contains(mLower)) return true;
+        if (n.title.toLowerCase().contains(mLower) ||
+            n.transcript.toLowerCase().contains(mLower))
+          return true;
         if (n.projectId != null) {
           final p = projects.where((p) => p.id == n.projectId).firstOrNull;
-          if (p != null && (p.machineList.any((pm) => pm.toLowerCase() == mLower) || p.machine.toLowerCase() == mLower)) {
+          if (p != null &&
+              (p.machineList.any((pm) => pm.toLowerCase() == mLower) ||
+                  p.machine.toLowerCase() == mLower)) {
             return true;
           }
         }
         return false;
       }).toList();
 
-      assets.add(MachineAsset(
-        name: m,
-        activeProjects: mActiveProjects,
-        completedProjects: mCompletedProjects,
-        openOrders: mOrders,
-        downtimes: mDowntimes,
-        notes: mNotes,
-        subAssemblies: availableSubAssembliesFor(m),
-      ));
+      assets.add(
+        MachineAsset(
+          name: m,
+          activeProjects: mActiveProjects,
+          completedProjects: mCompletedProjects,
+          openOrders: mOrders,
+          downtimes: mDowntimes,
+          notes: mNotes,
+          subAssemblies: availableSubAssembliesFor(m),
+        ),
+      );
     }
 
     return assets;
@@ -252,7 +282,8 @@ class EngineeringState {
         set.add(p.machine.trim());
       }
     }
-    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final list = set.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
   }
 
@@ -263,7 +294,8 @@ class EngineeringState {
         set.add(p.subAssembly.trim());
       }
     }
-    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final list = set.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
   }
 
@@ -286,11 +318,13 @@ class EngineeringState {
           .map((m) => m.trim().toLowerCase())
           .where((m) => m.isNotEmpty)
           .toList();
-      final matches =
-          tokens.any((t) => pMachines.any((pm) => pm.contains(t) || t.contains(pm)));
+      final matches = tokens.any(
+        (t) => pMachines.any((pm) => pm.contains(t) || t.contains(pm)),
+      );
       if (matches) set.add(p.subAssembly.trim());
     }
-    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final list = set.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
   }
 
@@ -318,7 +352,8 @@ class EngineeringState {
     final taskHits = <TaskSearchHit>[];
 
     for (final p in projects) {
-      final projectMatch = matches(p.title) ||
+      final projectMatch =
+          matches(p.title) ||
           matches(p.machine) ||
           matches(p.subAssembly) ||
           matches(p.phase) ||
@@ -337,13 +372,15 @@ class EngineeringState {
       }
 
       if (p.notes.trim().isNotEmpty && matches(p.notes)) {
-        noteHits.add(NoteSearchHit(
-          title: p.title,
-          content: p.notes,
-          projectId: p.id,
-          projectTitle: p.title,
-          isProjectNote: true,
-        ));
+        noteHits.add(
+          NoteSearchHit(
+            title: p.title,
+            content: p.notes,
+            projectId: p.id,
+            projectTitle: p.title,
+            isProjectNote: true,
+          ),
+        );
       }
 
       for (final t in p.tasks) {
@@ -358,31 +395,35 @@ class EngineeringState {
           matches(o.pr) ||
           matches(o.po) ||
           matches(o.vendorName)) {
-        orderHits.add(OrderSearchHit(
-          id: o.id,
-          standaloneOrder: o,
-          description: o.description,
-          pr: o.pr,
-          po: o.po,
-          price: o.price,
-          eta: o.eta,
-          delivered: o.delivered,
-          project: null,
-          projectTitle: 'Unlinked',
-        ));
+        orderHits.add(
+          OrderSearchHit(
+            id: o.id,
+            standaloneOrder: o,
+            description: o.description,
+            pr: o.pr,
+            po: o.po,
+            price: o.price,
+            eta: o.eta,
+            delivered: o.delivered,
+            project: null,
+            projectTitle: 'Unlinked',
+          ),
+        );
       }
     }
 
     for (final n in voiceNotes) {
       if (matches(n.title) || matches(n.transcript)) {
-        noteHits.add(NoteSearchHit(
-          id: n.id,
-          voiceNote: n,
-          title: n.title,
-          content: n.transcript,
-          projectId: n.projectId,
-          projectTitle: n.projectId != null ? _titleOf(n.projectId!) : null,
-        ));
+        noteHits.add(
+          NoteSearchHit(
+            id: n.id,
+            voiceNote: n,
+            title: n.title,
+            content: n.transcript,
+            projectId: n.projectId,
+            projectTitle: n.projectId != null ? _titleOf(n.projectId!) : null,
+          ),
+        );
       }
     }
 
@@ -435,12 +476,13 @@ class EngineeringState {
       downtimes: downtimes ?? this.downtimes,
       isLoading: isLoading ?? this.isLoading,
       searchQuery: searchQuery ?? this.searchQuery,
-      selectedCategory:
-          clearCategory ? null : (selectedCategory ?? this.selectedCategory),
-      selectedPhase:
-          clearPhase ? null : (selectedPhase ?? this.selectedPhase),
-      selectedMachine:
-          clearMachine ? null : (selectedMachine ?? this.selectedMachine),
+      selectedCategory: clearCategory
+          ? null
+          : (selectedCategory ?? this.selectedCategory),
+      selectedPhase: clearPhase ? null : (selectedPhase ?? this.selectedPhase),
+      selectedMachine: clearMachine
+          ? null
+          : (selectedMachine ?? this.selectedMachine),
     );
   }
 }

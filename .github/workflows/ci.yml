@@ -1,0 +1,48 @@
+name: CI
+
+# Fast feedback on every pull request and on pushes to main: static analysis
+# and the full test suite (with coverage). The release workflow re-runs the
+# same gate before building artifacts.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyze
+        # Infos (existing deprecation notices) don't fail the build; errors
+        # and warnings do.
+        run: flutter analyze --no-fatal-infos
+      - name: Test with coverage
+        run: flutter test --coverage
+      - name: Coverage summary
+        run: |
+          total=$(awk -F: '/^LF:/{lf+=$2} /^LH:/{lh+=$2} END{ if (lf>0) printf "%.1f", 100*lh/lf; else print "0" }' coverage/lcov.info)
+          echo "### Line coverage: ${total}%" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov
+          path: coverage/lcov.info
+          retention-days: 14

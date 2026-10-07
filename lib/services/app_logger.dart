@@ -28,9 +28,11 @@ class LogEntry {
   /// Single-block text form used for the on-disk log and for sharing.
   String format() {
     final b = StringBuffer(
-        '${time.toIso8601String()} [${level.name.toUpperCase()}] $tag: $message');
+      '${time.toIso8601String()} [${level.name.toUpperCase()}] $tag: $message',
+    );
     if (error != null) b.write('\n  error: $error');
-    if (stack != null) b.write('\n  stack: ${stack!.trim().replaceAll('\n', '\n         ')}');
+    if (stack != null)
+      b.write('\n  stack: ${stack!.trim().replaceAll('\n', '\n         ')}');
     return b.toString();
   }
 }
@@ -59,8 +61,7 @@ class AppLogger {
 
   List<LogEntry> get entries => List.unmodifiable(_entries);
 
-  int get errorCount =>
-      _entries.where((e) => e.level == LogLevel.error).length;
+  int get errorCount => _entries.where((e) => e.level == LogLevel.error).length;
 
   /// Resolves the log file and enables disk persistence. Call once at startup.
   Future<void> attachFile() async {
@@ -78,8 +79,7 @@ class AppLogger {
     }
   }
 
-  void info(String tag, String message) =>
-      _add(LogLevel.info, tag, message);
+  void info(String tag, String message) => _add(LogLevel.info, tag, message);
 
   void warn(String tag, String message, [Object? error]) =>
       _add(LogLevel.warning, tag, message, error);
@@ -87,8 +87,13 @@ class AppLogger {
   void error(String tag, String message, [Object? error, StackTrace? stack]) =>
       _add(LogLevel.error, tag, message, error, stack);
 
-  void _add(LogLevel level, String tag, String message,
-      [Object? error, StackTrace? stack]) {
+  void _add(
+    LogLevel level,
+    String tag,
+    String message, [
+    Object? error,
+    StackTrace? stack,
+  ]) {
     final entry = LogEntry(
       time: DateTime.now(),
       level: level,
@@ -132,8 +137,11 @@ class AppLogger {
     if (file == null) return;
     _writeChain = _writeChain.then((_) async {
       try {
-        await file.writeAsString('${entry.format()}\n',
-            mode: FileMode.append, flush: true);
+        await file.writeAsString(
+          '${entry.format()}\n',
+          mode: FileMode.append,
+          flush: true,
+        );
       } catch (_) {
         // Logging must never raise; the in-memory buffer still has the entry.
       }

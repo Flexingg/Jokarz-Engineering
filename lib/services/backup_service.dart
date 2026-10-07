@@ -20,10 +20,11 @@ class BackupInfo {
   final DateTime createdAt;
   final int fileCount;
   final int schemaVersion;
-  const BackupInfo(
-      {required this.createdAt,
-      required this.fileCount,
-      required this.schemaVersion});
+  const BackupInfo({
+    required this.createdAt,
+    required this.fileCount,
+    required this.schemaVersion,
+  });
 }
 
 /// Whole-dataset backup & restore.
@@ -43,10 +44,19 @@ class BackupService {
   final Future<Directory> Function() _docsDir;
 
   BackupService({Future<Directory> Function()? docsDir})
-      : _docsDir = docsDir ?? getApplicationDocumentsDirectory;
+    : _docsDir = docsDir ?? getApplicationDocumentsDirectory;
+
+  /// Files that never go into a backup. The BAMM connection config holds the
+  /// server login (including the password, stored in plain text on disk), and
+  /// backups get written to Downloads and passed to the share sheet - so that
+  /// credential stays on the device and must be re-entered after a restore on
+  /// a new one.
+  static const Set<String> excludedFiles = {'jokarz_bamm_config.json'};
 
   bool _isDataFile(String name) =>
-      name.startsWith(dataPrefix) && name.endsWith('.json');
+      name.startsWith(dataPrefix) &&
+      name.endsWith('.json') &&
+      !excludedFiles.contains(name);
 
   Future<Directory> _backupsDir() async {
     final dir = Directory('${(await _docsDir()).path}/$backupsDirName');
@@ -60,12 +70,13 @@ class BackupService {
     final archive = Archive();
     final checksums = <String, String>{};
 
-    final files = docs
-        .listSync()
-        .whereType<File>()
-        .where((f) => _isDataFile(f.uri.pathSegments.last))
-        .toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final files =
+        docs
+            .listSync()
+            .whereType<File>()
+            .where((f) => _isDataFile(f.uri.pathSegments.last))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
 
     for (final f in files) {
       final name = f.uri.pathSegments.last;
@@ -74,12 +85,14 @@ class BackupService {
       archive.addFile(ArchiveFile(name, bytes.length, bytes));
     }
 
-    final manifest = utf8.encode(jsonEncode({
-      'app': 'jokarz-engineering',
-      'schemaVersion': schemaVersion,
-      'createdAt': (now ?? DateTime.now()).toUtc().toIso8601String(),
-      'files': checksums,
-    }));
+    final manifest = utf8.encode(
+      jsonEncode({
+        'app': 'jokarz-engineering',
+        'schemaVersion': schemaVersion,
+        'createdAt': (now ?? DateTime.now()).toUtc().toIso8601String(),
+        'files': checksums,
+      }),
+    );
     archive.addFile(ArchiveFile(manifestName, manifest.length, manifest));
 
     final out = ZipEncoder().encode(archive);
@@ -108,8 +121,9 @@ class BackupService {
 
     final Map<String, dynamic> manifest;
     try {
-      manifest = jsonDecode(utf8.decode(manifestFile.content as List<int>))
-          as Map<String, dynamic>;
+      manifest =
+          jsonDecode(utf8.decode(manifestFile.content as List<int>))
+              as Map<String, dynamic>;
     } catch (_) {
       throw const BackupException('Backup manifest is unreadable.');
     }
@@ -119,16 +133,19 @@ class BackupService {
     final version = manifest['schemaVersion'];
     if (version is! int || version > schemaVersion) {
       throw const BackupException(
-          'This backup was made by a newer version of the app. Update first.');
+        'This backup was made by a newer version of the app. Update first.',
+      );
     }
 
-    final expected =
-        (manifest['files'] as Map<String, dynamic>? ?? const {}).cast<String, dynamic>();
+    final expected = (manifest['files'] as Map<String, dynamic>? ?? const {})
+        .cast<String, dynamic>();
     final files = <String, List<int>>{};
     for (final f in archive.files) {
       if (!f.isFile || f.name == manifestName) continue;
       // Reject path tricks: only flat jokarz_*.json names are ever restored.
-      if (f.name.contains('/') || f.name.contains('\\') || !_isDataFile(f.name)) {
+      if (f.name.contains('/') ||
+          f.name.contains('\\') ||
+          !_isDataFile(f.name)) {
         throw BackupException('Backup contains an unexpected entry: ${f.name}');
       }
       final bytes = f.content as List<int>;
@@ -154,7 +171,8 @@ class BackupService {
 
     return (
       info: BackupInfo(
-        createdAt: DateTime.tryParse('${manifest['createdAt']}') ??
+        createdAt:
+            DateTime.tryParse('${manifest['createdAt']}') ??
             DateTime.fromMillisecondsSinceEpoch(0),
         fileCount: files.length,
         schemaVersion: version,
@@ -176,12 +194,18 @@ class BackupService {
       final snapshot = await buildBackup();
       final dir = await _backupsDir();
       await File(
-              '${dir.path}/pre-restore-${DateTime.now().millisecondsSinceEpoch}.zip')
-          .writeAsBytes(snapshot, flush: true);
+        '${dir.path}/pre-restore-${DateTime.now().millisecondsSinceEpoch}.zip',
+      ).writeAsBytes(snapshot, flush: true);
     } catch (e, stack) {
-      log.error('backup', 'Pre-restore snapshot failed; aborting restore', e, stack);
+      log.error(
+        'backup',
+        'Pre-restore snapshot failed; aborting restore',
+        e,
+        stack,
+      );
       throw const BackupException(
-          'Could not snapshot current data before restoring. Nothing was changed.');
+        'Could not snapshot current data before restoring. Nothing was changed.',
+      );
     }
 
     for (final entry in parsed.files.entries) {
@@ -196,7 +220,10 @@ class BackupService {
   }
 
   /// Writes a timestamped backup into `backups/` and prunes old auto-backups.
-  Future<File> writeBackupFile({String prefix = 'backup', DateTime? now}) async {
+  Future<File> writeBackupFile({
+    String prefix = 'backup',
+    DateTime? now,
+  }) async {
     final stamp = (now ?? DateTime.now());
     final name =
         '$prefix-${stamp.year}${_2(stamp.month)}${_2(stamp.day)}-${_2(stamp.hour)}${_2(stamp.minute)}${_2(stamp.second)}.zip';
@@ -212,22 +239,24 @@ class BackupService {
     try {
       final today = now ?? DateTime.now();
       final dir = await _backupsDir();
-      final autos = dir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.uri.pathSegments.last.startsWith('auto-'))
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+      final autos =
+          dir
+              .listSync()
+              .whereType<File>()
+              .where((f) => f.uri.pathSegments.last.startsWith('auto-'))
+              .toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
 
       final todayKey = '${today.year}${_2(today.month)}${_2(today.day)}';
-      if (autos.any((f) => f.uri.pathSegments.last.startsWith('auto-$todayKey'))) {
+      if (autos.any(
+        (f) => f.uri.pathSegments.last.startsWith('auto-$todayKey'),
+      )) {
         return null;
       }
       // Nothing worth backing up yet (fresh install).
-      final hasData = (await _docsDir())
-          .listSync()
-          .whereType<File>()
-          .any((f) => _isDataFile(f.uri.pathSegments.last));
+      final hasData = (await _docsDir()).listSync().whereType<File>().any(
+        (f) => _isDataFile(f.uri.pathSegments.last),
+      );
       if (!hasData) return null;
 
       final created = await writeBackupFile(prefix: 'auto', now: today);
@@ -235,7 +264,10 @@ class BackupService {
       while (autos.length > maxAutoBackups) {
         await autos.removeAt(0).delete();
       }
-      log.info('backup', 'Auto-backup written: ${created.uri.pathSegments.last}');
+      log.info(
+        'backup',
+        'Auto-backup written: ${created.uri.pathSegments.last}',
+      );
       return created;
     } catch (e, stack) {
       log.error('backup', 'Auto-backup failed', e, stack);

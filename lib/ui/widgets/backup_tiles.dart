@@ -30,10 +30,12 @@ class BackupTiles extends ConsumerWidget {
 
   void _toast(BuildContext context, String msg, {bool error = false}) {
     final colors = AppTheme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? colors.coral : colors.emerald,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? colors.coral : colors.emerald,
+      ),
+    );
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
@@ -50,8 +52,9 @@ class BackupTiles extends ConsumerWidget {
       if (!context.mounted) return;
       _toast(context, 'Backup saved: ${file.path}');
       try {
-        await Share.shareXFiles([XFile(file.path, mimeType: 'application/zip')],
-            text: 'Jokarz Engineering backup');
+        await Share.shareXFiles([
+          XFile(file.path, mimeType: 'application/zip'),
+        ], text: 'Jokarz Engineering backup');
       } catch (e) {
         log.warn('backup', 'Share sheet unavailable; file kept on disk', e);
       }
@@ -71,8 +74,8 @@ class BackupTiles extends ConsumerWidget {
       );
       final picked0 = picked?.files.firstOrNull;
       if (picked0 == null) return;
-      final List<int> bytes = picked0.bytes ??
-          await File(picked0.path!).readAsBytes();
+      final List<int> bytes =
+          picked0.bytes ?? await File(picked0.path!).readAsBytes();
 
       final BackupInfo info = service.inspect(bytes);
       if (!context.mounted) return;
@@ -88,11 +91,13 @@ class BackupTiles extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Restore')),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Restore'),
+            ),
           ],
         ),
       );
@@ -125,7 +130,7 @@ class BackupTiles extends ConsumerWidget {
           leading: Icon(Icons.archive_rounded, color: colors.primary),
           title: const Text('Export Full Backup (.zip)'),
           subtitle: const Text(
-            'Everything: projects, orders, notes, schedule, settings. Checksummed.',
+            'Projects, orders, notes, schedule, settings. Excludes the BAMM login. Checksummed.',
             style: TextStyle(fontSize: 11),
           ),
           trailing: const Icon(Icons.chevron_right),
@@ -134,7 +139,10 @@ class BackupTiles extends ConsumerWidget {
         const Divider(height: 16),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.settings_backup_restore_rounded, color: colors.emerald),
+          leading: Icon(
+            Icons.settings_backup_restore_rounded,
+            color: colors.emerald,
+          ),
           title: const Text('Restore From Backup (.zip)'),
           subtitle: const Text(
             'Validates the archive and snapshots current data first.',
@@ -156,8 +164,9 @@ class BackupTiles extends ConsumerWidget {
             ),
           ),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const DiagnosticsScreen())),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const DiagnosticsScreen())),
         ),
         const Divider(height: 16),
       ],
