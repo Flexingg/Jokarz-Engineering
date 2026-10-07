@@ -13,10 +13,12 @@ import 'services/deep_link_service.dart';
 import 'ui/widgets/app_shortcuts.dart';
 import 'services/app_logger.dart';
 import 'services/backup_service.dart';
+import 'services/window_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   installGlobalErrorHandlers();
+  await WindowService.instance.init();
   await log.attachFile();
   // Daily rolling safety net; never blocks or throws.
   unawaited(BackupService().runAutoBackupIfDue());

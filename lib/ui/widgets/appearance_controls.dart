@@ -1,8 +1,11 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/ui_prefs.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/ui_prefs_provider.dart';
+import '../../services/window_service.dart';
 import '../../theme/app_theme.dart';
 
 /// Accent picker (Graphite themes) and animation level, shown in Settings >
@@ -87,6 +90,17 @@ class AppearanceControls extends ConsumerWidget {
           onSelectionChanged: (s) =>
               notifier.update((p) => p.copyWith(motion: s.first)),
         ),
+        if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) ...[
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => WindowService.instance.reset(),
+              icon: const Icon(Icons.crop_free_rounded, size: 16),
+              label: const Text('Reset window size and position'),
+            ),
+          ),
+        ],
       ],
     );
   }

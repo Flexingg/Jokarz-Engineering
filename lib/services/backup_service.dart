@@ -51,7 +51,11 @@ class BackupService {
   /// backups get written to Downloads and passed to the share sheet - so that
   /// credential stays on the device and must be re-entered after a restore on
   /// a new one.
-  static const Set<String> excludedFiles = {'jokarz_bamm_config.json'};
+  static const Set<String> excludedFiles = {
+    'jokarz_bamm_config.json',
+    // Per-machine window position/size; wrong on another computer.
+    'jokarz_window.json',
+  };
 
   bool _isDataFile(String name) =>
       name.startsWith(dataPrefix) &&

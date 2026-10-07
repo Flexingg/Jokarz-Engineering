@@ -1,15 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/ui_prefs_provider.dart';
 import '../../theme/app_theme.dart';
+import '../motion/motion.dart';
+import '../shell/app_menu_bar.dart';
 import '../widgets/voice_memo_modal.dart';
 import 'breakpoints.dart';
 
+/// One destination in the desktop rail. [branch] is the StatefulShellRoute
+/// branch index; the list order is the visual order (BAMM sits after
+/// Workbench in the rail but is branch 6).
+class _RailDest {
+  final int branch;
+  final IconData icon;
+  final String label;
+  const _RailDest(this.branch, this.icon, this.label);
+}
+
+const _railDests = [
+  _RailDest(0, Icons.dashboard_rounded, 'Dashboard'),
+  _RailDest(1, Icons.assignment_outlined, 'Projects'),
+  _RailDest(2, Icons.local_shipping_outlined, 'Open Orders'),
+  _RailDest(3, Icons.handyman_rounded, 'Workbench Tools'),
+  _RailDest(6, Icons.precision_manufacturing_rounded, 'BAMM Orders'),
+  _RailDest(4, Icons.edit_note_rounded, 'Notes'),
+  _RailDest(5, Icons.settings_suggest_rounded, 'Settings'),
+];
+
+const double _itemHeight = 44;
+const double _itemGap = 4;
+const double _railWide = 236;
+const double _railNarrow = 76;
+
 /// The app's single adaptive navigation shell: a collapsible navigation
-/// rail on [WindowSizeClass.expanded] windows (desktop), a bottom
-/// [NavigationBar] on [WindowSizeClass.compact]/[WindowSizeClass.medium]
-/// windows (mobile). Every top-level branch route is wrapped in this one
-/// shell so the choice of rail vs. bottom nav lives in exactly one place.
+/// rail (with a spring-animated selection highlight and a menu bar) on
+/// [WindowSizeClass.expanded] windows, a bottom [NavigationBar] otherwise.
+/// Every top-level branch route is wrapped in this one shell so the choice of
+/// rail vs. bottom nav lives in exactly one place.
 class AdaptiveNavShell extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -20,8 +48,6 @@ class AdaptiveNavShell extends ConsumerStatefulWidget {
 }
 
 class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
-  bool _collapsed = false;
-
   void _onTapNav(int index) {
     widget.navigationShell.goBranch(
       index,
@@ -31,207 +57,48 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final motion = Motion.of(context);
+    final collapsed = ref.watch(uiPrefsProvider.select((p) => p.railCollapsed));
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = Breakpoints.isExpanded(constraints.maxWidth);
 
         if (isDesktop) {
-          final railWidth = _collapsed ? 68.0 : 230.0;
-          // Desktop & Tablet Navigation Rail Layout
+          final selectedVisual = _railDests
+              .indexWhere((d) => d.branch == widget.navigationShell.currentIndex);
           return Scaffold(
-            body: Row(
+            body: Column(
               children: [
-                // Custom Expressive Navigation Rail
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  width: railWidth,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
-                    border: Border(
-                      right: BorderSide(
-                        color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Column(
+                const AppMenuBar(),
+                Expanded(
+                  child: Row(
                     children: [
-                      const SizedBox(height: 16),
-                      // Navigation Header
-                      if (_collapsed)
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: AppTheme.of(context).primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                            ),
-                            child: Icon(
-                              Icons.precision_manufacturing_rounded,
-                              color: AppTheme.of(context).primary,
-                              size: 18,
-                            ),
-                          ),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.of(context).primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                ),
-                                child: Icon(
-                                  Icons.precision_manufacturing_rounded,
-                                  color: AppTheme.of(context).primary,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'WORKSPACE',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.2,
-                                  color: AppTheme.of(context).primary,
-                                ),
-                              ),
-                            ],
-                          ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(end: collapsed ? _railNarrow : _railWide),
+                        duration: motion.d(380),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, width, _) => _Rail(
+                          width: width,
+                          showLabels: width > 170,
+                          selectedVisual: selectedVisual,
+                          motion: motion,
+                          onSelect: _onTapNav,
+                          onToggle: () => ref
+                              .read(uiPrefsProvider.notifier)
+                              .update((p) => p.copyWith(railCollapsed: !p.railCollapsed)),
                         ),
-                      const SizedBox(height: 16),
-
-                      // Navigation Items (scrollable if viewport height is compact)
+                      ),
                       Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.dashboard_rounded,
-                                label: 'Dashboard',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 0,
-                                onTap: () => _onTapNav(0),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.assignment_outlined,
-                                label: 'Projects',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 1,
-                                onTap: () => _onTapNav(1),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.local_shipping_outlined,
-                                label: 'Open Orders',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 2,
-                                onTap: () => _onTapNav(2),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.handyman_rounded,
-                                label: 'Workbench Tools',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 3,
-                                onTap: () => _onTapNav(3),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.precision_manufacturing_rounded,
-                                label: 'BAMM Orders',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 6,
-                                onTap: () => _onTapNav(6),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.edit_note_rounded,
-                                label: 'Notes',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 4,
-                                onTap: () => _onTapNav(4),
-                              ),
-                              _buildDesktopNavItem(
-                                context,
-                                icon: Icons.settings_suggest_rounded,
-                                label: 'Settings',
-                                collapsed: _collapsed,
-                                isSelected: widget.navigationShell.currentIndex == 5,
-                                onTap: () => _onTapNav(5),
-                              ),
-                            ],
-                          ),
+                        child: _PageEnter(
+                          index: widget.navigationShell.currentIndex,
+                          motion: motion,
+                          child: widget.navigationShell,
                         ),
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Quick Voice Record
-                      if (_collapsed)
-                        IconButton(
-                          tooltip: 'Dictate Note',
-                          onPressed: () => VoiceMemoModal.show(context),
-                          icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          child: OutlinedButton.icon(
-                            onPressed: () => VoiceMemoModal.show(context),
-                            icon: Icon(Icons.mic, color: AppTheme.of(context).amber, size: 18),
-                            label: const Text(
-                              'Dictate Note',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: AppTheme.of(context).amber),
-                              minimumSize: Size.fromHeight(40),
-                            ),
-                          ),
-                        ),
-
-                        // Theme — managed in Settings
-                        _buildDesktopNavItem(
-                          context,
-                          icon: Icons.palette_outlined,
-                          label: 'Theme',
-                          collapsed: _collapsed,
-                          isSelected: false,
-                          onTap: () => context.push('/settings'),
-                        ),
-
-                      const Divider(height: 1),
-                      // Collapse / Expand Toggle
-                      Tooltip(
-                        message: _collapsed ? 'Expand sidebar' : 'Collapse sidebar',
-                        child: IconButton(
-                          onPressed: () => setState(() => _collapsed = !_collapsed),
-                          icon: Icon(
-                            _collapsed ? Icons.menu_rounded : Icons.menu_open_rounded,
-                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 8),
                     ],
                   ),
                 ),
-
-                // Main Content Area
-                Expanded(child: widget.navigationShell),
               ],
             ),
           );
@@ -287,75 +154,301 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
       },
     );
   }
+}
 
-  Widget _buildDesktopNavItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required bool collapsed,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+/// Re-plays a short rise-and-fade each time the selected branch changes. The
+/// child is never rebuilt with a new key, so every branch keeps its state.
+class _PageEnter extends StatefulWidget {
+  final int index;
+  final Motion motion;
+  final Widget child;
+  const _PageEnter({required this.index, required this.motion, required this.child});
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Material(
-        color: isSelected
-            ? AppTheme.of(context).primary.withValues(alpha: 0.15)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          onTap: onTap,
-          child: Tooltip(
-            message: collapsed ? label : '',
-            child: Container(
-              padding: collapsed
-                  ? const EdgeInsets.symmetric(vertical: 12)
-                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                border: isSelected
-                    ? Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.4))
-                    : null,
-              ),
-              child: collapsed
-                  ? Center(
-                      child: Icon(
-                        icon,
-                        size: 20,
-                        color: isSelected
-                            ? AppTheme.of(context).primary
-                            : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        Icon(
-                          icon,
-                          size: 20,
-                          color: isSelected
-                              ? AppTheme.of(context).primary
-                              : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected
-                                  ? (isDark ? Colors.white : AppTheme.of(context).primaryBlue)
-                                  : (isDark ? AppTheme.of(context).textPrimary : AppTheme.of(context).textPrimary),
-                            ),
-                            overflow: TextOverflow.ellipsis,
+  @override
+  State<_PageEnter> createState() => _PageEnterState();
+}
+
+class _PageEnterState extends State<_PageEnter> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, value: 1);
+
+  @override
+  void didUpdateWidget(_PageEnter old) {
+    super.didUpdateWidget(old);
+    if (old.index != widget.index && widget.motion.enabled) {
+      _c.duration = widget.motion.page;
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final curve = widget.motion.spring;
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) {
+        final t = curve.transform(_c.value);
+        return Opacity(
+          opacity: Curves.easeOut.transform((_c.value * 1.6).clamp(0.0, 1.0)),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 18),
+            child: Transform.scale(scale: 0.985 + 0.015 * t, child: child),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Rail extends StatelessWidget {
+  final double width;
+  final bool showLabels;
+  final int selectedVisual;
+  final Motion motion;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onToggle;
+
+  const _Rail({
+    required this.width,
+    required this.showLabels,
+    required this.selectedVisual,
+    required this.motion,
+    required this.onSelect,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppTheme.of(context);
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(right: BorderSide(color: colors.border)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                height: _railDests.length * (_itemHeight + _itemGap),
+                child: Stack(
+                  children: [
+                    // The selection highlight slides (and overshoots a little)
+                    // between destinations.
+                    if (selectedVisual >= 0)
+                      AnimatedPositioned(
+                        duration: motion.nav,
+                        curve: motion.spring,
+                        top: selectedVisual * (_itemHeight + _itemGap),
+                        left: 0,
+                        right: 0,
+                        height: _itemHeight,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: colors.primary.withValues(alpha: 0.14),
+                            border: Border.all(color: colors.primary.withValues(alpha: 0.35)),
                           ),
                         ),
+                      ),
+                    Column(
+                      children: [
+                        for (var i = 0; i < _railDests.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: _itemGap),
+                            child: _RailItem(
+                              dest: _railDests[i],
+                              selected: i == selectedVisual,
+                              showLabel: showLabels,
+                              motion: motion,
+                              onTap: () => onSelect(_railDests[i].branch),
+                            ),
+                          ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _DictateButton(showLabel: showLabels),
+          const SizedBox(height: 8),
+          Divider(height: 1, color: colors.border),
+          const SizedBox(height: 8),
+          Tooltip(
+            message: showLabels ? 'Collapse sidebar' : 'Expand sidebar',
+            child: _Bounce(
+              motion: motion,
+              onTap: onToggle,
+              child: SizedBox(
+                height: _itemHeight,
+                child: Row(
+                  mainAxisAlignment:
+                      showLabels ? MainAxisAlignment.start : MainAxisAlignment.center,
+                  children: [
+                    if (showLabels) const SizedBox(width: 14),
+                    Icon(
+                      showLabels ? Icons.menu_open_rounded : Icons.menu_rounded,
+                      size: 20,
+                      color: colors.textSecondary,
+                    ),
+                    if (showLabels) ...[
+                      const SizedBox(width: 12),
+                      Text('Collapse',
+                          style: TextStyle(fontSize: 13, color: colors.textSecondary)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailItem extends StatelessWidget {
+  final _RailDest dest;
+  final bool selected;
+  final bool showLabel;
+  final Motion motion;
+  final VoidCallback onTap;
+
+  const _RailItem({
+    required this.dest,
+    required this.selected,
+    required this.showLabel,
+    required this.motion,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppTheme.of(context);
+    final color = selected ? colors.primary : colors.textSecondary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: dest.label,
+      child: Tooltip(
+        message: showLabel ? '' : dest.label,
+        child: _Bounce(
+          motion: motion,
+          onTap: onTap,
+          child: SizedBox(
+            height: _itemHeight,
+            child: Row(
+              mainAxisAlignment:
+                  showLabel ? MainAxisAlignment.start : MainAxisAlignment.center,
+              children: [
+                if (showLabel) const SizedBox(width: 14),
+                // The icon hops up slightly when its destination is selected.
+                AnimatedSlide(
+                  duration: motion.pop,
+                  curve: motion.spring,
+                  offset: selected ? const Offset(0, -0.06) : Offset.zero,
+                  child: Icon(dest.icon, size: 20, color: color),
+                ),
+                if (showLabel) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      dest.label,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                        color: selected ? colors.primary : colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DictateButton extends StatelessWidget {
+  final bool showLabel;
+  const _DictateButton({required this.showLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppTheme.of(context);
+    if (!showLabel) {
+      return IconButton(
+        tooltip: 'Dictate Note',
+        onPressed: () => VoiceMemoModal.show(context),
+        icon: Icon(Icons.mic, color: colors.amber),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: () => VoiceMemoModal.show(context),
+      icon: Icon(Icons.mic, color: colors.amber, size: 18),
+      label: const Text('Dictate Note'),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: colors.amber.withValues(alpha: 0.6)),
+        minimumSize: const Size.fromHeight(40),
+      ),
+    );
+  }
+}
+
+/// Press feedback: shrinks slightly while pressed and springs back on release.
+class _Bounce extends StatefulWidget {
+  final Motion motion;
+  final VoidCallback onTap;
+  final Widget child;
+  const _Bounce({required this.motion, required this.onTap, required this.child});
+
+  @override
+  State<_Bounce> createState() => _BounceState();
+}
+
+class _BounceState extends State<_Bounce> {
+  bool _down = false;
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppTheme.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Listener(
+        onPointerDown: (_) => setState(() => _down = true),
+        onPointerUp: (_) => setState(() => _down = false),
+        onPointerCancel: (_) => setState(() => _down = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: _down ? 0.95 : 1,
+            duration: _down ? widget.motion.quick : widget.motion.pop,
+            curve: _down ? Curves.easeOut : widget.motion.spring,
+            child: AnimatedContainer(
+              duration: widget.motion.quick,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: _hover ? colors.textPrimary.withValues(alpha: 0.05) : Colors.transparent,
+              ),
+              child: widget.child,
             ),
           ),
         ),

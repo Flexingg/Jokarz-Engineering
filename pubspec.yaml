@@ -32,6 +32,8 @@ dependencies:
   app_links: ^7.2.1
   archive: ^4.0.9
   file_picker: ^8.3.7
+  window_manager: ^0.5.2
+  desktop_drop: ^0.8.4
 
 dev_dependencies:
   flutter_test:
