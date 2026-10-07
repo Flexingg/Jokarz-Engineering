@@ -1,22 +1,33 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
+import 'providers/ui_prefs_provider.dart';
+import 'ui/motion/motion.dart';
 import 'services/sync_service.dart';
 import 'router/app_router.dart';
 import 'services/deep_link_service.dart';
 import 'ui/widgets/app_shortcuts.dart';
+import 'services/app_logger.dart';
+import 'services/backup_service.dart';
+import 'services/window_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installGlobalErrorHandlers();
+  await WindowService.instance.init();
+  await log.attachFile();
+  // Daily rolling safety net; never blocks or throws.
+  unawaited(BackupService().runAutoBackupIfDue());
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase initialization note: $e');
+    log.info('startup', 'Firebase initialization note: $e');
   }
 
   runApp(
@@ -27,7 +38,7 @@ Future<void> main() async {
 
   // Fire-and-forget: a scanned report QR (or a cold start from one) routes
   // straight to that work order. Never blocks app startup.
-  initDeepLinks(appRouter).catchError((e) => debugPrint('Deep link init note: $e'));
+  initDeepLinks(appRouter).catchError((e) => log.error('startup', 'Deep link init note: $e'));
 }
 
 class JokarzEngineeringApp extends ConsumerWidget {
@@ -36,16 +47,20 @@ class JokarzEngineeringApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeFamily = ref.watch(themeProvider);
+    final prefs = ref.watch(uiPrefsProvider);
     // Eagerly initialize cloud sync listener when app starts
     ref.watch(syncStatusProvider);
 
     return MaterialApp.router(
       title: 'AOR Engineering',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.themeFor(themeFamily),
+      theme: AppTheme.themeFor(themeFamily, accent: prefs.accent),
       routerConfig: appRouter,
-      builder: (context, child) =>
-          AppShortcuts(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => MotionScope(
+        motion: Motion.resolve(prefs.motion,
+            disableAnimations: MediaQuery.disableAnimationsOf(context)),
+        child: AppShortcuts(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

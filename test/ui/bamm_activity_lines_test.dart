@@ -165,9 +165,10 @@ class _ActivityLinesBammNotifier extends BammNotifier {
     this.initialWo, {
     this.failWithException = false,
     this.reportNotAdded = false,
-  }) : super(BammService()) {
-    state = BammState(workOrders: [initialWo]);
-  }
+  }) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [initialWo]);
 
   @override
   Future<void> init() async {}
@@ -262,7 +263,7 @@ void main() {
       overrides: [
         storageServiceProvider.overrideWithValue(_FakeStorageService()),
         bammServiceProvider.overrideWithValue(service ?? _FakeBammService()),
-        bammProvider.overrideWith((ref) => notifier),
+        bammProvider.overrideWith(() => notifier),
       ],
       child: MaterialApp(
         home: Scaffold(

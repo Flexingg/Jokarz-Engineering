@@ -192,9 +192,11 @@ class _RecordingBammService extends BammService {
 
 class _FakeBammNotifier extends BammNotifier {
   int refreshCalls = 0;
-  _FakeBammNotifier(super.service, List<BammWorkOrder> seed) {
-    state = BammState(workOrders: seed);
-  }
+  final List<BammWorkOrder> _seedRows;
+  _FakeBammNotifier(super.service, this._seedRows);
+
+  @override
+  BammState initialState() => BammState(workOrders: _seedRows);
 
   @override
   Future<void> init() async {}
@@ -213,9 +215,9 @@ List<BammWorkOrder> _seedRows() => [
 
 List<Override> _overrides(BammNotifier notifier) => [
       storageServiceProvider.overrideWithValue(_FakeStorageService()),
-      projectProvider.overrideWith((ref) => ProjectNotifier(_FakeStorageService())),
+      projectProvider.overrideWith(() => ProjectNotifier(_FakeStorageService())),
       bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-      bammProvider.overrideWith((ref) => notifier),
+      bammProvider.overrideWith(() => notifier),
     ];
 
 Future<void> _pump(WidgetTester tester, BammNotifier notifier) async {

@@ -154,9 +154,10 @@ Map<String, dynamic> _rawDto() => {
 class _FakeBammNotifier extends BammNotifier {
   final BammWorkOrder _listRow;
   final Map<String, dynamic> _detailRawDto;
-  _FakeBammNotifier(this._listRow, this._detailRawDto) : super(BammService()) {
-    state = BammState(workOrders: [_listRow]);
-  }
+  _FakeBammNotifier(this._listRow, this._detailRawDto) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [_listRow]);
 
   @override
   Future<void> init() async {}
@@ -185,7 +186,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
           bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-          bammProvider.overrideWith((ref) => _FakeBammNotifier(listRow, rawDto)),
+          bammProvider.overrideWith(() => _FakeBammNotifier(listRow, rawDto)),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: listRow))),
       ),

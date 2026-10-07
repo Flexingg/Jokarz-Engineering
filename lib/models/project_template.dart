@@ -62,8 +62,11 @@ class ProjectTemplate {
   final List<OrderTemplate> suggestedOrders;
   final bool isSystemTemplate;
   final DateTime createdAt;
+  /// Last edit time; drives last-write-wins cloud merging.
+  final DateTime updatedAt;
 
   ProjectTemplate({
+    DateTime? updatedAt,
     String? id,
     required this.name,
     this.description = '',
@@ -76,9 +79,11 @@ class ProjectTemplate {
     this.isSystemTemplate = false,
     DateTime? createdAt,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
   ProjectTemplate copyWith({
+    DateTime? updatedAt,
     String? name,
     String? description,
     ProjectCategory? category,
@@ -101,6 +106,7 @@ class ProjectTemplate {
       suggestedOrders: suggestedOrders ?? this.suggestedOrders,
       isSystemTemplate: isSystemTemplate ?? this.isSystemTemplate,
       createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 
@@ -117,6 +123,7 @@ class ProjectTemplate {
       'suggestedOrders': suggestedOrders.map((o) => o.toJson()).toList(),
       'isSystemTemplate': isSystemTemplate,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
@@ -144,6 +151,9 @@ class ProjectTemplate {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
     );
   }
 

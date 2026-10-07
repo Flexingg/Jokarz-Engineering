@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import './app_logger.dart';
 
 class SpeechService {
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -13,9 +13,9 @@ class SpeechService {
     if (_isInitialized) return true;
     try {
       _isInitialized = await _speech.initialize(
-        onError: (val) => debugPrint('Speech error: ${val.errorMsg}'),
+        onError: (val) => log.error('speech', 'Speech error: ${val.errorMsg}'),
         onStatus: (val) {
-          debugPrint('Speech status: $val');
+          log.info('speech', 'Speech status: $val');
           if (val == 'done' || val == 'notListening') {
             _isListening = false;
           }
@@ -23,7 +23,7 @@ class SpeechService {
       );
       return _isInitialized;
     } catch (e) {
-      debugPrint('Speech init failed (expected on Windows/desktop fallback): $e');
+      log.error('speech', 'Speech init failed (expected on Windows/desktop fallback): $e');
       _isInitialized = false;
       return false;
     }
@@ -52,7 +52,7 @@ class SpeechService {
         onSoundLevelChange: onSoundLevel,
       );
     } catch (e) {
-      debugPrint('Speech listen exception: $e');
+      log.error('speech', 'Speech listen exception: $e');
       _isListening = false;
     }
   }
@@ -62,7 +62,7 @@ class SpeechService {
     try {
       await _speech.stop();
     } catch (e) {
-      debugPrint('Speech stop error: $e');
+      log.error('speech', 'Speech stop error: $e');
     }
   }
 }

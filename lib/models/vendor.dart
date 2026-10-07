@@ -11,8 +11,11 @@ class Vendor {
   final String accountNumber;
   final String notes;
   final DateTime createdAt;
+  /// Last edit time; drives last-write-wins cloud merging.
+  final DateTime updatedAt;
 
   Vendor({
+    DateTime? updatedAt,
     String? id,
     required this.name,
     this.contactPerson = '',
@@ -23,9 +26,11 @@ class Vendor {
     this.notes = '',
     DateTime? createdAt,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
   Vendor copyWith({
+    DateTime? updatedAt,
     String? name,
     String? contactPerson,
     String? email,
@@ -44,6 +49,7 @@ class Vendor {
       accountNumber: accountNumber ?? this.accountNumber,
       notes: notes ?? this.notes,
       createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 
@@ -58,6 +64,7 @@ class Vendor {
       'accountNumber': accountNumber,
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
@@ -74,6 +81,9 @@ class Vendor {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
     );
   }
 }

@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/key_bindings.dart';
 import '../../providers/keybindings_provider.dart';
-import '../../router/app_router.dart';
-import 'note_dialogs.dart';
-import 'order_dialogs.dart';
+import '../shell/app_actions.dart';
 
 /// Wraps the whole app and dispatches configurable desktop keyboard shortcuts
 /// to navigation and quick-create actions. Placed via `MaterialApp.builder` so
@@ -19,7 +17,9 @@ class AppShortcuts extends ConsumerWidget {
     final bindings = ref.watch(keyBindingsProvider);
 
     return Focus(
-      autofocus: false,
+      // Autofocus so shortcuts work from a cold start, before anything has been
+      // clicked; key events from focused descendants still bubble up here.
+      autofocus: true,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final combo = comboForEvent(event);
@@ -35,48 +35,10 @@ class AppShortcuts extends ConsumerWidget {
           actionId = 'search';
         }
         if (actionId == null) return KeyEventResult.ignored;
-        _dispatch(ref, actionId!);
+        dispatchAppAction(ref, actionId!);
         return KeyEventResult.handled;
       },
       child: child,
     );
-  }
-
-  void _dispatch(WidgetRef ref, String actionId) {
-    final router = appRouter;
-    switch (actionId) {
-      case 'search':
-        router.push('/search');
-        break;
-      case 'createNote':
-        final ctx = appRootContext;
-        if (ctx != null) showNewFieldNoteDialog(ctx, ref);
-        break;
-      case 'createProject':
-        router.push('/projects/new');
-        break;
-      case 'createOrder':
-        final ctx = appRootContext;
-        if (ctx != null) showStandaloneOrderDialog(ctx, ref);
-        break;
-      case 'tabDashboard':
-        router.go('/');
-        break;
-      case 'tabProjects':
-        router.go('/projects');
-        break;
-      case 'tabOrders':
-        router.go('/orders');
-        break;
-      case 'tabWorkbench':
-        router.go('/workbench');
-        break;
-      case 'tabNotes':
-        router.go('/voice-notes');
-        break;
-      case 'tabSettings':
-        router.go('/settings');
-        break;
-    }
   }
 }

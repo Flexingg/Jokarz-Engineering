@@ -8,6 +8,7 @@ import '../../providers/project_provider.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/bamm_chip.dart';
+import '../widgets/context_menu.dart';
 import '../adaptive/breakpoints.dart';
 import '../adaptive/master_detail.dart';
 import 'project_detail_screen.dart';
@@ -375,10 +376,42 @@ class _ProjectCard extends ConsumerWidget {
     final isTerminal = project.isCompletedOrCancelled;
     final nextTask = project.nextPendingTask;
 
+    final notifier = ref.read(projectProvider.notifier);
     return ExpressiveCard(
       key: ValueKey(project.id),
       margin: const EdgeInsets.only(bottom: 12),
       onTap: onTap,
+      contextActions: [
+        MenuAction('Open', Icons.open_in_new_rounded, onTap),
+        MenuAction('Edit...', Icons.edit_outlined, () => context.push('/projects/${project.id}/edit')),
+        if (!isTerminal && project.priority != 1)
+          MenuAction('Move to #1', Icons.vertical_align_top_rounded,
+              () => notifier.setProjectPriority(project.id, 1)),
+        if (!isTerminal)
+          MenuAction('Mark complete', Icons.check_circle_outline_rounded,
+              () => notifier.updateProject(project.copyWith(phase: ProjectPhases.complete)))
+        else
+          MenuAction('Reopen', Icons.replay_rounded,
+              () => notifier.updateProject(project.copyWith(phase: ProjectPhases.pending))),
+        MenuAction('Delete...', Icons.delete_outline_rounded, () async {
+          final ok = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Delete this project?'),
+              content: Text('"${project.title}" and its tasks and orders will be removed.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).coral),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+          if (ok == true) notifier.deleteProject(project.id);
+        }, danger: true, dividerBefore: true),
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

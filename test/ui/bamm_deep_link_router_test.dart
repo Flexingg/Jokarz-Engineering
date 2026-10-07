@@ -72,11 +72,12 @@ class _FakeStorageService extends StorageService {
 /// the cold-start scenario a scanned sheet lands in.
 class _ColdStartNotifier extends BammNotifier {
   final BammWorkOrder detail;
-  _ColdStartNotifier(this.detail) : super(BammService()) {
-    state = BammState(workOrders: [
-      BammWorkOrder(worId: 1, worNoSeq: '1', description: 'Unrelated WO', status: 'Registered', step: 'Emergency'),
-    ]);
-  }
+  _ColdStartNotifier(this.detail) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [
+        BammWorkOrder(worId: 1, worNoSeq: '1', description: 'Unrelated WO', status: 'Registered', step: 'Emergency'),
+      ]);
 
   @override
   Future<void> init() async {}
@@ -96,8 +97,8 @@ class _ColdStartNotifier extends BammNotifier {
 
 List<Override> _overrides(BammNotifier notifier) => [
       storageServiceProvider.overrideWithValue(_FakeStorageService()),
-      projectProvider.overrideWith((ref) => ProjectNotifier(_FakeStorageService())),
-      bammProvider.overrideWith((ref) => notifier),
+      projectProvider.overrideWith(() => ProjectNotifier(_FakeStorageService())),
+      bammProvider.overrideWith(() => notifier),
     ];
 
 void main() {

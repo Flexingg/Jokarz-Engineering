@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show protected;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bamm_models.dart';
 import '../services/bamm_adapter.dart' show resolveWorkOrderLabels;
 import '../services/bamm_service.dart';
+import '../services/app_logger.dart';
 
 final bammServiceProvider = Provider<BammService>((ref) {
   return BammService();
@@ -197,8 +198,12 @@ class BammState {
   }).length;
 }
 
-class BammNotifier extends StateNotifier<BammState> {
-  final BammService _service;
+class BammNotifier extends Notifier<BammState> {
+  /// [service] is a test seam; production resolves [bammServiceProvider].
+  BammNotifier([BammService? service]) : _injectedService = service;
+
+  final BammService? _injectedService;
+  BammService get _service => _injectedService ?? ref.read(bammServiceProvider);
   Timer? _autoPollTimer;
   Timer? _debounceTimer;
 
@@ -215,9 +220,21 @@ class BammNotifier extends StateNotifier<BammState> {
   /// at once (e.g. "Apply Filters" firing several setters back to back).
   int _requestId = 0;
 
-  BammNotifier(this._service) : super(const BammState()) {
-    init();
+  @override
+  BammState build() {
+    ref.onDispose(() {
+      _autoPollTimer?.cancel();
+      _debounceTimer?.cancel();
+    });
+    // init() reads/sets `state`, so it must run after build() has returned.
+    Future.microtask(init);
+    return initialState();
   }
+
+  /// The state [build] starts from, before [init] loads anything. Tests
+  /// override this to seed rows without touching the network or disk.
+  @protected
+  BammState initialState() => const BammState(isLoading: true);
 
   Future<void> init() async {
     state = state.copyWith(isLoading: true);
@@ -253,13 +270,6 @@ class BammNotifier extends StateNotifier<BammState> {
     });
   }
 
-  @override
-  void dispose() {
-    _autoPollTimer?.cancel();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
-
   /// Quickly poll network to see if BAMM is on the current network
   Future<bool> pollNetwork() async {
     state = state.copyWith(isPolling: true);
@@ -289,7 +299,7 @@ class BammNotifier extends StateNotifier<BammState> {
         execLookups: execs,
       );
     } catch (e) {
-      debugPrint('Error loading BAMM lookups: $e');
+      log.error('bamm', 'Error loading BAMM lookups: $e');
     }
   }
 
@@ -724,7 +734,4 @@ class BammNotifier extends StateNotifier<BammState> {
   }
 }
 
-final bammProvider = StateNotifierProvider<BammNotifier, BammState>((ref) {
-  final service = ref.watch(bammServiceProvider);
-  return BammNotifier(service);
-});
+final bammProvider = NotifierProvider<BammNotifier, BammState>(BammNotifier.new);

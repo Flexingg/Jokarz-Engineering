@@ -12,6 +12,9 @@ const Map<String, String> defaultKeyBindings = {
   'tabWorkbench': 'ctrl+4',
   'tabNotes': 'ctrl+5',
   'tabSettings': 'ctrl+6',
+  'tabBamm': 'ctrl+7',
+  'palette': 'ctrl+k',
+  'toggleSidebar': 'ctrl+b',
 };
 
 /// Human-readable labels for each action.
@@ -26,7 +29,16 @@ const Map<String, String> keyBindingsLabels = {
   'tabWorkbench': 'Go to Workbench',
   'tabNotes': 'Go to Notes',
   'tabSettings': 'Go to Settings',
+  'tabBamm': 'Go to BAMM Orders',
+  'palette': 'Command Palette',
+  'toggleSidebar': 'Toggle Sidebar',
 };
+
+/// `ctrl+shift+n` -> `Ctrl+Shift+N`, for menus and hints.
+String prettyCombo(String combo) => combo
+    .split('+')
+    .map((p) => p.isEmpty ? p : p[0].toUpperCase() + p.substring(1))
+    .join('+');
 
 /// Computes the pressed key combination (e.g. `ctrl+shift+s`) for a key event,
 /// ignoring pure modifier presses. Returns null for non-keydown or modifier-only

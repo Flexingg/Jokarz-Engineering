@@ -13,6 +13,8 @@ class StandaloneOrder {
   final String notes;
   final String? projectId;
   final DateTime createdAt;
+  /// Last edit time; drives last-write-wins cloud merging.
+  final DateTime updatedAt;
   final bool addToStores;
   final bool storeRequested;
   final String storeRequestNumber;
@@ -24,6 +26,7 @@ class StandaloneOrder {
   final List<String> bammWorkOrders;
 
   StandaloneOrder({
+    DateTime? updatedAt,
     String? id,
     this.pr = '',
     this.po = '',
@@ -44,9 +47,11 @@ class StandaloneOrder {
     List<String>? bammWorkOrders,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         bammWorkOrders = bammWorkOrders ?? [],
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
   StandaloneOrder copyWith({
+    DateTime? updatedAt,
     String? pr,
     String? po,
     String? description,
@@ -78,6 +83,7 @@ class StandaloneOrder {
       notes: notes ?? this.notes,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
       createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
       addToStores: addToStores ?? this.addToStores,
       storeRequested: storeRequested ?? this.storeRequested,
       storeRequestNumber: storeRequestNumber ?? this.storeRequestNumber,
@@ -101,6 +107,7 @@ class StandaloneOrder {
       'notes': notes,
       'projectId': projectId,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'addToStores': addToStores,
       'storeRequested': storeRequested,
       'storeRequestNumber': storeRequestNumber,
@@ -126,6 +133,9 @@ class StandaloneOrder {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
       addToStores: json['addToStores'] as bool? ?? false,
       storeRequested: json['storeRequested'] as bool? ?? false,
       storeRequestNumber: json['storeRequestNumber'] as String? ?? '',

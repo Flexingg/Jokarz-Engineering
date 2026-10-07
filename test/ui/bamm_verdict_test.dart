@@ -83,9 +83,11 @@ BammWorkOrder _testWorkOrder() => BammWorkOrder(
 /// description but silently dropped the work-done edit - exactly the
 /// scenario A3 exists to surface rather than hide behind "success".
 class _MixedVerdictBammNotifier extends BammNotifier {
-  _MixedVerdictBammNotifier(BammWorkOrder seed) : super(BammService()) {
-    state = BammState(workOrders: [seed]);
-  }
+  final BammWorkOrder _seed;
+  _MixedVerdictBammNotifier(this._seed) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [_seed]);
 
   @override
   Future<void> init() async {}
@@ -154,7 +156,7 @@ void main() {
       ProviderScope(
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
-          bammProvider.overrideWith((ref) => _MixedVerdictBammNotifier(wo)),
+          bammProvider.overrideWith(() => _MixedVerdictBammNotifier(wo)),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
       ),

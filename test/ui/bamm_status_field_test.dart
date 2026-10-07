@@ -130,9 +130,10 @@ class _CapturingBammNotifier extends BammNotifier {
   String? capturedStatusId;
   Object? throwOnSave;
 
-  _CapturingBammNotifier(this._detail) : super(BammService()) {
-    state = BammState(workOrders: [_detail]);
-  }
+  _CapturingBammNotifier(this._detail) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [_detail]);
 
   @override
   Future<void> init() async {}
@@ -205,7 +206,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
           bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-          bammProvider.overrideWith((ref) => notifier),
+          bammProvider.overrideWith(() => notifier),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
       ),
@@ -248,7 +249,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
           bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-          bammProvider.overrideWith((ref) => notifier),
+          bammProvider.overrideWith(() => notifier),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
       ),
@@ -294,7 +295,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
           bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-          bammProvider.overrideWith((ref) => notifier),
+          bammProvider.overrideWith(() => notifier),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
       ),
@@ -338,7 +339,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(_FakeStorageService()),
           bammServiceProvider.overrideWithValue(_FakeBammServiceWithLookups()),
-          bammProvider.overrideWith((ref) => notifier),
+          bammProvider.overrideWith(() => notifier),
         ],
         child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
       ),

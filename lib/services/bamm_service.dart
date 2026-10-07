@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../bamm/bamm_config.dart';
@@ -16,6 +15,7 @@ import '../bamm/transport/http_transport.dart';
 import '../models/bamm_models.dart';
 import 'bamm_adapter.dart';
 import 'bamm_sort.dart';
+import './app_logger.dart';
 
 /// The honest result of [BammService.updateWorkOrder]: the work order as
 /// BAMM's own read-back returned it, plus the per-field verdict for exactly
@@ -560,7 +560,7 @@ class BammService {
       final model = await writer.getById(worId);
       return bammWorkOrderFromModel(model);
     } catch (e) {
-      debugPrint('Error fetching BAMM work order detail for $worId: $e');
+      log.error('bamm', 'Error fetching BAMM work order detail for $worId: $e');
       return null;
     }
   }
@@ -583,7 +583,7 @@ class BammService {
         final items = bammLookupItemsFromOptions(result.items);
         if (items.isNotEmpty) return items;
       } catch (e) {
-        debugPrint('Error fetching BAMM lookup $method: $e');
+        log.error('bamm', 'Error fetching BAMM lookup $method: $e');
       }
     }
 
@@ -794,7 +794,7 @@ class BammService {
       final list = jsonDecode(text) as List<dynamic>;
       return list.map((e) => BammSavedFilter.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
-      debugPrint('Error loading BAMM saved filters: $e');
+      log.error('bamm', 'Error loading BAMM saved filters: $e');
       return _getDefaultSavedFilters();
     }
   }
@@ -805,7 +805,7 @@ class BammService {
       final jsonStr = jsonEncode(filters.map((f) => f.toJson()).toList());
       await _atomicWrite(file, jsonStr);
     } catch (e) {
-      debugPrint('Error saving BAMM filters: $e');
+      log.error('bamm', 'Error saving BAMM filters: $e');
     }
   }
 
@@ -819,7 +819,7 @@ class BammService {
       if (text.trim().isEmpty) return const BammColumnLayout();
       return BammColumnLayout.fromJson(jsonDecode(text) as Map<String, dynamic>);
     } catch (e) {
-      debugPrint('Error loading BAMM column layout: $e');
+      log.error('bamm', 'Error loading BAMM column layout: $e');
       return const BammColumnLayout();
     }
   }
@@ -829,7 +829,7 @@ class BammService {
       final file = await _getFile(_columnLayoutFileName);
       await _atomicWrite(file, jsonEncode(layout.toJson()));
     } catch (e) {
-      debugPrint('Error saving BAMM column layout: $e');
+      log.error('bamm', 'Error saving BAMM column layout: $e');
     }
   }
 
@@ -843,7 +843,7 @@ class BammService {
       config = BammConnectionConfig.fromJson(json);
       return config;
     } catch (e) {
-      debugPrint('Error loading BAMM config: $e');
+      log.error('bamm', 'Error loading BAMM config: $e');
       return const BammConnectionConfig();
     }
   }
@@ -854,7 +854,7 @@ class BammService {
       final file = await _getFile(_configFileName);
       await _atomicWrite(file, jsonEncode(newConfig.toJson()));
     } catch (e) {
-      debugPrint('Error saving BAMM config: $e');
+      log.error('bamm', 'Error saving BAMM config: $e');
     }
   }
 

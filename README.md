@@ -129,6 +129,19 @@ Engineered specifically for plant floor mechanical engineers managing production
 
 ---
 
+## 🧱 Architecture notes
+
+- **State**: Riverpod `Notifier`s. `ProjectNotifier` is composed from small domain mixins in `lib/providers/project_ops/` (cloud merge, standalone orders, BAMM links, inbox/vendors) over a thin `EngineeringNotifierCore`; `EngineeringState` lives in `lib/providers/engineering_state.dart`.
+- **Sync**: `lib/services/sync_service.dart` is one generic implementation over six Firestore collections. Merging is last-write-wins on `updatedAt` via the pure `mergeByUpdatedAt` (`sync_merge.dart`); edits made since the last sync that lose to a different cloud edit are logged and counted in the sync status.
+- **Safety nets**: every save keeps a `.bak`; an unreadable data file is quarantined (`*.corrupt-<ts>`) and the last good copy restored instead of starting blank. A daily auto-backup (last 7 kept) is written to `backups/`, and Settings has full **Export / Restore (.zip)** with checksums and a pre-restore snapshot. The BAMM login is never included in a backup.
+- **Diagnostics**: `AppLogger` (ring buffer + rotating `jokarz_diagnostics.log`) captures framework/platform errors; view or share it from Settings -> Diagnostics Log.
+- **Look and motion**: Graphite themes (dark/light, pickable accent) are the default. All animation goes through one spring curve in `lib/ui/motion/motion.dart` (Off / Subtle / Bouncy in Settings; the OS reduce-motion setting forces Off). Preferences (theme, accent, motion, sidebar, dashboard layout) persist in `jokarz_ui_prefs.json`.
+- **Desktop shell**: menu bar, spring navigation rail, Ctrl+K command palette (one action dispatcher in `lib/ui/shell/app_actions.dart` shared with shortcuts and menus), window size/position restore, Open Orders data table with bulk actions and a details drawer, right-click menus, vendor master-detail, customizable dashboard, and drag-and-drop photo attach on project pages.
+- **UI structure**: large screens are split into `part` files next to the screen (`*_parts/`).
+- **CI**: `.github/workflows/ci.yml` runs analyze + tests with coverage on every PR; `release.yml` re-runs the gate before building.
+
+---
+
 ## 📄 License
 
 MIT License • Developed for Randall Engineering by Jonathan Randall.
