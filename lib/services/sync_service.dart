@@ -43,14 +43,11 @@ class SyncState {
 }
 
 final syncStatusProvider =
-    StateNotifierProvider<SyncNotifier, SyncState>((ref) {
-  final authService = ref.watch(authServiceProvider);
-  return SyncNotifier(ref, authService);
-});
+    NotifierProvider<SyncNotifier, SyncState>(SyncNotifier.new);
 
-class SyncNotifier extends StateNotifier<SyncState> {
-  final Ref _ref;
-  final AuthService _authService;
+class SyncNotifier extends Notifier<SyncState> {
+  Ref get _ref => ref;
+  late AuthService _authService;
   
   FirebaseFirestore? get _firestore {
     try {
@@ -71,8 +68,15 @@ class SyncNotifier extends StateNotifier<SyncState> {
   bool _isProcessingRemoteUpdate = false;
   bool _initialRemoteReceived = false;
 
-  SyncNotifier(this._ref, this._authService) : super(const SyncState()) {
+  @override
+  SyncState build() {
+    _authService = ref.watch(authServiceProvider);
+    ref.onDispose(() {
+      _stopListening();
+      _authSub?.cancel();
+    });
     _init();
+    return const SyncState();
   }
 
   void _init() {
@@ -874,13 +878,6 @@ class SyncNotifier extends StateNotifier<SyncState> {
     _vendorsSub = null;
     _templatesSub = null;
     _localStateSub = null;
-  }
-
-  @override
-  void dispose() {
-    _stopListening();
-    _authSub?.cancel();
-    super.dispose();
   }
 }
 

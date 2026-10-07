@@ -4,16 +4,17 @@ import '../providers/project_provider.dart';
 import '../services/storage_service.dart';
 
 final keyBindingsProvider =
-    StateNotifierProvider<KeyBindingsNotifier, Map<String, String>>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return KeyBindingsNotifier(storage);
-});
+    NotifierProvider<KeyBindingsNotifier, Map<String, String>>(
+        KeyBindingsNotifier.new);
 
-class KeyBindingsNotifier extends StateNotifier<Map<String, String>> {
-  final StorageService _storage;
+class KeyBindingsNotifier extends Notifier<Map<String, String>> {
+  late StorageService _storage;
 
-  KeyBindingsNotifier(this._storage) : super(Map.of(defaultKeyBindings)) {
+  @override
+  Map<String, String> build() {
+    _storage = ref.watch(storageServiceProvider);
     _load();
+    return Map.of(defaultKeyBindings);
   }
 
   Future<void> _load() async {

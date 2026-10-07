@@ -10,16 +10,16 @@ class ReportSettings {
 }
 
 final reportSettingsProvider =
-    StateNotifierProvider<ReportSettingsNotifier, ReportSettings>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return ReportSettingsNotifier(storage);
-});
+    NotifierProvider<ReportSettingsNotifier, ReportSettings>(ReportSettingsNotifier.new);
 
-class ReportSettingsNotifier extends StateNotifier<ReportSettings> {
-  final StorageService _storage;
-  ReportSettingsNotifier(this._storage)
-      : super(const ReportSettings(current: ReportConfig())) {
+class ReportSettingsNotifier extends Notifier<ReportSettings> {
+  late StorageService _storage;
+
+  @override
+  ReportSettings build() {
+    _storage = ref.watch(storageServiceProvider);
     _load();
+    return const ReportSettings(current: ReportConfig());
   }
 
   Future<void> _load() async {

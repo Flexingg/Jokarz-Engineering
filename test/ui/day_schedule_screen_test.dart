@@ -113,8 +113,8 @@ void main() {
 
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       expect(find.text('First'), findsOneWidget);
@@ -132,8 +132,8 @@ void main() {
 
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       expect(find.textContaining('min free'), findsNothing);
@@ -152,8 +152,8 @@ void main() {
 
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       // The unscheduled task is offered in the bottom tray.
@@ -183,8 +183,8 @@ void main() {
 
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       final traySource = find.byKey(const Key('tray_drag-task'));
@@ -207,8 +207,8 @@ void main() {
       final storage = _FakeStorage();
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       expect(find.byKey(const Key('weekly_slip_summary')), findsOneWidget);
@@ -259,8 +259,8 @@ void main() {
 
       await _pump(tester, overrides: [
         storageServiceProvider.overrideWithValue(storage),
-        timeBlockProvider.overrideWith((ref) => TimeBlockNotifier(storage)),
-        projectProvider.overrideWith((ref) => ProjectNotifier(storage)),
+        timeBlockProvider.overrideWith(() => TimeBlockNotifier(storage)),
+        projectProvider.overrideWith(() => ProjectNotifier(storage)),
       ]);
 
       await tester.tap(find.byKey(const Key('block_a')));

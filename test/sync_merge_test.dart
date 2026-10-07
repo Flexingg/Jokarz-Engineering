@@ -2,15 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/project.dart';
 import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/voice_note.dart';
-import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/services/storage_service.dart';
+import 'helpers/mount_notifier.dart';
 
 /// Waits for the notifier's async initial load to finish. In tests the platform
 /// storage calls (path_provider) are unmocked, so StorageService degrades
 /// gracefully to blank data and all saves are no-ops — which is fine for
 /// exercising the in-memory merge/removal logic.
-Future<void> _waitForLoad(ProjectNotifier n) async {
-  while (n.state.isLoading) {
+Future<void> _waitForLoad(MountedProject h) async {
+  while (h.state.isLoading) {
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
 }
@@ -45,8 +45,9 @@ void main() {
 
   group('mergeCloudNotes', () {
     test('keeps the newer edit instead of cloud last-write-wins', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final local = VoiceNote(
         id: 'n1',
@@ -64,7 +65,7 @@ void main() {
         updatedAt: DateTime.utc(2026, 9, 1, 10),
       );
       await notifier.mergeCloudNotes([staleRemote]);
-      expect(notifier.state.voiceNotes.first.transcript, 'local v2');
+      expect(h.state.voiceNotes.first.transcript, 'local v2');
 
       // Newer remote edit -> remote wins.
       final newRemote = VoiceNote(
@@ -74,24 +75,26 @@ void main() {
         updatedAt: DateTime.utc(2026, 9, 1, 14),
       );
       await notifier.mergeCloudNotes([newRemote]);
-      expect(notifier.state.voiceNotes.first.transcript, 'fresh remote v3');
+      expect(h.state.voiceNotes.first.transcript, 'fresh remote v3');
     });
   });
 
   group('local-only removals (sync resurrection guard)', () {
     test('removeVoiceNoteLocal removes from local state', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       await notifier.addVoiceNote(
           VoiceNote(id: 'a', title: 'A', transcript: 'x'));
       await notifier.removeVoiceNoteLocal('a');
-      expect(notifier.state.voiceNotes.where((n) => n.id == 'a'), isEmpty);
+      expect(h.state.voiceNotes.where((n) => n.id == 'a'), isEmpty);
     });
 
     test('removeProjectLocal removes from local state', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       await notifier.addProject(Project(id: 'p1', title: 'Test project'));
       expect(notifier.getProjectById('p1'), isNotNull);
@@ -102,8 +105,9 @@ void main() {
 
   group('overdueTasks', () {
     test('only incomplete tasks with a past date are overdue', () async {
-      final n = ProjectNotifier(StorageService());
-      await _waitForLoad(n);
+      final h = mountProject(StorageService());
+      final n = h.notifier;
+      await _waitForLoad(h);
       final today = DateTime.now();
       final yesterday = DateTime(today.year, today.month, today.day - 1);
       final tomorrow = DateTime(today.year, today.month, today.day + 1);
@@ -115,14 +119,15 @@ void main() {
         TaskItem(id: 't4', description: 'past done', scheduledDate: yesterday, isCompleted: true),
       ]));
 
-      expect(n.state.overdueTasks.length, 1);
-      expect(n.state.overdueTasks.first.task.id, 't1');
+      expect(h.state.overdueTasks.length, 1);
+      expect(h.state.overdueTasks.first.task.id, 't1');
     });
 
     test('rescheduleTaskToToday moves an overdue task to today, keeping time',
         () async {
-      final n = ProjectNotifier(StorageService());
-      await _waitForLoad(n);
+      final h = mountProject(StorageService());
+      final n = h.notifier;
+      await _waitForLoad(h);
       final today = DateTime.now();
       final past = DateTime(today.year, today.month, today.day - 5, 9, 30);
 
@@ -134,7 +139,7 @@ void main() {
       final task = n.getProjectById('p1')!.tasks.first;
       expect(task.scheduledDate!.day, today.day);
       expect(task.scheduledDate!.hour, 9); // time-of-day preserved
-      expect(n.state.overdueTasks, isEmpty);
+      expect(h.state.overdueTasks, isEmpty);
     });
   });
 }

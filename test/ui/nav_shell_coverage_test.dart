@@ -77,9 +77,10 @@ class _FakeStorageService extends StorageService {
 }
 
 class _FakeBammNotifier extends BammNotifier {
-  _FakeBammNotifier() : super(BammService()) {
-    state = const BammState();
-  }
+  _FakeBammNotifier() : super(BammService());
+
+  @override
+  BammState initialState() => const BammState();
 
   @override
   Future<void> init() async {}
@@ -90,7 +91,7 @@ class _FakeBammNotifier extends BammNotifier {
 
 List<Override> _overrides() => [
       storageServiceProvider.overrideWithValue(_FakeStorageService()),
-      bammProvider.overrideWith((ref) => _FakeBammNotifier()),
+      bammProvider.overrideWith(() => _FakeBammNotifier()),
     ];
 
 /// Every branch this app's router declares, in branch-index order (0-6),

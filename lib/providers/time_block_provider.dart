@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/time_block.dart';
 import '../models/slip_log_entry.dart';
@@ -90,13 +91,16 @@ class TimeBlockState {
   }
 }
 
-final timeBlockProvider = StateNotifierProvider<TimeBlockNotifier, TimeBlockState>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return TimeBlockNotifier(storage);
-});
+final timeBlockProvider =
+    NotifierProvider<TimeBlockNotifier, TimeBlockState>(TimeBlockNotifier.new);
 
-class TimeBlockNotifier extends StateNotifier<TimeBlockState> {
-  final StorageService _storage;
+class TimeBlockNotifier extends Notifier<TimeBlockState> {
+  /// [storage] is a test seam; production resolves [storageServiceProvider].
+  TimeBlockNotifier([StorageService? storage]) : _injectedStorage = storage;
+
+  final StorageService? _injectedStorage;
+  StorageService get _storage =>
+      _injectedStorage ?? ref.read(storageServiceProvider);
 
   /// Resolves once the initial load from storage has completed - tests
   /// await this instead of racing the fire-and-forget load in the
@@ -104,8 +108,13 @@ class TimeBlockNotifier extends StateNotifier<TimeBlockState> {
   /// `init()` entirely; here we just expose it since the load is trivial).
   late final Future<void> ready;
 
-  TimeBlockNotifier(this._storage) : super(const TimeBlockState()) {
-    ready = _load();
+  @override
+  TimeBlockState build() {
+    // _load() sets `state`, so it must start after build() has returned.
+    final loaded = Completer<void>();
+    ready = loaded.future;
+    Future.microtask(() => _load().whenComplete(loaded.complete));
+    return const TimeBlockState();
   }
 
   Future<void> _load() async {

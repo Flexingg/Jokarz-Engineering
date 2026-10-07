@@ -88,9 +88,11 @@ class _FakeStorageService extends StorageService {
 /// A [BammNotifier] that skips network polling / config loading (`init()`)
 /// and starts from a fixed seed state instead.
 class _FakeBammNotifier extends BammNotifier {
-  _FakeBammNotifier(BammState seed) : super(BammService()) {
-    state = seed;
-  }
+  final BammState _seed;
+  _FakeBammNotifier(this._seed) : super(BammService());
+
+  @override
+  BammState initialState() => _seed;
 
   @override
   Future<void> init() async {}
@@ -145,7 +147,7 @@ List<Override> _projectOverrides(List<Project> projects) => [
 
 List<Override> _bammOverrides(BammWorkOrder wo) => [
       storageServiceProvider.overrideWithValue(_FakeStorageService(const [])),
-      bammProvider.overrideWith((ref) => _FakeBammNotifier(BammState(workOrders: [wo]))),
+      bammProvider.overrideWith(() => _FakeBammNotifier(BammState(workOrders: [wo]))),
     ];
 
 Future<void> _pumpAt(

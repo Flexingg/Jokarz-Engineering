@@ -8,6 +8,7 @@
 // so BammNotifier's own logic under test (merge, resolve, request-id guard)
 // runs for real - the same pattern as bamm_activity_lines_test.dart.
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/mount_notifier.dart';
 
 import 'package:jokarz_engineering/bamm/mutations/fields.dart';
 import 'package:jokarz_engineering/models/bamm_models.dart';
@@ -15,13 +16,22 @@ import 'package:jokarz_engineering/providers/bamm_provider.dart';
 import 'package:jokarz_engineering/services/bamm_service.dart';
 
 class _TestNotifier extends BammNotifier {
-  _TestNotifier(super.service, BammState seed) {
-    state = seed;
-  }
+  final BammState _seed;
+  _TestNotifier(super.service, this._seed);
+
+  @override
+  BammState initialState() => _seed;
+
+  /// Read access to [state], which is protected outside subclasses.
+  BammState get current => state;
 
   @override
   Future<void> init() async {}
 }
+
+/// Mounts a [_TestNotifier] in its own container (disposed with the test).
+_TestNotifier _mount(BammService service, BammState seed) =>
+    mountNotifier(() => _TestNotifier(service, seed)).notifier;
 
 BammWorkOrder _listRow() => BammWorkOrder(
       worId: 700203512,
@@ -152,7 +162,7 @@ void main() {
         priority: '6',
       );
 
-      final notifier = _TestNotifier(
+      final notifier = _mount(
         _DetailFakeService(rawDetail),
         BammState(
           workOrders: [listRow],
@@ -175,7 +185,7 @@ void main() {
       expect(merged.description, 'LR repair request (edited)', reason: 'detail genuinely carries this - must patch through');
 
       // The row actually stored in state is the merged version, not the raw detail.
-      final stored = notifier.state.workOrders.firstWhere((w) => w.worId == listRow.worId);
+      final stored = notifier.current.workOrders.firstWhere((w) => w.worId == listRow.worId);
       expect(stored.worNoSeq, 'WO-143608.4');
       expect(stored.status, 'Registered');
     });
@@ -183,7 +193,7 @@ void main() {
     test('an id with no lookup match shows the raw id, never a wrong hardcoded label', () async {
       final listRow = _listRow();
       final rawDetail = BammWorkOrder(worId: 700203512, worNoSeq: '143608', description: '', status: '', statusId: 99, step: '', stepId: 42);
-      final notifier = _TestNotifier(
+      final notifier = _mount(
         _DetailFakeService(rawDetail),
         BammState(workOrders: [listRow], statusLookups: const [], stepLookups: const []),
       );
@@ -198,7 +208,7 @@ void main() {
   group('BammNotifier.updateWorkOrder - re-query and merge', () {
     test('a successful save re-runs the list query', () async {
       final service = _UpdateFakeService();
-      final notifier = _TestNotifier(service, BammState(workOrders: [_listRow()]));
+      final notifier = _mount(service, BammState(workOrders: [_listRow()]));
 
       await notifier.updateWorkOrder(worId: 700203512, description: 'Updated description');
 
@@ -208,7 +218,7 @@ void main() {
     test('the returned outcome and stored row are merged - list-only fields and labels survive', () async {
       final service = _UpdateFakeService();
       final listRow = _listRow();
-      final notifier = _TestNotifier(
+      final notifier = _mount(
         service,
         BammState(
           workOrders: [listRow],
@@ -235,14 +245,14 @@ void main() {
         () => Future.delayed(const Duration(milliseconds: 30), () => older),
         () => Future.value(newer),
       ]);
-      final notifier = _TestNotifier(service, const BammState());
+      final notifier = _mount(service, const BammState());
 
       final firstCall = notifier.refreshWorkOrders(); // slow, fires first
       await Future<void>.delayed(const Duration(milliseconds: 5));
       final secondCall = notifier.refreshWorkOrders(); // fast, fires second, resolves first
       await Future.wait([firstCall, secondCall]);
 
-      expect(notifier.state.workOrders, newer, reason: 'the newer request must win even though the older one resolves later');
+      expect(notifier.current.workOrders, newer, reason: 'the newer request must win even though the older one resolves later');
     });
   });
 }

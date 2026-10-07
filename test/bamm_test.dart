@@ -4,12 +4,12 @@ import 'package:jokarz_engineering/models/project.dart';
 import 'package:jokarz_engineering/models/task_item.dart';
 import 'package:jokarz_engineering/models/order_item.dart';
 import 'package:jokarz_engineering/models/standalone_order.dart';
-import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/services/bamm_service.dart';
 import 'package:jokarz_engineering/services/storage_service.dart';
+import 'helpers/mount_notifier.dart';
 
-Future<void> _waitForLoad(ProjectNotifier n) async {
-  while (n.state.isLoading) {
+Future<void> _waitForLoad(MountedProject h) async {
+  while (h.state.isLoading) {
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
 }
@@ -453,8 +453,9 @@ void main() {
 
   group('BAMM Assignments in ProjectProvider', () {
     test('assignBammToProject and removeBammFromProject', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final project = Project(
         id: 'proj-bamm-1',
@@ -464,29 +465,30 @@ void main() {
       await notifier.addProject(project);
 
       await notifier.assignBammToProject('proj-bamm-1', '185586');
-      var updated = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
+      var updated = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
       expect(updated.bammWorkOrders, contains('185586'));
 
       // Duplicate assignment is idempotent
       await notifier.assignBammToProject('proj-bamm-1', '185586');
-      updated = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
+      updated = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
       expect(updated.bammWorkOrders.length, 1);
 
       // Add a second BAMM
       await notifier.assignBammToProject('proj-bamm-1', '190022');
-      updated = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
+      updated = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
       expect(updated.bammWorkOrders, containsAll(['185586', '190022']));
 
       // Remove BAMM
       await notifier.removeBammFromProject('proj-bamm-1', '185586');
-      updated = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
+      updated = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-1');
       expect(updated.bammWorkOrders, isNot(contains('185586')));
       expect(updated.bammWorkOrders, contains('190022'));
     });
 
     test('assignBammToTask and removeBammFromTask', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final task = TaskItem(id: 'task-1', description: 'Replace seal');
       final project = Project(
@@ -497,17 +499,18 @@ void main() {
       await notifier.addProject(project);
 
       await notifier.assignBammToTask('proj-bamm-2', 'task-1', '185586');
-      var proj = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-2');
+      var proj = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-2');
       expect(proj.tasks.first.bammWorkOrders, contains('185586'));
 
       await notifier.removeBammFromTask('proj-bamm-2', 'task-1', '185586');
-      proj = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-2');
+      proj = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-2');
       expect(proj.tasks.first.bammWorkOrders, isNot(contains('185586')));
     });
 
     test('assignBammToOrder and removeBammFromOrder', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final order = OrderItem(id: 'ord-1', description: 'Seal kit');
       final project = Project(
@@ -518,33 +521,35 @@ void main() {
       await notifier.addProject(project);
 
       await notifier.assignBammToOrder('proj-bamm-3', 'ord-1', '185586');
-      var proj = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-3');
+      var proj = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-3');
       expect(proj.orders.first.bammWorkOrders, contains('185586'));
 
       await notifier.removeBammFromOrder('proj-bamm-3', 'ord-1', '185586');
-      proj = notifier.state.projects.firstWhere((p) => p.id == 'proj-bamm-3');
+      proj = h.state.projects.firstWhere((p) => p.id == 'proj-bamm-3');
       expect(proj.orders.first.bammWorkOrders, isNot(contains('185586')));
     });
 
     test('assignBammToStandaloneOrder and removeBammFromStandaloneOrder', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final standalone = StandaloneOrder(id: 'std-1', description: 'Spare valves');
       await notifier.addStandaloneOrder(standalone);
 
       await notifier.assignBammToStandaloneOrder('std-1', '185586');
-      var order = notifier.state.standaloneOrders.firstWhere((o) => o.id == 'std-1');
+      var order = h.state.standaloneOrders.firstWhere((o) => o.id == 'std-1');
       expect(order.bammWorkOrders, contains('185586'));
 
       await notifier.removeBammFromStandaloneOrder('std-1', '185586');
-      order = notifier.state.standaloneOrders.firstWhere((o) => o.id == 'std-1');
+      order = h.state.standaloneOrders.firstWhere((o) => o.id == 'std-1');
       expect(order.bammWorkOrders, isNot(contains('185586')));
     });
 
     test('findItemsLinkedToBamm finds cross-referenced projects, tasks, and orders', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final task = TaskItem(id: 't-10', description: 'Align gearbox', bammWorkOrders: ['185586']);
       final order = OrderItem(id: 'o-20', description: 'Coupling kit', bammWorkOrders: ['185586']);
@@ -577,8 +582,9 @@ void main() {
     });
 
     test('linkOrderToProject preserves bammWorkOrders when converting standalone order', () async {
-      final notifier = ProjectNotifier(StorageService());
-      await _waitForLoad(notifier);
+      final h = mountProject(StorageService());
+      final notifier = h.notifier;
+      await _waitForLoad(h);
 
       final project = Project(id: 'p-dest', title: 'Destination Project');
       await notifier.addProject(project);
@@ -592,10 +598,10 @@ void main() {
 
       await notifier.linkOrderToProject('s-to-link', 'p-dest');
 
-      final updatedProj = notifier.state.projects.firstWhere((p) => p.id == 'p-dest');
+      final updatedProj = h.state.projects.firstWhere((p) => p.id == 'p-dest');
       expect(updatedProj.orders.length, 1);
       expect(updatedProj.orders.first.bammWorkOrders, contains('185586'));
-      expect(notifier.state.standaloneOrders.any((s) => s.id == 's-to-link'), isFalse);
+      expect(h.state.standaloneOrders.any((s) => s.id == 's-to-link'), isFalse);
     });
   });
 }

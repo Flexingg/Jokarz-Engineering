@@ -10,15 +10,16 @@ class BammReportSettings {
 }
 
 final bammReportSettingsProvider =
-    StateNotifierProvider<BammReportSettingsNotifier, BammReportSettings>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return BammReportSettingsNotifier(storage);
-});
+    NotifierProvider<BammReportSettingsNotifier, BammReportSettings>(BammReportSettingsNotifier.new);
 
-class BammReportSettingsNotifier extends StateNotifier<BammReportSettings> {
-  final StorageService _storage;
-  BammReportSettingsNotifier(this._storage) : super(const BammReportSettings(current: BammReportConfig())) {
+class BammReportSettingsNotifier extends Notifier<BammReportSettings> {
+  late StorageService _storage;
+
+  @override
+  BammReportSettings build() {
+    _storage = ref.watch(storageServiceProvider);
     _load();
+    return const BammReportSettings(current: BammReportConfig());
   }
 
   Future<void> _load() async {

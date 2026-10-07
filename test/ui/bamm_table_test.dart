@@ -86,10 +86,13 @@ class _FakeStorageService extends StorageService {
 /// what's rendered - not a mocked-out no-op.
 class _FakeBammNotifier extends BammNotifier {
   final List<BammWorkOrder> _seed;
+  final BammColumnLayout _columnLayout;
   _FakeBammNotifier(this._seed, {BammColumnLayout columnLayout = const BammColumnLayout()})
-      : super(BammService()) {
-    state = BammState(workOrders: _seed, columnLayout: columnLayout);
-  }
+      : _columnLayout = columnLayout,
+        super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: _seed, columnLayout: _columnLayout);
 
   @override
   Future<void> init() async {}
@@ -181,7 +184,7 @@ BammWorkOrder _wo({
 
 List<Override> _overrides(List<BammWorkOrder> seed, {BammColumnLayout columnLayout = const BammColumnLayout()}) => [
       storageServiceProvider.overrideWithValue(_FakeStorageService()),
-      bammProvider.overrideWith((ref) => _FakeBammNotifier(seed, columnLayout: columnLayout)),
+      bammProvider.overrideWith(() => _FakeBammNotifier(seed, columnLayout: columnLayout)),
     ];
 
 Future<void> _pumpAt(WidgetTester tester, Size size, {required List<Override> overrides}) async {
@@ -597,7 +600,7 @@ void main() {
       late _FakeBammNotifier notifier;
       final overrides = <Override>[
         storageServiceProvider.overrideWithValue(_FakeStorageService()),
-        bammProvider.overrideWith((ref) {
+        bammProvider.overrideWith(() {
           notifier = _FakeBammNotifier(seed);
           return notifier;
         }),

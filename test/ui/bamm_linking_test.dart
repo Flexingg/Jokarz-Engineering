@@ -79,14 +79,22 @@ class _FakeStorageService extends StorageService {
 class _TrackingProjectNotifier extends ProjectNotifier {
   final List<String> recordedOps = [];
 
+  final List<Project> _seedProjects;
+  final List<ProjectTemplate> _seedTemplates;
+
   _TrackingProjectNotifier(
     super.storage, {
     List<Project>? seedProjects,
     List<ProjectTemplate>? seedTemplates,
-  }) {
-    state = EngineeringState(
-      projects: seedProjects ?? [],
-      customTemplates: seedTemplates ?? [],
+  })  : _seedProjects = seedProjects ?? [],
+        _seedTemplates = seedTemplates ?? [];
+
+  @override
+  EngineeringState build() {
+    super.build();
+    return EngineeringState(
+      projects: _seedProjects,
+      customTemplates: _seedTemplates,
     );
   }
 
@@ -144,9 +152,11 @@ class _TrackingProjectNotifier extends ProjectNotifier {
 }
 
 class _FakeBammNotifier extends BammNotifier {
-  _FakeBammNotifier(BammWorkOrder seed) : super(BammService()) {
-    state = BammState(workOrders: [seed]);
-  }
+  final BammWorkOrder _seed;
+  _FakeBammNotifier(this._seed) : super(BammService());
+
+  @override
+  BammState initialState() => BammState(workOrders: [_seed]);
 
   @override
   Future<void> init() async {}
@@ -223,8 +233,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -304,8 +314,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -370,8 +380,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -436,8 +446,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -501,8 +511,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -566,8 +576,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),
@@ -626,8 +636,8 @@ void main() {
         ProviderScope(
           overrides: [
             storageServiceProvider.overrideWithValue(fakeStorage),
-            bammProvider.overrideWith((ref) => _FakeBammNotifier(wo)),
-            projectProvider.overrideWith((ref) => trackingNotifier),
+            bammProvider.overrideWith(() => _FakeBammNotifier(wo)),
+            projectProvider.overrideWith(() => trackingNotifier),
           ],
           child: MaterialApp(home: Scaffold(body: BammDetailDialog(workOrder: wo))),
         ),

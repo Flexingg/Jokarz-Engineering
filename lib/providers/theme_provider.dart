@@ -4,12 +4,11 @@ import '../theme/app_theme.dart';
 /// The user-selected app-wide theme family (Bridgestone Dark/Light, Vibes Dark/White, Material
 /// Light/Dark, Bridgestone Brutalist).
 final themeProvider =
-    StateNotifierProvider<ThemeNotifier, AppThemeFamily>((ref) {
-  return ThemeNotifier();
-});
+    NotifierProvider<ThemeNotifier, AppThemeFamily>(ThemeNotifier.new);
 
-class ThemeNotifier extends StateNotifier<AppThemeFamily> {
-  ThemeNotifier() : super(AppThemeFamily.bridgestoneDark);
+class ThemeNotifier extends Notifier<AppThemeFamily> {
+  @override
+  AppThemeFamily build() => AppThemeFamily.bridgestoneDark;
 
   void setTheme(AppThemeFamily family) {
     state = family;
