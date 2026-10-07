@@ -218,6 +218,20 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                                   color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
                                 ),
                               ),
+                            if (syncState.conflictCount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Tooltip(
+                                  message: syncState.lastConflict ?? '',
+                                  child: Text(
+                                    '${syncState.conflictCount} sync conflict(s) auto-resolved (newest edit won). See Diagnostics Log.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.of(context).amber,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),

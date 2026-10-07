@@ -4,75 +4,114 @@ import '../../models/project_template.dart';
 import '../../models/standalone_order.dart';
 import '../../models/vendor.dart';
 import '../../models/voice_note.dart';
+import '../../services/app_logger.dart';
+import '../../services/sync_merge.dart';
 import 'notifier_core.dart';
 
 /// Cloud snapshot merge handlers (applied by the sync service).
+///
+/// Every collection is merged last-write-wins on `updatedAt` via
+/// [mergeByUpdatedAt]. Each handler returns the conflicts it detected (edits
+/// made here since [lastSyncedAt] that disagreed with the cloud) so the sync
+/// layer can surface them; they are also written to the diagnostics log.
 mixin CloudMergeOps on EngineeringNotifierCore {
-  Future<void> mergeCloudStandaloneOrders(List<StandaloneOrder> remoteOrders) async {
-    final localMap = {for (var o in state.standaloneOrders) o.id: o};
-    for (final remote in remoteOrders) {
-      localMap[remote.id] = remote;
+  List<SyncConflict> _record(List<SyncConflict> conflicts) {
+    for (final c in conflicts) {
+      log.warn('sync', 'Merge conflict: ${c.summary}');
     }
-    state = state.copyWith(standaloneOrders: localMap.values.toList());
-    await persist();
+    return conflicts;
   }
 
-  Future<void> mergeCloudInbox(List<InboxItem> remoteItems) async {
-    final localMap = {for (var i in state.inboxItems) i.id: i};
-    for (final remote in remoteItems) {
-      localMap[remote.id] = remote;
-    }
-    state = state.copyWith(inboxItems: localMap.values.toList());
-    await persist();
-  }
-
-  Future<void> mergeCloudVendors(List<Vendor> remoteVendors) async {
-    final localMap = {for (var v in state.vendors) v.id: v};
-    for (final remote in remoteVendors) {
-      localMap[remote.id] = remote;
-    }
-    state = state.copyWith(vendors: localMap.values.toList());
-    await persist();
-  }
-
-  Future<void> mergeCloudTemplates(List<ProjectTemplate> remoteTemplates) async {
-    final localMap = {for (var t in state.customTemplates) t.id: t};
-    for (final remote in remoteTemplates) {
-      if (!remote.isSystemTemplate) {
-        localMap[remote.id] = remote;
-      }
-    }
-    state = state.copyWith(customTemplates: localMap.values.toList());
-    await persist();
-  }
-
-  Future<void> mergeCloudProjects(List<Project> remoteProjects) async {
-    final localMap = {for (var p in state.projects) p.id: p};
-    for (final remote in remoteProjects) {
-      final local = localMap[remote.id];
-      if (local == null || remote.updatedAt.isAfter(local.updatedAt)) {
-        localMap[remote.id] = remote;
-      }
-    }
-    state = state.copyWith(
-      projects: rebalancePriorities(localMap.values.toList()),
+  Future<List<SyncConflict>> mergeCloudStandaloneOrders(
+      List<StandaloneOrder> remoteOrders,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<StandaloneOrder>(
+      collection: 'standaloneOrders',
+      local: state.standaloneOrders,
+      remote: remoteOrders,
+      idOf: (o) => o.id,
+      updatedAtOf: (o) => o.updatedAt,
+      lastSyncedAt: lastSyncedAt,
     );
+    state = state.copyWith(standaloneOrders: out.merged);
     await persist();
+    return _record(out.conflicts);
   }
 
-  Future<void> mergeCloudNotes(List<VoiceNote> remoteNotes) async {
-    final localMap = {for (var n in state.voiceNotes) n.id: n};
-    for (final remote in remoteNotes) {
-      final local = localMap[remote.id];
-      // Keep the newer edit (last-write-wins by updatedAt). This prevents a
-      // stale device's older copy from clobbering newer local edits.
-      if (local == null || remote.updatedAt.isAfter(local.updatedAt)) {
-        localMap[remote.id] = remote;
-      }
-    }
-    state = state.copyWith(
-      voiceNotes: localMap.values.toList(),
+  Future<List<SyncConflict>> mergeCloudInbox(List<InboxItem> remoteItems,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<InboxItem>(
+      collection: 'inbox',
+      local: state.inboxItems,
+      remote: remoteItems,
+      idOf: (i) => i.id,
+      updatedAtOf: (i) => i.updatedAt,
+      lastSyncedAt: lastSyncedAt,
     );
+    state = state.copyWith(inboxItems: out.merged);
     await persist();
+    return _record(out.conflicts);
+  }
+
+  Future<List<SyncConflict>> mergeCloudVendors(List<Vendor> remoteVendors,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<Vendor>(
+      collection: 'vendors',
+      local: state.vendors,
+      remote: remoteVendors,
+      idOf: (v) => v.id,
+      updatedAtOf: (v) => v.updatedAt,
+      lastSyncedAt: lastSyncedAt,
+    );
+    state = state.copyWith(vendors: out.merged);
+    await persist();
+    return _record(out.conflicts);
+  }
+
+  Future<List<SyncConflict>> mergeCloudTemplates(
+      List<ProjectTemplate> remoteTemplates,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<ProjectTemplate>(
+      collection: 'templates',
+      local: state.customTemplates,
+      remote: remoteTemplates,
+      idOf: (t) => t.id,
+      updatedAtOf: (t) => t.updatedAt,
+      lastSyncedAt: lastSyncedAt,
+      skipRemote: (t) => t.isSystemTemplate,
+    );
+    state = state.copyWith(customTemplates: out.merged);
+    await persist();
+    return _record(out.conflicts);
+  }
+
+  Future<List<SyncConflict>> mergeCloudProjects(List<Project> remoteProjects,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<Project>(
+      collection: 'projects',
+      local: state.projects,
+      remote: remoteProjects,
+      idOf: (p) => p.id,
+      updatedAtOf: (p) => p.updatedAt,
+      lastSyncedAt: lastSyncedAt,
+    );
+    state = state.copyWith(projects: rebalancePriorities(out.merged));
+    await persist();
+    return _record(out.conflicts);
+  }
+
+  Future<List<SyncConflict>> mergeCloudNotes(List<VoiceNote> remoteNotes,
+      {DateTime? lastSyncedAt}) async {
+    final out = mergeByUpdatedAt<VoiceNote>(
+      collection: 'voiceNotes',
+      local: state.voiceNotes,
+      remote: remoteNotes,
+      idOf: (n) => n.id,
+      updatedAtOf: (n) => n.updatedAt,
+      lastSyncedAt: lastSyncedAt,
+    );
+    state = state.copyWith(voiceNotes: out.merged);
+    await persist();
+    return _record(out.conflicts);
   }
 }

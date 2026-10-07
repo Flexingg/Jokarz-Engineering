@@ -10,6 +10,7 @@ import '../models/project_template.dart';
 import '../providers/project_provider.dart';
 import 'app_logger.dart';
 import 'auth_service.dart';
+import 'sync_merge.dart';
 
 enum SyncStatus {
   offline,
@@ -23,21 +24,34 @@ class SyncState {
   final DateTime? lastSyncedAt;
   final String? errorMessage;
 
+  /// Merge conflicts resolved since the app started (an edit made here since
+  /// the last sync disagreed with a different cloud edit; see [mergeByUpdatedAt]).
+  final int conflictCount;
+
+  /// Human-readable description of the most recent conflict, if any.
+  final String? lastConflict;
+
   const SyncState({
     this.status = SyncStatus.offline,
     this.lastSyncedAt,
     this.errorMessage,
+    this.conflictCount = 0,
+    this.lastConflict,
   });
 
   SyncState copyWith({
     SyncStatus? status,
     DateTime? lastSyncedAt,
     String? errorMessage,
+    int? conflictCount,
+    String? lastConflict,
   }) {
     return SyncState(
       status: status ?? this.status,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       errorMessage: errorMessage ?? this.errorMessage,
+      conflictCount: conflictCount ?? this.conflictCount,
+      lastConflict: lastConflict ?? this.lastConflict,
     );
   }
 }
@@ -45,10 +59,47 @@ class SyncState {
 final syncStatusProvider =
     NotifierProvider<SyncNotifier, SyncState>(SyncNotifier.new);
 
+/// Firestore caps a write batch at 500 operations; stay well under it.
+const int _kBatchLimit = 400;
+
+/// Everything the sync layer needs to know about one synced collection
+/// (`users/{uid}/<name>`): how to (de)serialize it, read it from local state,
+/// merge a cloud snapshot into it, and remove an item that was deleted
+/// elsewhere. One generic implementation then serves all six collections.
+class _SyncCollection<T> {
+  final String name;
+  final String label;
+  final T Function(Map<String, dynamic>) fromJson;
+  final Map<String, dynamic> Function(T) toJson;
+  final String Function(T) idOf;
+  final DateTime Function(T) updatedAtOf;
+  final List<T> Function(EngineeringState) items;
+  final Future<List<SyncConflict>> Function(
+      ProjectNotifier, List<T> remote, DateTime? lastSyncedAt) merge;
+  final Future<void> Function(ProjectNotifier, String id) removeLocal;
+
+  /// Projects and notes are what flip the "initial cloud state received" flag
+  /// that arms local-change pushing and the Synced status.
+  final bool marksInitialSync;
+
+  const _SyncCollection({
+    required this.name,
+    required this.label,
+    required this.fromJson,
+    required this.toJson,
+    required this.idOf,
+    required this.updatedAtOf,
+    required this.items,
+    required this.merge,
+    required this.removeLocal,
+    this.marksInitialSync = false,
+  });
+}
+
 class SyncNotifier extends Notifier<SyncState> {
   Ref get _ref => ref;
   late AuthService _authService;
-  
+
   FirebaseFirestore? get _firestore {
     try {
       return FirebaseFirestore.instance;
@@ -58,15 +109,84 @@ class SyncNotifier extends Notifier<SyncState> {
   }
 
   StreamSubscription? _authSub;
-  StreamSubscription? _projectsSub;
-  StreamSubscription? _notesSub;
-  StreamSubscription? _ordersSub;
-  StreamSubscription? _inboxSub;
-  StreamSubscription? _vendorsSub;
-  StreamSubscription? _templatesSub;
+  final List<StreamSubscription> _collectionSubs = [];
   ProviderSubscription? _localStateSub;
   bool _isProcessingRemoteUpdate = false;
   bool _initialRemoteReceived = false;
+
+  late final _SyncCollection<Project> _projects = _SyncCollection<Project>(
+    name: 'projects',
+    label: 'projects',
+    fromJson: Project.fromJson,
+    toJson: (p) => p.toJson(),
+    idOf: (p) => p.id,
+    updatedAtOf: (p) => p.updatedAt,
+    items: (s) => s.projects,
+    merge: (n, r, t) => n.mergeCloudProjects(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.removeProjectLocal(id),
+    marksInitialSync: true,
+  );
+  late final _SyncCollection<VoiceNote> _notes = _SyncCollection<VoiceNote>(
+    name: 'voiceNotes',
+    label: 'notes',
+    fromJson: VoiceNote.fromJson,
+    toJson: (n) => n.toJson(),
+    idOf: (n) => n.id,
+    updatedAtOf: (n) => n.updatedAt,
+    items: (s) => s.voiceNotes,
+    merge: (n, r, t) => n.mergeCloudNotes(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.removeVoiceNoteLocal(id),
+    marksInitialSync: true,
+  );
+  late final _SyncCollection<StandaloneOrder> _orders =
+      _SyncCollection<StandaloneOrder>(
+    name: 'standaloneOrders',
+    label: 'standalone orders',
+    fromJson: StandaloneOrder.fromJson,
+    toJson: (o) => o.toJson(),
+    idOf: (o) => o.id,
+    updatedAtOf: (o) => o.updatedAt,
+    items: (s) => s.standaloneOrders,
+    merge: (n, r, t) => n.mergeCloudStandaloneOrders(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.deleteStandaloneOrder(id),
+  );
+  late final _SyncCollection<InboxItem> _inbox = _SyncCollection<InboxItem>(
+    name: 'inbox',
+    label: 'inbox items',
+    fromJson: InboxItem.fromJson,
+    toJson: (i) => i.toJson(),
+    idOf: (i) => i.id,
+    updatedAtOf: (i) => i.updatedAt,
+    items: (s) => s.inboxItems,
+    merge: (n, r, t) => n.mergeCloudInbox(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.deleteInboxItem(id),
+  );
+  late final _SyncCollection<Vendor> _vendors = _SyncCollection<Vendor>(
+    name: 'vendors',
+    label: 'vendors',
+    fromJson: Vendor.fromJson,
+    toJson: (v) => v.toJson(),
+    idOf: (v) => v.id,
+    updatedAtOf: (v) => v.updatedAt,
+    items: (s) => s.vendors,
+    merge: (n, r, t) => n.mergeCloudVendors(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.deleteVendor(id),
+  );
+  late final _SyncCollection<ProjectTemplate> _templates =
+      _SyncCollection<ProjectTemplate>(
+    name: 'templates',
+    label: 'templates',
+    fromJson: ProjectTemplate.fromJson,
+    toJson: (t) => t.toJson(),
+    idOf: (t) => t.id,
+    updatedAtOf: (t) => t.updatedAt,
+    items: (s) => s.customTemplates,
+    merge: (n, r, t) => n.mergeCloudTemplates(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.deleteCustomTemplate(id),
+  );
+
+  List<_SyncCollection<dynamic>> get _all =>
+      [_projects, _notes, _orders, _inbox, _vendors, _templates];
 
   @override
   SyncState build() {
@@ -90,365 +210,116 @@ class SyncNotifier extends Notifier<SyncState> {
     });
   }
 
+  CollectionReference<Map<String, dynamic>>? _col(String uid, String name) =>
+      _firestore?.collection('users').doc(uid).collection(name);
+
   void _startListeningToCloud(String uid) {
     _stopListening();
-    final firestore = _firestore;
-    if (firestore == null) return;
+    if (_firestore == null) return;
 
     state = state.copyWith(status: SyncStatus.syncing);
 
-    // Real-time snapshot listener on user's projects collection
-    _projectsSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('projects')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleProjectsSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore projects sync error: $e');
-        state = state.copyWith(
-          status: SyncStatus.error,
-          errorMessage: e.toString(),
-        );
-      },
-    );
+    for (final c in _all) {
+      _collectionSubs.add(_col(uid, c.name)!.snapshots().listen(
+        (snapshot) => _handleSnapshot(c, snapshot),
+        onError: (Object e) {
+          log.error('sync', 'Firestore ${c.label} sync error', e);
+          // Only the projects listener drives the visible error status
+          // (matches the previous behaviour); the rest are logged.
+          if (identical(c, _projects)) {
+            state = state.copyWith(
+                status: SyncStatus.error, errorMessage: e.toString());
+          }
+        },
+      ));
+    }
 
-    // Real-time snapshot listener on user's voice notes collection
-    _notesSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('voiceNotes')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleNotesSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore voice notes sync error: $e');
-      },
-    );
-
-    // Real-time snapshot listener on user's standaloneOrders collection
-    _ordersSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('standaloneOrders')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleOrdersSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore standalone orders sync error: $e');
-      },
-    );
-
-    // Real-time snapshot listener on user's inbox collection
-    _inboxSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('inbox')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleInboxSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore inbox sync error: $e');
-      },
-    );
-
-    // Real-time snapshot listener on user's vendors collection
-    _vendorsSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('vendors')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleVendorsSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore vendors sync error: $e');
-      },
-    );
-
-    // Real-time snapshot listener on user's customTemplates collection
-    _templatesSub = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('templates')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _handleTemplatesSnapshot(snapshot);
-      },
-      onError: (e) {
-        log.error('sync', 'Firestore templates sync error: $e');
-      },
-    );
-
-    // Push local changes (creates/edits) to the cloud automatically
-    _localStateSub = _ref.listen<EngineeringState>(projectProvider, (prev, next) {
+    // Push local changes (creates/edits/deletes) to the cloud automatically
+    _localStateSub =
+        _ref.listen<EngineeringState>(projectProvider, (prev, next) {
       if (_isProcessingRemoteUpdate) return;
       if (!_initialRemoteReceived) return;
       unawaited(_syncChangedEntities(prev, next));
     });
   }
 
-  void _handleProjectsSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
+  void _noteConflicts(List<SyncConflict> conflicts) {
+    if (conflicts.isEmpty) return;
+    state = state.copyWith(
+      conflictCount: state.conflictCount + conflicts.length,
+      lastConflict: conflicts.last.summary,
+    );
+  }
+
+  void _handleSnapshot<T>(
+      _SyncCollection<T> c, QuerySnapshot<Map<String, dynamic>> snapshot) {
     try {
       if (_isProcessingRemoteUpdate) return;
       _isProcessingRemoteUpdate = true;
 
-      // 1) Process remote deletions FIRST: a project deleted on another device
-      //    arrives here as a `removed` doc change. We remove it locally so the
+      final notifier = _ref.read(projectProvider.notifier);
+
+      // 1) Process remote deletions FIRST: an item deleted on another device
+      //    arrives as a `removed` doc change. Removing it locally means the
       //    "push local-only" loop below cannot re-upload it (sync resurrection).
       for (final change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.removed) {
-          unawaited(
-              _ref.read(projectProvider.notifier).removeProjectLocal(change.doc.id));
+          unawaited(c.removeLocal(notifier, change.doc.id));
         }
       }
 
-      final remoteProjects = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Project.fromJson(data);
-      }).toList();
+      final remote = snapshot.docs.map((d) => c.fromJson(d.data())).toList();
+      final hadLocal = c.items(_ref.read(projectProvider)).isNotEmpty;
 
-      final localState = _ref.read(projectProvider);
-
-      if (remoteProjects.isNotEmpty) {
-        // Merge cloud with local state
-        _ref.read(projectProvider.notifier).mergeCloudProjects(remoteProjects);
-      } else if (localState.projects.isNotEmpty) {
-        // Initial cloud push if cloud is empty
-        pushAllLocalToCloud();
+      if (remote.isNotEmpty) {
+        unawaited(c
+            .merge(notifier, remote, state.lastSyncedAt)
+            .then(_noteConflicts)
+            .catchError((Object e, StackTrace s) =>
+                log.error('sync', 'Merge of ${c.label} failed', e, s)));
+      } else if (hadLocal) {
+        // Cloud is empty but we have data: initial cloud push.
+        unawaited(pushAllLocalToCloud());
       }
 
-      // Push any local-only projects (e.g. created while offline) not on cloud.
-      // Projects removed above are already gone from local state, so they are
+      // Push any local-only items (e.g. created while offline) not on cloud.
+      // Items removed above are already gone from local state, so they are
       // correctly excluded here.
-      final remoteProjectIds = {for (final p in remoteProjects) p.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final p in localAfter.projects) {
-        if (!remoteProjectIds.contains(p.id)) {
-          syncProject(p);
+      final remoteIds = {for (final r in remote) c.idOf(r)};
+      for (final item in c.items(_ref.read(projectProvider))) {
+        if (!remoteIds.contains(c.idOf(item))) {
+          unawaited(_pushDoc(c, item));
         }
       }
-      _initialRemoteReceived = true;
 
-      state = state.copyWith(
-        status: SyncStatus.synced,
-        lastSyncedAt: DateTime.now(),
-      );
-    } catch (e) {
-      log.error('sync', 'Error merging remote projects: $e');
+      if (c.marksInitialSync) {
+        _initialRemoteReceived = true;
+        state = state.copyWith(
+          status: SyncStatus.synced,
+          lastSyncedAt: DateTime.now(),
+        );
+      }
+    } catch (e, stack) {
+      log.error('sync', 'Error merging remote ${c.label}', e, stack);
     } finally {
       _isProcessingRemoteUpdate = false;
     }
   }
 
-  void _handleNotesSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
-    try {
-      if (_isProcessingRemoteUpdate) return;
-      _isProcessingRemoteUpdate = true;
-
-      // 1) Process remote deletions FIRST so a note deleted on another device
-      //    is removed locally and not re-uploaded (sync resurrection).
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.removed) {
-          unawaited(
-              _ref.read(projectProvider.notifier).removeVoiceNoteLocal(change.doc.id));
-        }
-      }
-
-      final remoteNotes = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return VoiceNote.fromJson(data);
-      }).toList();
-
-      final localState = _ref.read(projectProvider);
-
-      if (remoteNotes.isNotEmpty) {
-        _ref.read(projectProvider.notifier).mergeCloudNotes(remoteNotes);
-      } else if (localState.voiceNotes.isNotEmpty) {
-        pushAllLocalToCloud();
-      }
-
-      // Push any local-only notes (e.g. created while offline) not on cloud.
-      final remoteNoteIds = {for (final n in remoteNotes) n.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final n in localAfter.voiceNotes) {
-        if (!remoteNoteIds.contains(n.id)) {
-          syncVoiceNote(n);
-        }
-      }
-      _initialRemoteReceived = true;
-
-      state = state.copyWith(
-        status: SyncStatus.synced,
-        lastSyncedAt: DateTime.now(),
-      );
-    } catch (e) {
-      log.error('sync', 'Error merging remote notes: $e');
-    } finally {
-      _isProcessingRemoteUpdate = false;
-    }
-  }
-
-  void _handleOrdersSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
-    try {
-      if (_isProcessingRemoteUpdate) return;
-      _isProcessingRemoteUpdate = true;
-
-      final remoteOrders = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return StandaloneOrder.fromJson(data);
-      }).toList();
-
-      final localState = _ref.read(projectProvider);
-
-      if (remoteOrders.isNotEmpty) {
-        _ref.read(projectProvider.notifier).mergeCloudStandaloneOrders(remoteOrders);
-      } else if (localState.standaloneOrders.isNotEmpty) {
-        pushAllLocalToCloud();
-      }
-
-      final remoteOrderIds = {for (final o in remoteOrders) o.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final o in localAfter.standaloneOrders) {
-        if (!remoteOrderIds.contains(o.id)) {
-          syncStandaloneOrder(o);
-        }
-      }
-    } catch (e) {
-      log.error('sync', 'Error merging remote standalone orders: $e');
-    } finally {
-      _isProcessingRemoteUpdate = false;
-    }
-  }
-
-  void _handleInboxSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
-    try {
-      if (_isProcessingRemoteUpdate) return;
-      _isProcessingRemoteUpdate = true;
-
-      final remoteItems = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return InboxItem.fromJson(data);
-      }).toList();
-
-      final localState = _ref.read(projectProvider);
-
-      if (remoteItems.isNotEmpty) {
-        _ref.read(projectProvider.notifier).mergeCloudInbox(remoteItems);
-      } else if (localState.inboxItems.isNotEmpty) {
-        pushAllLocalToCloud();
-      }
-
-      final remoteItemIds = {for (final i in remoteItems) i.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final i in localAfter.inboxItems) {
-        if (!remoteItemIds.contains(i.id)) {
-          syncInboxItem(i);
-        }
-      }
-    } catch (e) {
-      log.error('sync', 'Error merging remote inbox items: $e');
-    } finally {
-      _isProcessingRemoteUpdate = false;
-    }
-  }
-
-  void _handleVendorsSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
-    try {
-      if (_isProcessingRemoteUpdate) return;
-      _isProcessingRemoteUpdate = true;
-
-      final remoteVendors = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Vendor.fromJson(data);
-      }).toList();
-
-      final localState = _ref.read(projectProvider);
-
-      if (remoteVendors.isNotEmpty) {
-        _ref.read(projectProvider.notifier).mergeCloudVendors(remoteVendors);
-      } else if (localState.vendors.isNotEmpty) {
-        pushAllLocalToCloud();
-      }
-
-      final remoteVendorIds = {for (final v in remoteVendors) v.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final v in localAfter.vendors) {
-        if (!remoteVendorIds.contains(v.id)) {
-          syncVendor(v);
-        }
-      }
-    } catch (e) {
-      log.error('sync', 'Error merging remote vendors: $e');
-    } finally {
-      _isProcessingRemoteUpdate = false;
-    }
-  }
-
-  void _handleTemplatesSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
-    try {
-      if (_isProcessingRemoteUpdate) return;
-      _isProcessingRemoteUpdate = true;
-
-      final remoteTemplates = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return ProjectTemplate.fromJson(data);
-      }).toList();
-
-      final localState = _ref.read(projectProvider);
-
-      if (remoteTemplates.isNotEmpty) {
-        _ref.read(projectProvider.notifier).mergeCloudTemplates(remoteTemplates);
-      } else if (localState.customTemplates.isNotEmpty) {
-        pushAllLocalToCloud();
-      }
-
-      final remoteTemplateIds = {for (final t in remoteTemplates) t.id};
-      final localAfter = _ref.read(projectProvider);
-      for (final t in localAfter.customTemplates) {
-        if (!remoteTemplateIds.contains(t.id)) {
-          syncTemplate(t);
-        }
-      }
-    } catch (e) {
-      log.error('sync', 'Error merging remote templates: $e');
-    } finally {
-      _isProcessingRemoteUpdate = false;
-    }
-  }
-
-  /// Push single project to cloud
-  Future<void> syncProject(Project project) async {
+  Future<void> _pushDoc<T>(_SyncCollection<T> c, T item) async {
     final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
+    if (user == null || _firestore == null) return;
     try {
       state = state.copyWith(status: SyncStatus.syncing);
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('projects')
-          .doc(project.id)
-          .set(project.toJson(), SetOptions(merge: true));
-
+      await _col(user.uid, c.name)!
+          .doc(c.idOf(item))
+          .set(c.toJson(item), SetOptions(merge: true));
       state = state.copyWith(
         status: SyncStatus.synced,
         lastSyncedAt: DateTime.now(),
       );
-    } catch (e) {
-      log.error('sync', 'Error uploading project: $e');
+    } catch (e, stack) {
+      log.error('sync', 'Error uploading ${c.label}', e, stack);
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: e.toString(),
@@ -456,199 +327,29 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  /// Delete project in cloud
-  Future<void> deleteCloudProject(String projectId) async {
+  Future<void> _deleteDoc(_SyncCollection<dynamic> c, String id) async {
     final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
+    if (user == null || _firestore == null) return;
     try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('projects')
-          .doc(projectId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud project: $e');
+      await _col(user.uid, c.name)!.doc(id).delete();
+    } catch (e, stack) {
+      log.error('sync', 'Error deleting cloud ${c.label}', e, stack);
     }
   }
 
-  /// Push single voice/written field note to cloud
-  Future<void> syncVoiceNote(VoiceNote note) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('voiceNotes')
-          .doc(note.id)
-          .set(note.toJson(), SetOptions(merge: true));
-    } catch (e) {
-      log.error('sync', 'Error uploading note: $e');
-    }
-  }
-
-  /// Delete note in cloud
-  Future<void> deleteCloudVoiceNote(String noteId) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('voiceNotes')
-          .doc(noteId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud note: $e');
-    }
-  }
-
-  /// Push standalone order to cloud
-  Future<void> syncStandaloneOrder(StandaloneOrder order) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('standaloneOrders')
-          .doc(order.id)
-          .set(order.toJson(), SetOptions(merge: true));
-    } catch (e) {
-      log.error('sync', 'Error uploading standalone order: $e');
-    }
-  }
-
-  Future<void> deleteCloudStandaloneOrder(String orderId) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('standaloneOrders')
-          .doc(orderId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud standalone order: $e');
-    }
-  }
-
-  /// Push inbox item to cloud
-  Future<void> syncInboxItem(InboxItem item) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('inbox')
-          .doc(item.id)
-          .set(item.toJson(), SetOptions(merge: true));
-    } catch (e) {
-      log.error('sync', 'Error uploading inbox item: $e');
-    }
-  }
-
-  Future<void> deleteCloudInboxItem(String itemId) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('inbox')
-          .doc(itemId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud inbox item: $e');
-    }
-  }
-
-  /// Push vendor to cloud
-  Future<void> syncVendor(Vendor vendor) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vendors')
-          .doc(vendor.id)
-          .set(vendor.toJson(), SetOptions(merge: true));
-    } catch (e) {
-      log.error('sync', 'Error uploading vendor: $e');
-    }
-  }
-
-  Future<void> deleteCloudVendor(String vendorId) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('vendors')
-          .doc(vendorId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud vendor: $e');
-    }
-  }
-
-  /// Push custom template to cloud
-  Future<void> syncTemplate(ProjectTemplate template) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('templates')
-          .doc(template.id)
-          .set(template.toJson(), SetOptions(merge: true));
-    } catch (e) {
-      log.error('sync', 'Error uploading template: $e');
-    }
-  }
-
-  Future<void> deleteCloudTemplate(String templateId) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    try {
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('templates')
-          .doc(templateId)
-          .delete();
-    } catch (e) {
-      log.error('sync', 'Error deleting cloud template: $e');
-    }
-  }
+  // Public push/delete API (used by the UI and the local-change diff).
+  Future<void> syncProject(Project project) => _pushDoc(_projects, project);
+  Future<void> deleteCloudProject(String id) => _deleteDoc(_projects, id);
+  Future<void> syncVoiceNote(VoiceNote note) => _pushDoc(_notes, note);
+  Future<void> deleteCloudVoiceNote(String id) => _deleteDoc(_notes, id);
+  Future<void> syncStandaloneOrder(StandaloneOrder o) => _pushDoc(_orders, o);
+  Future<void> deleteCloudStandaloneOrder(String id) => _deleteDoc(_orders, id);
+  Future<void> syncInboxItem(InboxItem i) => _pushDoc(_inbox, i);
+  Future<void> deleteCloudInboxItem(String id) => _deleteDoc(_inbox, id);
+  Future<void> syncVendor(Vendor v) => _pushDoc(_vendors, v);
+  Future<void> deleteCloudVendor(String id) => _deleteDoc(_vendors, id);
+  Future<void> syncTemplate(ProjectTemplate t) => _pushDoc(_templates, t);
+  Future<void> deleteCloudTemplate(String id) => _deleteDoc(_templates, id);
 
   /// Deletes a voice/written note from BOTH local state and Firestore so it is
   /// not resurrected by the next cloud snapshot.
@@ -663,7 +364,8 @@ class SyncNotifier extends Notifier<SyncState> {
     unawaited(deleteCloudProject(projectId));
   }
 
-  /// Push all local entities to cloud
+  /// Push all local entities to cloud, in batches under Firestore's
+  /// 500-operation limit (one oversized batch used to fail the whole push).
   Future<void> pushAllLocalToCloud() async {
     final user = _authService.currentUser;
     final firestore = _firestore;
@@ -673,69 +375,37 @@ class SyncNotifier extends Notifier<SyncState> {
       state = state.copyWith(status: SyncStatus.syncing);
       final localState = _ref.read(projectProvider);
 
-      final batch = firestore.batch();
-      for (final project in localState.projects) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('projects')
-            .doc(project.id);
-        batch.set(docRef, project.toJson(), SetOptions(merge: true));
+      var batch = firestore.batch();
+      var ops = 0;
+      Future<void> flush() async {
+        if (ops == 0) return;
+        await batch.commit();
+        batch = firestore.batch();
+        ops = 0;
       }
 
-      for (final note in localState.voiceNotes) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('voiceNotes')
-            .doc(note.id);
-        batch.set(docRef, note.toJson(), SetOptions(merge: true));
+      Future<void> addAll<T>(_SyncCollection<T> c) async {
+        for (final item in c.items(localState)) {
+          batch.set(_col(user.uid, c.name)!.doc(c.idOf(item)), c.toJson(item),
+              SetOptions(merge: true));
+          if (++ops >= _kBatchLimit) await flush();
+        }
       }
 
-      for (final order in localState.standaloneOrders) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('standaloneOrders')
-            .doc(order.id);
-        batch.set(docRef, order.toJson(), SetOptions(merge: true));
-      }
-
-      for (final item in localState.inboxItems) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('inbox')
-            .doc(item.id);
-        batch.set(docRef, item.toJson(), SetOptions(merge: true));
-      }
-
-      for (final vendor in localState.vendors) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('vendors')
-            .doc(vendor.id);
-        batch.set(docRef, vendor.toJson(), SetOptions(merge: true));
-      }
-
-      for (final template in localState.customTemplates) {
-        final docRef = firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('templates')
-            .doc(template.id);
-        batch.set(docRef, template.toJson(), SetOptions(merge: true));
-      }
-
-      await batch.commit();
+      await addAll(_projects);
+      await addAll(_notes);
+      await addAll(_orders);
+      await addAll(_inbox);
+      await addAll(_vendors);
+      await addAll(_templates);
+      await flush();
 
       state = state.copyWith(
         status: SyncStatus.synced,
         lastSyncedAt: DateTime.now(),
       );
-    } catch (e) {
-      log.error('sync', 'Error pushing local data to cloud: $e');
+    } catch (e, stack) {
+      log.error('sync', 'Error pushing local data to cloud', e, stack);
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: e.toString(),
@@ -744,119 +414,41 @@ class SyncNotifier extends Notifier<SyncState> {
   }
 
   /// Diffs previous and next local states and pushes only changes to cloud.
+  ///
+  /// Edits are detected by `updatedAt` (every model stamps it on copyWith), so
+  /// a change to any field syncs - the old per-field comparisons silently
+  /// skipped edits such as an order's ETA or notes.
   Future<void> _syncChangedEntities(
       EngineeringState? prev, EngineeringState next) async {
-    final user = _authService.currentUser;
-    final firestore = _firestore;
-    if (user == null || firestore == null) return;
-
-    final prevProjects = {
-      for (final p in prev?.projects ?? const <Project>[]) p.id: p,
-    };
-    final prevNotes = {
-      for (final n in prev?.voiceNotes ?? const <VoiceNote>[]) n.id: n,
-    };
-    final prevOrders = {
-      for (final o in prev?.standaloneOrders ?? const <StandaloneOrder>[]) o.id: o,
-    };
-    final prevInbox = {
-      for (final i in prev?.inboxItems ?? const <InboxItem>[]) i.id: i,
-    };
-    final prevVendors = {
-      for (final v in prev?.vendors ?? const <Vendor>[]) v.id: v,
-    };
-    final prevTemplates = {
-      for (final t in prev?.customTemplates ?? const <ProjectTemplate>[]) t.id: t,
-    };
+    if (_authService.currentUser == null || _firestore == null) return;
 
     final futures = <Future<void>>[];
 
-    // Projects
-    for (final p in next.projects) {
-      final old = prevProjects[p.id];
-      if (old == null || old.updatedAt != p.updatedAt) {
-        futures.add(syncProject(p));
+    void diff<T>(_SyncCollection<T> c) {
+      final before = <String, T>{
+        if (prev != null)
+          for (final x in c.items(prev)) c.idOf(x): x,
+      };
+      final afterIds = <String>{};
+      for (final x in c.items(next)) {
+        final id = c.idOf(x);
+        afterIds.add(id);
+        final old = before[id];
+        if (old == null || c.updatedAtOf(old) != c.updatedAtOf(x)) {
+          futures.add(_pushDoc(c, x));
+        }
       }
-    }
-    for (final old in prevProjects.values) {
-      if (!next.projects.any((p) => p.id == old.id)) {
-        futures.add(deleteCloudProject(old.id));
-      }
-    }
-
-    // Voice Notes
-    for (final n in next.voiceNotes) {
-      final old = prevNotes[n.id];
-      if (old == null || old.updatedAt != n.updatedAt) {
-        futures.add(syncVoiceNote(n));
-      }
-    }
-    for (final old in prevNotes.values) {
-      if (!next.voiceNotes.any((n) => n.id == old.id)) {
-        futures.add(deleteCloudVoiceNote(old.id));
+      for (final id in before.keys) {
+        if (!afterIds.contains(id)) futures.add(_deleteDoc(c, id));
       }
     }
 
-    // Standalone Orders
-    for (final o in next.standaloneOrders) {
-      final old = prevOrders[o.id];
-      if (old == null ||
-          old.pr != o.pr ||
-          old.po != o.po ||
-          old.description != o.description ||
-          old.price != o.price ||
-          old.delivered != o.delivered ||
-          old.vendorName != o.vendorName) {
-        futures.add(syncStandaloneOrder(o));
-      }
-    }
-    for (final old in prevOrders.values) {
-      if (!next.standaloneOrders.any((o) => o.id == old.id)) {
-        futures.add(deleteCloudStandaloneOrder(old.id));
-      }
-    }
-
-    // Inbox Items
-    for (final i in next.inboxItems) {
-      final old = prevInbox[i.id];
-      if (old == null || old.text != i.text || old.isProcessed != i.isProcessed) {
-        futures.add(syncInboxItem(i));
-      }
-    }
-    for (final old in prevInbox.values) {
-      if (!next.inboxItems.any((i) => i.id == old.id)) {
-        futures.add(deleteCloudInboxItem(old.id));
-      }
-    }
-
-    // Vendors
-    for (final v in next.vendors) {
-      final old = prevVendors[v.id];
-      if (old == null ||
-          old.name != v.name ||
-          old.email != v.email ||
-          old.phone != v.phone) {
-        futures.add(syncVendor(v));
-      }
-    }
-    for (final old in prevVendors.values) {
-      if (!next.vendors.any((v) => v.id == old.id)) {
-        futures.add(deleteCloudVendor(old.id));
-      }
-    }
-
-    // Templates
-    for (final t in next.customTemplates) {
-      final old = prevTemplates[t.id];
-      if (old == null || old.name != t.name) {
-        futures.add(syncTemplate(t));
-      }
-    }
-    for (final old in prevTemplates.values) {
-      if (!next.customTemplates.any((t) => t.id == old.id)) {
-        futures.add(deleteCloudTemplate(old.id));
-      }
-    }
+    diff(_projects);
+    diff(_notes);
+    diff(_orders);
+    diff(_inbox);
+    diff(_vendors);
+    diff(_templates);
 
     if (futures.isNotEmpty) {
       await Future.wait(futures);
@@ -864,20 +456,11 @@ class SyncNotifier extends Notifier<SyncState> {
   }
 
   void _stopListening() {
-    _projectsSub?.cancel();
-    _notesSub?.cancel();
-    _ordersSub?.cancel();
-    _inboxSub?.cancel();
-    _vendorsSub?.cancel();
-    _templatesSub?.cancel();
+    for (final s in _collectionSubs) {
+      s.cancel();
+    }
+    _collectionSubs.clear();
     _localStateSub?.close();
-    _projectsSub = null;
-    _notesSub = null;
-    _ordersSub = null;
-    _inboxSub = null;
-    _vendorsSub = null;
-    _templatesSub = null;
     _localStateSub = null;
   }
 }
-
