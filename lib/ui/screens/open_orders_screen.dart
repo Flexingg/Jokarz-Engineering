@@ -14,8 +14,9 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/order_dialogs.dart';
 import '../widgets/bamm_chip.dart';
-import '../widgets/sap_code_chip.dart';
 import '../motion/motion.dart';
+import '../panels/order_editor_panel.dart';
+import '../panels/resizable_panel.dart';
 
 part 'open_orders_parts/dialogs.dart';
 part 'open_orders_parts/rows.dart';
@@ -73,7 +74,6 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   bool _sortAsc = true;
   final Set<String> _selected = {};
   String? _activeKey;
-  _OrderEntry? _lastActive;
 
   @override
   void initState() {

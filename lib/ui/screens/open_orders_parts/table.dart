@@ -530,7 +530,6 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         .where((e) => _selected.contains(e.key))
         .toList();
     final active = all.where((e) => e.key == _activeKey).firstOrNull;
-    if (active != null) _lastActive = active;
     final allChecked =
         rows.isNotEmpty && rows.every((e) => _selected.contains(e.key));
 
@@ -600,40 +599,22 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
       ),
     );
 
-    final drawerOpen = active != null;
     return Stack(
       children: [
         Row(
           children: [
             Expanded(child: table),
-            TweenAnimationBuilder<double>(
-              tween: Tween(end: drawerOpen ? 1 : 0),
-              duration: motion.sheet,
-              curve: motion.spring,
-              builder: (context, t, _) {
-                final w = (_drawerWidth * t).clamp(0.0, _drawerWidth + 24);
-                if (w < 1) return const SizedBox.shrink();
-                return SizedBox(
-                  width: w,
-                  child: ClipRect(
-                    child: OverflowBox(
-                      alignment: Alignment.centerLeft,
-                      minWidth: 0,
-                      maxWidth: _drawerWidth,
-                      child: SizedBox(
-                        width: _drawerWidth,
-                        child: _orderDrawer(
-                          active ?? _lastActive,
-                          currency,
-                          dateFormat,
-                          notifier,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            if (active != null)
+              ResizablePanel(
+                prefKey: 'orders',
+                defaultWidth: 440,
+                // Each order gets its own editor; selecting another disposes
+                // the old one, which saves its edits first.
+                child: _SlideIn(
+                  key: ValueKey('slide-${active.key}'),
+                  child: _orderPanel(active, notifier),
+                ),
+              ),
           ],
         ),
         Positioned(
@@ -662,8 +643,6 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
       ],
     );
   }
-
-  static const double _drawerWidth = 380;
 
   Widget _bulkBar(List<_OrderEntry> sel, dynamic notifier) {
     final colors = AppTheme.of(context);
@@ -715,150 +694,65 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
     );
   }
 
-  Widget _orderDrawer(
-    _OrderEntry? e,
-    NumberFormat currency,
-    DateFormat dateFormat,
-    dynamic notifier,
-  ) {
-    final colors = AppTheme.of(context);
-    if (e == null) return const SizedBox.shrink();
-    Widget field(String label, String value) => SizedBox(
-      width: 150,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: colors.textSecondary),
+  Widget _orderPanel(_OrderEntry e, dynamic notifier) {
+    return OrderEditorPanel(
+      key: ValueKey('order-${e.key}'),
+      order: e.order,
+      projectId: e.project?.id,
+      standalone: e.standalone,
+      projectTitle: e.projectTitle,
+      onClose: () => _rebuild(() => _activeKey = null),
+      statusBadge: e.delivered
+          ? ExpressiveBadge(
+              label: 'Delivered',
+              color: AppTheme.of(context).emerald,
+              fontSize: 12,
+            )
+          : (e.eta != null
+                ? _buildEtaBadge(e.eta!)
+                : Text(
+                    'No ETA set',
+                    style: TextStyle(color: AppTheme.of(context).textSecondary),
+                  )),
+      actions: [
+        ElevatedButton(
+          onPressed: () => _setDelivered([e], !e.delivered, notifier),
+          child: Text(e.delivered ? 'Mark not delivered' : 'Mark delivered'),
+        ),
+        if (e.po.isNotEmpty)
+          OutlinedButton(
+            onPressed: () => _copyText(e.po, 'PO ${e.po}'),
+            child: const Text('Copy PO #'),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value.isEmpty ? '-' : value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        if (e.isStandalone)
+          OutlinedButton(
+            onPressed: () => _showAttachToProjectDialog(context, e),
+            child: const Text('Link to project...'),
           ),
-        ],
-      ),
+      ],
     );
+  }
+}
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    e.po.isEmpty ? 'No PO yet' : 'PO ${e.po}',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Close details',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _rebuild(() => _activeKey = null),
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                ),
-              ],
-            ),
-            Text(
-              e.description.isEmpty ? 'Parts / Material Order' : e.description,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            e.delivered
-                ? ExpressiveBadge(
-                    label: 'Delivered',
-                    color: colors.emerald,
-                    fontSize: 12,
-                  )
-                : (e.eta != null
-                      ? _buildEtaBadge(e.eta!)
-                      : Text(
-                          'No ETA set',
-                          style: TextStyle(color: colors.textSecondary),
-                        )),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 12,
-              runSpacing: 14,
-              children: [
-                SizedBox(
-                  width: 150,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Vendor',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        e.vendorName.isEmpty ? '-' : e.vendorName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (_sapCode(e).isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        SapCodeChip(_sapCode(e), dense: true),
-                      ],
-                    ],
-                  ),
-                ),
-                field('Price', currency.format(e.price)),
-                field('Project', e.projectTitle),
-                field('PR', e.pr),
-                field('ETA', e.eta == null ? '' : dateFormat.format(e.eta!)),
-                field('Quote #', e.vendorQuoteNumber),
-              ],
-            ),
-            if (e.bammWorkOrders.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final wo in e.bammWorkOrders)
-                    BammChip(worNo: wo, isDense: true),
-                ],
-              ),
-            ],
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: () => _setDelivered([e], !e.delivered, notifier),
-                  child: Text(
-                    e.delivered ? 'Mark not delivered' : 'Mark delivered',
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () => _openEntry(e),
-                  child: const Text('Edit'),
-                ),
-                if (e.po.isNotEmpty)
-                  OutlinedButton(
-                    onPressed: () => _copyText(e.po, 'PO ${e.po}'),
-                    child: const Text('Copy PO #'),
-                  ),
-              ],
-            ),
-          ],
+/// Eases its child in from the right when first built.
+class _SlideIn extends StatelessWidget {
+  final Widget child;
+  const _SlideIn({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = Motion.of(context);
+    if (!motion.enabled) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: motion.sheet,
+      curve: motion.spring,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: (t * 2).clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset((1 - t) * 36, 0),
+          child: child,
         ),
       ),
     );

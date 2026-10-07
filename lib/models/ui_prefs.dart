@@ -35,6 +35,9 @@ class UiPrefs {
   final List<String> dashboardOrder;
   final List<String> dashboardHidden;
 
+  /// Width the user dragged each side panel to, by screen id ('orders', ...).
+  final Map<String, double> panelWidths;
+
   const UiPrefs({
     this.themeName = 'graphiteDark',
     this.accentValue = 0xFF4DA3FF,
@@ -42,6 +45,7 @@ class UiPrefs {
     this.railCollapsed = false,
     this.dashboardOrder = const [],
     this.dashboardHidden = const [],
+    this.panelWidths = const {},
   });
 
   Color get accent => Color(accentValue);
@@ -53,6 +57,7 @@ class UiPrefs {
     bool? railCollapsed,
     List<String>? dashboardOrder,
     List<String>? dashboardHidden,
+    Map<String, double>? panelWidths,
   }) => UiPrefs(
     themeName: themeName ?? this.themeName,
     accentValue: accentValue ?? this.accentValue,
@@ -84,6 +89,10 @@ class UiPrefs {
       railCollapsed: json['railCollapsed'] as bool? ?? false,
       dashboardOrder: strings(json['dashboardOrder']),
       dashboardHidden: strings(json['dashboardHidden']),
+      panelWidths: {
+        for (final e in ((json['panelWidths'] as Map<String, dynamic>?) ?? const {}).entries)
+          if (e.value is num) e.key: (e.value as num).toDouble(),
+      },
     );
   }
 }
