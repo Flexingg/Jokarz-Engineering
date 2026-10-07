@@ -148,6 +148,8 @@ class EngineeringState {
     final today = todayString;
     final active = activeProjects
         .where((p) => snoozedProjects[p.id] != today)
+        // Parked projects are waiting on purpose; do not nag about them.
+        .where((p) => !p.isParked)
         .toList();
     final scored = active.map((p) {
       final days = p.daysSinceLastAction.toDouble();

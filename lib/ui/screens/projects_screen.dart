@@ -9,6 +9,7 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/bamm_chip.dart';
 import '../widgets/context_menu.dart';
+import '../widgets/park_dialog.dart';
 import '../adaptive/breakpoints.dart';
 import '../adaptive/master_detail.dart';
 import 'project_detail_screen.dart';
@@ -388,6 +389,18 @@ class _ProjectCard extends ConsumerWidget {
           MenuAction('Move to #1', Icons.vertical_align_top_rounded,
               () => notifier.setProjectPriority(project.id, 1)),
         if (!isTerminal)
+          MenuAction(
+            project.isParked ? 'Change park date...' : 'Park until...',
+            Icons.pause_circle_outline_rounded,
+            () => parkWithDialog(context, ref, project),
+          ),
+        if (project.isParked)
+          MenuAction(
+            'Return to #${project.parkRestorePriority ?? project.priority} now',
+            Icons.play_circle_outline_rounded,
+            () => notifier.unparkProject(project.id),
+          ),
+        if (!isTerminal)
           MenuAction('Mark complete', Icons.check_circle_outline_rounded,
               () => notifier.updateProject(project.copyWith(phase: ProjectPhases.complete)))
         else
@@ -446,6 +459,16 @@ class _ProjectCard extends ConsumerWidget {
                       fontSize: 10,
                     ),
                     _EditablePhaseBadge(project: project),
+                    if (project.isParked)
+                      Tooltip(
+                        message: project.parkReason.isEmpty ? 'Parked' : project.parkReason,
+                        child: ExpressiveBadge(
+                          label: parkBadgeText(project),
+                          icon: Icons.pause_circle_outline_rounded,
+                          color: AppTheme.of(context).textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -10,6 +10,7 @@ import 'ui/motion/motion.dart';
 import 'services/sync_service.dart';
 import 'router/app_router.dart';
 import 'services/deep_link_service.dart';
+import 'ui/shell/park_scheduler.dart';
 import 'ui/widgets/app_shortcuts.dart';
 import 'services/app_logger.dart';
 import 'services/backup_service.dart';
@@ -59,7 +60,9 @@ class JokarzEngineeringApp extends ConsumerWidget {
       builder: (context, child) => MotionScope(
         motion: Motion.resolve(prefs.motion,
             disableAnimations: MediaQuery.disableAnimationsOf(context)),
-        child: AppShortcuts(child: child ?? const SizedBox.shrink()),
+        child: ParkScheduler(
+          child: AppShortcuts(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }

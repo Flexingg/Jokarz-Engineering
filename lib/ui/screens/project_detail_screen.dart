@@ -14,6 +14,7 @@ import '../../providers/project_provider.dart';
 import '../../services/sync_service.dart';
 import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
+import '../widgets/park_dialog.dart';
 import '../widgets/photo_drop_zone.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/template_dialogs.dart';
@@ -155,6 +156,47 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               preselectedProjectId: project.id,
             ),
           ),
+          if (!project.isCompletedOrCancelled)
+            IconButton(
+              icon: Icon(
+                project.isParked
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.pause_circle_outline_rounded,
+                color: AppTheme.of(context).amber,
+              ),
+              tooltip: project.isParked
+                  ? '${parkBadgeText(project)}. Click to change or return now.'
+                  : 'Park until a date (waiting on parts, downtime...)',
+              onPressed: () async {
+                if (!project.isParked) {
+                  await parkWithDialog(context, ref, project);
+                  return;
+                }
+                final choice = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => SimpleDialog(
+                    title: Text(parkBadgeText(project)),
+                    children: [
+                      SimpleDialogOption(
+                        onPressed: () => Navigator.pop(ctx, 'change'),
+                        child: const Text('Change the date...'),
+                      ),
+                      SimpleDialogOption(
+                        onPressed: () => Navigator.pop(ctx, 'now'),
+                        child: Text(
+                            'Return to #${project.parkRestorePriority ?? project.priority} now'),
+                      ),
+                    ],
+                  ),
+                );
+                if (!context.mounted) return;
+                if (choice == 'change') {
+                  await parkWithDialog(context, ref, project);
+                } else if (choice == 'now') {
+                  await ref.read(projectProvider.notifier).unparkProject(project.id);
+                }
+              },
+            ),
           IconButton(
             icon: Icon(Icons.content_copy_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Save as Reusable Template',

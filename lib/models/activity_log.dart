@@ -14,6 +14,8 @@ enum ActivityType {
   noteDeleted,
   logAdded,
   storesRequested,
+  projectParked,
+  projectUnparked,
 }
 
 String activityTypeLabel(ActivityType t) => switch (t) {
@@ -30,6 +32,8 @@ String activityTypeLabel(ActivityType t) => switch (t) {
       ActivityType.noteDeleted => 'Note deleted',
       ActivityType.logAdded => 'Log entry added',
       ActivityType.storesRequested => 'Stores request sent',
+      ActivityType.projectParked => 'Project parked',
+      ActivityType.projectUnparked => 'Project returned to queue',
     };
 
 String activityTypeIcon(ActivityType t) => switch (t) {
@@ -46,6 +50,8 @@ String activityTypeIcon(ActivityType t) => switch (t) {
       ActivityType.noteDeleted => '🗑️',
       ActivityType.logAdded => '📋',
       ActivityType.storesRequested => '🏬',
+      ActivityType.projectParked => '⏸️',
+      ActivityType.projectUnparked => '▶️',
     };
 
 /// A timestamped record of an action taken in the app, kept for traceability.
