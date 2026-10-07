@@ -1,4 +1,6 @@
+import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -12,9 +14,11 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/order_dialogs.dart';
 import '../widgets/bamm_chip.dart';
+import '../motion/motion.dart';
 
 part 'open_orders_parts/dialogs.dart';
 part 'open_orders_parts/rows.dart';
+part 'open_orders_parts/table.dart';
 
 /// Unified view of a purchase order that is either attached to a project or
 /// standalone/unlinked.
@@ -38,6 +42,8 @@ class _OrderEntry {
   String get vendorQuoteNumber => order?.vendorQuoteNumber ?? standalone?.vendorQuoteNumber ?? '';
   String get trackingUrl => order?.trackingUrl ?? standalone?.trackingUrl ?? '';
   String get projectTitle => project?.title ?? 'Unlinked';
+  /// Stable id across project-attached and standalone orders.
+  String get key => order?.id ?? standalone?.id ?? '';
   String get machine => project?.machine ?? '';
   List<String> get bammWorkOrders => order?.bammWorkOrders ?? standalone?.bammWorkOrders ?? const [];
 }
@@ -58,6 +64,14 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   String _search = '';
   bool _handledTargetOrder = false;
   bool _denseView = true;
+
+  /// Desktop table state: view mode, sort, multi-select and the details drawer.
+  bool _tableView = true;
+  String? _sortKey;
+  bool _sortAsc = true;
+  final Set<String> _selected = {};
+  String? _activeKey;
+  _OrderEntry? _lastActive;
 
   @override
   void initState() {
@@ -176,13 +190,26 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
         ]),
         actions: [
           if (isDesktop)
-            IconButton(
-              icon: Icon(
-                _denseView ? Icons.view_agenda_outlined : Icons.table_rows_rounded,
-                color: AppTheme.of(context).primary,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SegmentedButton<int>(
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 6)),
+                ),
+                segments: const [
+                  ButtonSegment(value: 0, icon: Icon(Icons.table_chart_outlined, size: 18), tooltip: 'Table'),
+                  ButtonSegment(value: 1, icon: Icon(Icons.table_rows_rounded, size: 18), tooltip: 'Compact rows'),
+                  ButtonSegment(value: 2, icon: Icon(Icons.view_agenda_outlined, size: 18), tooltip: 'Cards'),
+                ],
+                selected: {_tableView ? 0 : (_denseView ? 1 : 2)},
+                onSelectionChanged: (v) => setState(() {
+                  final m = v.first;
+                  _tableView = m == 0;
+                  _denseView = m == 1;
+                }),
               ),
-              tooltip: _denseView ? 'Switch to Cards View' : 'Switch to Compact Rows',
-              onPressed: () => setState(() => _denseView = !_denseView),
             ),
           IconButton(
             icon: Icon(Icons.storefront_rounded, color: AppTheme.of(context).primary),
@@ -363,7 +390,9 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 12, color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)),
                   ]))
-                : ListView.builder(
+                : (isDesktop && _tableView)
+                    ? _buildOrdersTable(allEntries, filtered, currency, dateFormat, notifier)
+                    : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) => showDense
