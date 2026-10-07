@@ -2,7 +2,6 @@ import 'package:flutter/services.dart';
 
 /// Default key combinations (lowercase, `+`-separated modifiers then key).
 const Map<String, String> defaultKeyBindings = {
-  'search': 'ctrl+shift+s',
   'createNote': 'ctrl+n',
   'createProject': 'ctrl+shift+n',
   'createOrder': 'ctrl+o',
@@ -19,7 +18,6 @@ const Map<String, String> defaultKeyBindings = {
 
 /// Human-readable labels for each action.
 const Map<String, String> keyBindingsLabels = {
-  'search': 'Search',
   'createNote': 'Create Note',
   'createProject': 'Create Project',
   'createOrder': 'Create Order',
@@ -30,9 +28,23 @@ const Map<String, String> keyBindingsLabels = {
   'tabNotes': 'Go to Notes',
   'tabSettings': 'Go to Settings',
   'tabBamm': 'Go to BAMM Orders',
-  'palette': 'Command Palette',
+  'palette': 'Search and Commands',
   'toggleSidebar': 'Toggle Sidebar',
 };
+
+/// Brings a saved shortcut file up to date: the removed Search screen's
+/// binding moves to the command palette (only if the user had customised it),
+/// and bindings for actions that no longer exist are dropped.
+Map<String, String> migrateSavedBindings(Map<String, String> saved) {
+  const oldSearchDefault = 'ctrl+shift+s';
+  final out = Map<String, String>.of(saved);
+  final oldSearch = out.remove('search');
+  if (oldSearch != null && oldSearch != oldSearchDefault && !out.containsKey('palette')) {
+    out['palette'] = oldSearch;
+  }
+  out.removeWhere((id, _) => !defaultKeyBindings.containsKey(id));
+  return out;
+}
 
 /// `ctrl+shift+n` -> `Ctrl+Shift+N`, for menus and hints.
 String prettyCombo(String combo) => combo

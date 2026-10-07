@@ -21,7 +21,7 @@ class KeyBindingsNotifier extends Notifier<Map<String, String>> {
     final saved = await _storage.loadKeyBindings();
     if (saved.isNotEmpty) {
       final merged = Map<String, String>.of(defaultKeyBindings);
-      merged.addAll(saved);
+      merged.addAll(migrateSavedBindings(saved));
       state = merged;
     }
   }

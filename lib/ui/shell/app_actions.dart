@@ -14,8 +14,6 @@ import '../widgets/order_dialogs.dart';
 void dispatchAppAction(WidgetRef ref, String actionId) {
   final router = appRouter;
   switch (actionId) {
-    case 'search':
-      router.push('/search');
     case 'palette':
       showCommandPalette(ref);
     case 'toggleSidebar':

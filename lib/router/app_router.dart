@@ -13,7 +13,6 @@ import '../ui/screens/tasks_calendar_screen.dart';
 import '../ui/screens/overdue_tasks_screen.dart';
 import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
-import '../ui/screens/search_screen.dart';
 import '../ui/screens/photo_note_editor_screen.dart';
 import '../ui/screens/inbox_screen.dart';
 import '../ui/screens/vendors_screen.dart';
@@ -198,13 +197,6 @@ final appRouter = GoRouter(
       path: '/report',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ReportScreen(),
-    ),
-    GoRoute(
-      path: '/search',
-      parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
-        child: SearchScreen(),
-      ),
     ),
     GoRoute(
       path: '/photo-note',

@@ -87,14 +87,9 @@ class AppMenuBar extends ConsumerWidget {
               SubmenuButton(
                 menuChildren: [
                   item(
-                    'Command palette',
+                    'Search and commands',
                     action: 'palette',
                     icon: Icons.keyboard_command_key_rounded,
-                  ),
-                  item(
-                    'Search everything',
-                    action: 'search',
-                    icon: Icons.search_rounded,
                   ),
                   item(
                     'Toggle sidebar',
