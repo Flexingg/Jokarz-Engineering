@@ -12,6 +12,7 @@ import '../models/vendor.dart';
 import '../models/project_template.dart';
 import '../models/time_block.dart';
 import '../models/slip_log_entry.dart';
+import '../models/ui_prefs.dart';
 import 'app_logger.dart';
 
 class StorageService {
@@ -136,6 +137,31 @@ class StorageService {
     final file = await _getFile();
     if (await file.exists()) {
       await file.delete();
+    }
+  }
+
+  // --- UI preferences (theme, accent, motion, rail, dashboard layout) ---
+  static const String _uiPrefsFile = 'jokarz_ui_prefs.json';
+
+  Future<UiPrefs> loadUiPrefs() async {
+    try {
+      final file = File('${(await _docs()).path}/$_uiPrefsFile');
+      if (!await file.exists()) return const UiPrefs();
+      final text = await file.readAsString();
+      if (text.trim().isEmpty) return const UiPrefs();
+      return UiPrefs.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (e) {
+      log.warn('storage', 'Could not read UI prefs; using defaults', e);
+      return const UiPrefs();
+    }
+  }
+
+  Future<void> saveUiPrefs(UiPrefs prefs) async {
+    try {
+      final file = File('${(await _docs()).path}/$_uiPrefsFile');
+      await _atomicWrite(file, jsonEncode(prefs.toJson()));
+    } catch (e) {
+      log.warn('storage', 'Could not save UI prefs', e);
     }
   }
 

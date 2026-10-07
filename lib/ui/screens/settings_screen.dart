@@ -13,6 +13,7 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/auth_account_modal.dart';
+import '../widgets/appearance_controls.dart';
 import '../widgets/backup_tiles.dart';
 import '../../providers/backup_provider.dart';
 import '../../services/app_logger.dart';
@@ -211,6 +212,7 @@ class SettingsScreen extends ConsumerWidget {
                     if (v != null) themeNotifier.setTheme(v);
                   },
                 ),
+                const AppearanceControls(),
               ],
             ),
           ),

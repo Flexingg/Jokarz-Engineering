@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ui/motion/motion.dart';
 
 /// A semantic accent used by const data tables/dictionaries so they stay
 /// theme-dynamic: store the [AccentKey] in const data, then resolve it to the
@@ -17,6 +18,8 @@ extension AccentKeyX on AccentKey {
 
 /// A theme family the user can select. Drives the whole app's palette.
 enum AppThemeFamily {
+  graphiteDark('Graphite Dark'),
+  graphiteLight('Graphite Light'),
   bridgestoneDark('Bridgestone Dark'),
   bridgestoneLight('Bridgestone Light'),
   vibesDark('Vibes Dark'),
@@ -384,8 +387,13 @@ class AppTheme {
   static ThemeData get bridgestoneLightTheme =>
       _buildBridgestone(_bridgestoneLight, Brightness.light);
 
-  static ThemeData themeFor(AppThemeFamily family) {
+  /// [accent] only affects the Graphite families.
+  static ThemeData themeFor(AppThemeFamily family, {Color? accent}) {
     switch (family) {
+      case AppThemeFamily.graphiteDark:
+        return _buildGraphite(Brightness.dark, accent ?? graphiteBlue);
+      case AppThemeFamily.graphiteLight:
+        return _buildGraphite(Brightness.light, accent ?? graphiteBlue);
       case AppThemeFamily.bridgestoneDark:
         return bridgestoneDarkTheme;
       case AppThemeFamily.bridgestoneLight:
@@ -403,6 +411,247 @@ class AppTheme {
       case AppThemeFamily.brutalistDark:
         return brutalistDarkTheme;
     }
+  }
+
+
+  // ==== GRAPHITE: flat surfaces, hairline borders, one accent ====
+  static const Color graphiteBlue = Color(0xFF4DA3FF);
+
+  /// On a light background an accent needs to be darker to stay readable as
+  /// text and on white buttons.
+  static Color _accentFor(Brightness b, Color accent) {
+    if (b == Brightness.dark) return accent;
+    final hsl = HSLColor.fromColor(accent);
+    return hsl.withLightness(hsl.lightness.clamp(0.0, 0.38)).toColor();
+  }
+
+  static AppColors _graphiteColors(Brightness b, Color accent) {
+    final a = _accentFor(b, accent);
+    if (b == Brightness.dark) {
+      return AppColors(
+        primary: a,
+        primaryBlue: a,
+        amber: const Color(0xFFF5B841),
+        emerald: const Color(0xFF3DD68C),
+        coral: const Color(0xFFFF7A7A),
+        background: const Color(0xFF0D0F12),
+        surface: const Color(0xFF15181D),
+        surfaceCard: const Color(0xFF15181D),
+        surfaceHighlight: const Color(0xFF1D2128),
+        surfaceVariant: const Color(0xFF1D2128),
+        border: const Color(0xFF272C34),
+        textPrimary: const Color(0xFFE9ECF0),
+        textSecondary: const Color(0xFF9BA4AF),
+      );
+    }
+    return AppColors(
+      primary: a,
+      primaryBlue: a,
+      amber: const Color(0xFF9A6200),
+      emerald: const Color(0xFF13804F),
+      coral: const Color(0xFFC2363A),
+      background: const Color(0xFFF3F4F6),
+      surface: const Color(0xFFFFFFFF),
+      surfaceCard: const Color(0xFFFFFFFF),
+      surfaceHighlight: const Color(0xFFEEF0F3),
+      surfaceVariant: const Color(0xFFEEF0F3),
+      border: const Color(0xFFE1E4E9),
+      textPrimary: const Color(0xFF14171C),
+      textSecondary: const Color(0xFF5A6370),
+    );
+  }
+
+  static ThemeData _buildGraphite(Brightness brightness, Color accent) {
+    final c = _graphiteColors(brightness, accent);
+    final isDark = brightness == Brightness.dark;
+    final ink = isDark ? const Color(0xFF081019) : Colors.white;
+    final scheme = ColorScheme.fromSeed(seedColor: c.primary, brightness: brightness).copyWith(
+      primary: c.primary,
+      onPrimary: ink,
+      surface: c.surface,
+      onSurface: c.textPrimary,
+      outline: c.border,
+      outlineVariant: c.border,
+      error: c.coral,
+    );
+    final base = _buildTheme(
+      brightness: brightness,
+      colors: c,
+      colorScheme: scheme,
+      radius: 12,
+    );
+    _active = c;
+    final btnShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(10));
+    const btnText = TextStyle(fontWeight: FontWeight.w600, fontSize: 13);
+    final selectedWash = c.primary.withValues(alpha: isDark ? 0.14 : 0.10);
+    return base.copyWith(
+      // Segoe UI Variable on current Windows, Roboto on Android.
+      textTheme: base.textTheme.apply(
+        fontFamilyFallback: const ['Segoe UI Variable Text', 'Segoe UI', 'Roboto'],
+        bodyColor: c.textPrimary,
+        displayColor: c.textPrimary,
+      ),
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: c.background,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: c.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+          letterSpacing: -0.2,
+        ),
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: c.border),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: c.primary,
+          foregroundColor: ink,
+          elevation: 0,
+          shape: btnShape,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          textStyle: btnText,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: c.primary,
+          foregroundColor: ink,
+          shape: btnShape,
+          textStyle: btnText,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: c.textPrimary,
+          side: BorderSide(color: c.border),
+          shape: btnShape,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          textStyle: btnText,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: c.primary,
+          shape: btnShape,
+          textStyle: btnText,
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: c.primary,
+        foregroundColor: ink,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: c.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: c.border),
+        ),
+        titleTextStyle: TextStyle(
+            color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: c.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: c.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: c.border),
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(c.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(8),
+          shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: c.border),
+          )),
+        ),
+      ),
+      menuBarTheme: MenuBarThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(c.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(0),
+          shape: const WidgetStatePropertyAll(RoundedRectangleBorder()),
+        ),
+      ),
+      menuButtonTheme: MenuButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(c.textPrimary),
+          overlayColor: WidgetStatePropertyAll(selectedWash),
+          textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 13)),
+          shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: isDark ? c.surfaceHighlight : const Color(0xFF14171C),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: c.border),
+        ),
+        textStyle: TextStyle(
+            color: isDark ? c.textPrimary : Colors.white, fontSize: 12),
+        waitDuration: const Duration(milliseconds: 500),
+      ),
+      dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? ink : c.textSecondary),
+        trackColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? c.primary : c.surfaceHighlight),
+        trackOutlineColor: WidgetStatePropertyAll(c.border),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? c.primary : Colors.transparent),
+        checkColor: WidgetStatePropertyAll(ink),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        side: BorderSide(color: c.textSecondary, width: 1.5),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: c.textPrimary,
+        unselectedLabelColor: c.textSecondary,
+        indicatorColor: c.primary,
+        dividerColor: c.border,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: isDark ? c.surfaceHighlight : const Color(0xFF14171C),
+        contentTextStyle: TextStyle(color: isDark ? c.textPrimary : Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: SpringPageTransitionsBuilder(),
+        TargetPlatform.windows: SpringPageTransitionsBuilder(),
+        TargetPlatform.linux: SpringPageTransitionsBuilder(),
+        TargetPlatform.macOS: SpringPageTransitionsBuilder(),
+        TargetPlatform.iOS: SpringPageTransitionsBuilder(),
+      }),
+    );
   }
 
   // ==== THEMES ====

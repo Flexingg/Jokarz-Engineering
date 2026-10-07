@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
+import 'providers/ui_prefs_provider.dart';
+import 'ui/motion/motion.dart';
 import 'services/sync_service.dart';
 import 'router/app_router.dart';
 import 'services/deep_link_service.dart';
@@ -43,16 +45,20 @@ class JokarzEngineeringApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeFamily = ref.watch(themeProvider);
+    final prefs = ref.watch(uiPrefsProvider);
     // Eagerly initialize cloud sync listener when app starts
     ref.watch(syncStatusProvider);
 
     return MaterialApp.router(
       title: 'AOR Engineering',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.themeFor(themeFamily),
+      theme: AppTheme.themeFor(themeFamily, accent: prefs.accent),
       routerConfig: appRouter,
-      builder: (context, child) =>
-          AppShortcuts(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => MotionScope(
+        motion: Motion.resolve(prefs.motion,
+            disableAnimations: MediaQuery.disableAnimationsOf(context)),
+        child: AppShortcuts(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }
