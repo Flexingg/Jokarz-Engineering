@@ -68,8 +68,10 @@ mixin AutosaveMixin<T extends StatefulWidget> on State<T> {
     _fade?.cancel();
     if (_dirty && canSave) {
       _dirty = false;
+      // Deferred: dispose runs while the framework is tearing the tree down,
+      // and providers cannot be modified then.
       unawaited(
-        saveDraft().catchError(
+        Future<void>.microtask(saveDraft).catchError(
           (Object e, StackTrace s) =>
               log.error('autosave', 'Save on close failed', e, s),
         ),

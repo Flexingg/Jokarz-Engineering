@@ -16,19 +16,21 @@ class MemoryStorage extends StorageService {
   final List<Project> projects;
   final List<StandaloneOrder> orders;
   final List<Vendor> vendors;
+  final List<VoiceNote> voiceNotes;
   UiPrefs prefs;
 
   MemoryStorage({
     this.projects = const [],
     this.orders = const [],
     this.vendors = const [],
+    this.voiceNotes = const [],
     this.prefs = const UiPrefs(),
   });
 
   @override
   Future<Map<String, dynamic>> loadData() async => {
     'projects': [...projects],
-    'voiceNotes': <VoiceNote>[],
+    'voiceNotes': [...voiceNotes],
     'filaments': <FilamentProfile>[],
     'standaloneOrders': [...orders],
     'inboxItems': <InboxItem>[],

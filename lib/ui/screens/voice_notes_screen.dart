@@ -14,6 +14,9 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/note_dialogs.dart';
+import '../adaptive/breakpoints.dart';
+import '../panels/note_editor_panel.dart';
+import '../panels/resizable_panel.dart';
 
 class VoiceNotesScreen extends ConsumerStatefulWidget {
   final String? targetNoteId;
@@ -26,6 +29,12 @@ class VoiceNotesScreen extends ConsumerStatefulWidget {
 class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   String _search = '';
   bool _handledTargetNote = false;
+
+  /// Record open in the side editor on wide windows: 'n:<noteId>' for a field
+  /// note, 'p:<projectId>' for a project's notes.
+  String? _activeKey;
+
+  bool get _wide => Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
 
   @override
   void initState() {
@@ -54,7 +63,11 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     final state = ref.read(projectProvider);
     final note = state.voiceNotes.where((n) => n.id == widget.targetNoteId).firstOrNull;
     if (note != null) {
-      _showEditNoteDialog(context, note);
+      if (_wide) {
+        setState(() => _activeKey = 'n:${note.id}');
+      } else {
+        _showEditNoteDialog(context, note);
+      }
     }
   }
 
@@ -281,7 +294,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: _withPanel(entries, Column(
         children: [
           // Search Header
           Padding(
@@ -355,11 +368,16 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                       final entry = filtered[index];
                       final isProjectNote = entry.isProjectNote;
 
-                      return ExpressiveCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        onTap: entry.isProjectNote
-                            ? () => context.push('/projects/${entry.project!.id}')
-                            : null,
+                      final key = isProjectNote
+                          ? 'p:${entry.project!.id}'
+                          : 'n:${entry.voiceNote!.id}';
+                      final card = ExpressiveCard(
+                        margin: EdgeInsets.zero,
+                        onTap: _wide
+                            ? () => setState(() => _activeKey = key)
+                            : entry.isProjectNote
+                                ? () => context.push('/projects/${entry.project!.id}')
+                                : null,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -392,24 +410,31 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                   ),
                                 ],
                                 const Spacer(),
-                                Text(
+                                Flexible(
+                                  child: Text(
                                   DateFormat('MMM d, y • h:mm a').format(entry.timestamp),
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                                  ),
                                   ),
                                 ),
                                 if (isProjectNote)
                                   IconButton(
                                     icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).amber),
                                     tooltip: 'Edit Project Notes',
-                                    onPressed: () => _showEditProjectNotesDialog(context, entry.project!),
+                                    onPressed: () => _wide
+                                        ? setState(() => _activeKey = 'p:${entry.project!.id}')
+                                        : _showEditProjectNotesDialog(context, entry.project!),
                                   )
                                 else ...[
                                   IconButton(
                                     icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).primary),
                                     tooltip: 'Edit Note',
-                                    onPressed: () => _showEditNoteDialog(context, entry.voiceNote!),
+                                    onPressed: () => _wide
+                                        ? setState(() => _activeKey = 'n:${entry.voiceNote!.id}')
+                                        : _showEditNoteDialog(context, entry.voiceNote!),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
@@ -502,15 +527,59 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                           ],
                         ),
                       );
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                            border: Border.all(
+                              color: _wide && _activeKey == key
+                                  ? AppTheme.of(context).primary
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: card,
+                        ),
+                      );
                     },
                   ),
           ),
         ],
-      ),
+      )),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showNewTextNoteDialog(context),
         child: const Icon(Icons.edit_note_rounded),
       ),
+    );
+  }
+
+  /// Puts the feed beside the note editor on wide windows.
+  Widget _withPanel(List<_NoteEntry> entries, Widget feed) {
+    final key = _activeKey;
+    if (!_wide || key == null) return feed;
+    final id = key.substring(2);
+    final exists = key.startsWith('n:')
+        ? entries.any((e) => e.voiceNote?.id == id)
+        : entries.any((e) => e.project?.id == id);
+    if (!exists) return feed;
+    return Row(
+      children: [
+        Expanded(child: feed),
+        ResizablePanel(
+          prefKey: 'notes',
+          defaultWidth: 460,
+          child: NoteEditorPanel(
+            key: ValueKey(key),
+            noteId: key.startsWith('n:') ? id : null,
+            projectId: key.startsWith('p:') ? id : null,
+            onOpenProject: key.startsWith('p:')
+                ? () => context.push('/projects/$id')
+                : null,
+            onClose: () => setState(() => _activeKey = null),
+          ),
+        ),
+      ],
     );
   }
 }
