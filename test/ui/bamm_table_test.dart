@@ -620,6 +620,28 @@ void main() {
       expect(notifier.refreshCalls, callsBeforeToggle, reason: 'local search must never trigger a new API request');
     });
   });
+
+  group('BAMM work order detail placement', () {
+    final seed = [_wo(id: 301, issueDate: DateTime(2026, 1, 3))];
+
+    testWidgets('desktop: tapping a row opens the side pane, not a dialog', (tester) async {
+      await _pumpAt(tester, _expanded, overrides: _overrides(seed));
+      await tester.tap(find.text('Work order 301'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('BAMM Work Order #301'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(find.text('BAMM Work Order #301'), findsNothing);
+    });
+
+    testWidgets('narrow window keeps the dialog', (tester) async {
+      await _pumpAt(tester, const Size(800, 900), overrides: _overrides(seed));
+      await tester.tap(find.text('Work order 301').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
+  });
 }
 
 /// A [BammService] whose column-layout persistence is in-memory instead of

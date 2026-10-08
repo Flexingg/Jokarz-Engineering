@@ -201,7 +201,7 @@ extension _BammScreenDialogs on _BammScreenState {
                           content: Text('Created BAMM Work Order #${created.worNoSeq}!'),
                           action: SnackBarAction(
                             label: 'View',
-                            onPressed: () => BammDetailDialog.show(context, created),
+                            onPressed: () => _openWo(created),
                           ),
                         ),
                       );

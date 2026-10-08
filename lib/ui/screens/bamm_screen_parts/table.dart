@@ -265,7 +265,7 @@ extension _BammScreenTable on _BammScreenState {
     final linkedItems = ref.read(projectProvider.notifier).findItemsLinkedToBamm(wo.worNoSeq);
 
     return InkWell(
-      onTap: () => BammDetailDialog.show(context, wo),
+      onTap: () => _openWo(wo),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -317,7 +317,7 @@ extension _BammScreenTable on _BammScreenState {
                   IconButton(
                     tooltip: 'View Work Order Details',
                     icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                    onPressed: () => BammDetailDialog.show(context, wo),
+                    onPressed: () => _openWo(wo),
                   ),
                 ],
               ),
@@ -376,7 +376,7 @@ extension _BammScreenTable on _BammScreenState {
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           child: InkWell(
-            onTap: () => BammDetailDialog.show(context, wo),
+            onTap: () => _openWo(wo),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),
