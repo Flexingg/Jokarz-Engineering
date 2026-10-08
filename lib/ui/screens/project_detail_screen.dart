@@ -20,6 +20,10 @@ import '../widgets/voice_memo_modal.dart';
 import '../widgets/template_dialogs.dart';
 import '../widgets/bamm_chip.dart';
 import '../widgets/bamm_assign_dialog.dart';
+import '../adaptive/breakpoints.dart';
+import '../panels/project_editor_panel.dart';
+import '../panels/resizable_panel.dart';
+import '../panels/task_editor_panel.dart';
 
 part 'project_detail_parts/dialogs.dart';
 part 'project_detail_parts/tabs.dart';
@@ -48,6 +52,33 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   late TabController _tabController;
   final ImagePicker _picker = ImagePicker();
 
+  /// Right-hand editor on wide windows: the project's fields, or one task.
+  bool _projectPanelOpen = false;
+  String? _panelTaskId;
+
+  bool get _wide => Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
+
+  void _openProjectEditor(VoidCallback narrowFallback) {
+    if (!_wide) return narrowFallback();
+    setState(() {
+      _projectPanelOpen = true;
+      _panelTaskId = null;
+    });
+  }
+
+  void _openTaskEditor(TaskItem task) {
+    if (!_wide) return _showAddTaskDialog(context, existingTask: task);
+    setState(() {
+      _panelTaskId = task.id;
+      _projectPanelOpen = false;
+    });
+  }
+
+  void _closePanel() => setState(() {
+    _projectPanelOpen = false;
+    _panelTaskId = null;
+  });
+
   @override
   void initState() {
     super.initState();
@@ -66,17 +97,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     if (widget.targetOrderId != null || widget.targetTaskId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final p = ref.read(projectProvider).projects.where((proj) => proj.id == widget.projectId).firstOrNull;
+        final p = ref
+            .read(projectProvider)
+            .projects
+            .where((proj) => proj.id == widget.projectId)
+            .firstOrNull;
         if (p == null) return;
         if (widget.targetOrderId != null) {
-          final order = p.orders.where((o) => o.id == widget.targetOrderId).firstOrNull;
+          final order = p.orders
+              .where((o) => o.id == widget.targetOrderId)
+              .firstOrNull;
           if (order != null) {
             _showAddOrderDialog(context, existingOrder: order);
           }
         } else if (widget.targetTaskId != null) {
-          final task = p.tasks.where((t) => t.id == widget.targetTaskId).firstOrNull;
+          final task = p.tasks
+              .where((t) => t.id == widget.targetTaskId)
+              .firstOrNull;
           if (task != null) {
-            _showAddTaskDialog(context, existingTask: task);
+            _openTaskEditor(task);
           }
         }
       });
@@ -91,8 +130,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   Future<void> _pickImage() async {
     try {
-      final XFile? photo =
-          await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
       if (photo != null) {
         await ref
             .read(projectProvider.notifier)
@@ -108,9 +149,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
@@ -119,9 +160,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(projectProvider);
     final project = state.projects.cast<Project?>().firstWhere(
-          (p) => p?.id == widget.projectId,
-          orElse: () => null,
-        );
+      (p) => p?.id == widget.projectId,
+      orElse: () => null,
+    );
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
@@ -130,157 +171,205 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     if (project == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(
-          child: Text('Project not found or deleted.'),
-        ),
+        body: const Center(child: Text('Project not found or deleted.')),
       );
     }
 
     final isTerminal = project.isCompletedOrCancelled;
     final nextTask = project.nextPendingTask;
 
-    return PhotoDropZone(
-      projectId: widget.projectId,
-      child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          project.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+    final appBar = AppBar(
+      title: Text(
+        project.title,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
+          tooltip: 'Dictate Field Log for Project',
+          onPressed: () =>
+              VoiceMemoModal.show(context, preselectedProjectId: project.id),
         ),
-        actions: [
+        if (!project.isCompletedOrCancelled)
           IconButton(
-            icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
-            tooltip: 'Dictate Field Log for Project',
-            onPressed: () => VoiceMemoModal.show(
-              context,
-              preselectedProjectId: project.id,
+            icon: Icon(
+              project.isParked
+                  ? Icons.play_circle_outline_rounded
+                  : Icons.pause_circle_outline_rounded,
+              color: AppTheme.of(context).amber,
             ),
-          ),
-          if (!project.isCompletedOrCancelled)
-            IconButton(
-              icon: Icon(
-                project.isParked
-                    ? Icons.play_circle_outline_rounded
-                    : Icons.pause_circle_outline_rounded,
-                color: AppTheme.of(context).amber,
-              ),
-              tooltip: project.isParked
-                  ? '${parkBadgeText(project)}. Click to change or return now.'
-                  : 'Park until a date (waiting on parts, downtime...)',
-              onPressed: () async {
-                if (!project.isParked) {
-                  await parkWithDialog(context, ref, project);
-                  return;
-                }
-                final choice = await showDialog<String>(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: Text(parkBadgeText(project)),
-                    children: [
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'change'),
-                        child: const Text('Change the date...'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'now'),
-                        child: Text(
-                            'Return to #${project.parkRestorePriority ?? project.priority} now'),
-                      ),
-                    ],
-                  ),
-                );
-                if (!context.mounted) return;
-                if (choice == 'change') {
-                  await parkWithDialog(context, ref, project);
-                } else if (choice == 'now') {
-                  await ref.read(projectProvider.notifier).unparkProject(project.id);
-                }
-              },
-            ),
-          IconButton(
-            icon: Icon(Icons.content_copy_rounded, color: AppTheme.of(context).primary),
-            tooltip: 'Save as Reusable Template',
-            onPressed: () => TemplateDialogs.showSaveAsTemplateDialog(context, ref, project),
-          ),
-          IconButton(
-            icon: Icon(Icons.edit_outlined, color: AppTheme.of(context).primary),
-            tooltip: 'Edit Project Details',
-            onPressed: () => context.push('/projects/${project.id}/edit'),
-          ),
-
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
-            tooltip: 'Delete Project',
+            tooltip: project.isParked
+                ? '${parkBadgeText(project)}. Click to change or return now.'
+                : 'Park until a date (waiting on parts, downtime...)',
             onPressed: () async {
-              final confirm = await showDialog<bool>(
+              if (!project.isParked) {
+                await parkWithDialog(context, ref, project);
+                return;
+              }
+              final choice = await showDialog<String>(
                 context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Delete Project?'),
-                  content: Text('Are you sure you want to delete "${project.title}"? This cannot be undone.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).coral),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Delete'),
+                builder: (ctx) => SimpleDialog(
+                  title: Text(parkBadgeText(project)),
+                  children: [
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, 'change'),
+                      child: const Text('Change the date...'),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, 'now'),
+                      child: Text(
+                        'Return to #${project.parkRestorePriority ?? project.priority} now',
+                      ),
                     ),
                   ],
                 ),
               );
-              if (confirm == true && context.mounted) {
+              if (!context.mounted) return;
+              if (choice == 'change') {
+                await parkWithDialog(context, ref, project);
+              } else if (choice == 'now') {
                 await ref
-                    .read(syncStatusProvider.notifier)
-                    .deleteProjectEverywhere(project.id);
-                if (context.mounted) {
-                  context.pop();
-                }
+                    .read(projectProvider.notifier)
+                    .unparkProject(project.id);
               }
             },
           ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.of(context).primary,
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.checklist_rounded),
-              text: 'Tasks (${project.completedTasksCount}/${project.tasks.length})',
-            ),
-            Tab(
-              icon: const Icon(Icons.local_shipping_outlined),
-              text: 'Orders (${project.orders.length})',
-            ),
-            Tab(
-              icon: const Icon(Icons.history_edu_outlined),
-              text: 'Logs & Photos (${project.logs.length})',
-            ),
-          ],
+        IconButton(
+          icon: Icon(
+            Icons.content_copy_rounded,
+            color: AppTheme.of(context).primary,
+          ),
+          tooltip: 'Save as Reusable Template',
+          onPressed: () =>
+              TemplateDialogs.showSaveAsTemplateDialog(context, ref, project),
         ),
-      ),
-      body: Column(
-        children: [
-          // Project Meta Info Header Card
-          _buildProjectHeader(context, project, currency, dateFormat, isDark, isTerminal),
+        IconButton(
+          icon: Icon(Icons.edit_outlined, color: AppTheme.of(context).primary),
+          tooltip: 'Edit Project Details',
+          onPressed: () => context.push('/projects/${project.id}/edit'),
+        ),
 
-          // Next Pending Task Banner
-          if (nextTask != null && !isTerminal)
-            _buildNextPendingBanner(context, nextTask, isDark),
-
-          // Tabs
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTasksTab(context, project, isDark),
-                _buildOrdersTab(context, project, currency, isDark),
-                _buildLogsAndPhotosTab(context, project, isDark),
-              ],
-            ),
+        IconButton(
+          icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
+          tooltip: 'Delete Project',
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Delete Project?'),
+                content: Text(
+                  'Are you sure you want to delete "${project.title}"? This cannot be undone.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.of(context).coral,
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true && context.mounted) {
+              await ref
+                  .read(syncStatusProvider.notifier)
+                  .deleteProjectEverywhere(project.id);
+              if (context.mounted) {
+                context.pop();
+              }
+            }
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
+      bottom: TabBar(
+        controller: _tabController,
+        indicatorColor: AppTheme.of(context).primary,
+        tabs: [
+          Tab(
+            icon: const Icon(Icons.checklist_rounded),
+            text:
+                'Tasks (${project.completedTasksCount}/${project.tasks.length})',
+          ),
+          Tab(
+            icon: const Icon(Icons.local_shipping_outlined),
+            text: 'Orders (${project.orders.length})',
+          ),
+          Tab(
+            icon: const Icon(Icons.history_edu_outlined),
+            text: 'Logs & Photos (${project.logs.length})',
           ),
         ],
       ),
-    ),
+    );
+    final content = Column(
+      children: [
+        // Project Meta Info Header Card
+        _buildProjectHeader(
+          context,
+          project,
+          currency,
+          dateFormat,
+          isDark,
+          isTerminal,
+        ),
+
+        // Next Pending Task Banner
+        if (nextTask != null && !isTerminal)
+          _buildNextPendingBanner(context, nextTask, isDark),
+
+        // Tabs
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTasksTab(context, project, isDark),
+              _buildOrdersTab(context, project, currency, isDark),
+              _buildLogsAndPhotosTab(context, project, isDark),
+            ],
+          ),
+        ),
+      ],
+    );
+    final panel = !_wide
+        ? null
+        : _projectPanelOpen
+        ? ProjectEditorPanel(
+            key: ValueKey('proj-${project.id}'),
+            projectId: project.id,
+            onClose: _closePanel,
+          )
+        : (_panelTaskId != null &&
+              project.tasks.any((t) => t.id == _panelTaskId))
+        ? TaskEditorPanel(
+            key: ValueKey('task-$_panelTaskId'),
+            projectId: project.id,
+            taskId: _panelTaskId!,
+            onClose: _closePanel,
+          )
+        : null;
+    return PhotoDropZone(
+      projectId: widget.projectId,
+      child: Scaffold(
+        appBar: appBar,
+        body: panel == null
+            ? content
+            : Row(
+                children: [
+                  Expanded(child: content),
+                  ResizablePanel(
+                    prefKey: 'project',
+                    defaultWidth: 420,
+                    child: panel,
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -294,20 +383,26 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   ) {
     final priorityColor = project.priority == 1
         ? AppTheme.of(context).coral
-        : (project.priority <= 3 ? AppTheme.of(context).amber : AppTheme.of(context).primary);
+        : (project.priority <= 3
+              ? AppTheme.of(context).amber
+              : AppTheme.of(context).primary);
     final phaseColor = project.phase.toLowerCase() == 'complete'
         ? AppTheme.of(context).emerald
         : (project.phase.toLowerCase() == 'cancelled'
-            ? AppTheme.of(context).coral
-            : AppTheme.of(context).amber);
+              ? AppTheme.of(context).coral
+              : AppTheme.of(context).amber);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
+        color: isDark
+            ? AppTheme.of(context).surface
+            : AppTheme.of(context).surface,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
+            color: isDark
+                ? AppTheme.of(context).border
+                : AppTheme.of(context).border,
           ),
         ),
       ),
@@ -324,7 +419,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               Tooltip(
                 message: 'Tap to change category',
                 child: InkWell(
-                  onTap: () => _showEditCategoryDialog(context, project),
+                  onTap: () => _openProjectEditor(
+                    () => _showEditCategoryDialog(context, project),
+                  ),
                   borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   child: ExpressiveBadge(
                     label: '${project.category.label} ✎',
@@ -345,7 +442,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 Tooltip(
                   message: 'Tap to change priority',
                   child: InkWell(
-                    onTap: () => _showEditPriorityDialog(context, project),
+                    onTap: () => _openProjectEditor(
+                      () => _showEditPriorityDialog(context, project),
+                    ),
                     borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     child: ExpressiveBadge(
                       label: 'Priority #${project.priority} ✎',
@@ -359,7 +458,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               Tooltip(
                 message: 'Tap to change phase / status',
                 child: InkWell(
-                  onTap: () => _showEditPhaseDialog(context, project),
+                  onTap: () => _openProjectEditor(
+                    () => _showEditPhaseDialog(context, project),
+                  ),
                   borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   child: ExpressiveBadge(
                     label: '${project.phase} ✎',
@@ -374,14 +475,18 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 Tooltip(
                   message: 'Tap to edit cost',
                   child: InkWell(
-                    onTap: () => _showEditCostDialog(context, project),
+                    onTap: () => _openProjectEditor(
+                      () => _showEditCostDialog(context, project),
+                    ),
                     borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
                         'Cost: ${currency.format(project.totalProjectCost)} ✎',
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
@@ -401,18 +506,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   Tooltip(
                     message: 'Tap to edit machine / line',
                     child: InkWell(
-                      onTap: () => _showEditMachineDialog(context, project),
+                      onTap: () => _openProjectEditor(
+                        () => _showEditMachineDialog(context, project),
+                      ),
                       borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.precision_manufacturing_outlined,
-                              size: 14, color: Colors.grey),
+                          const Icon(
+                            Icons.precision_manufacturing_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '${project.machine} ✎',
                             style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -422,18 +534,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   Tooltip(
                     message: 'Tap to edit sub-assembly',
                     child: InkWell(
-                      onTap: () => _showEditSubAssemblyDialog(context, project),
+                      onTap: () => _openProjectEditor(
+                        () => _showEditSubAssemblyDialog(context, project),
+                      ),
                       borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.account_tree_outlined,
-                              size: 14, color: Colors.grey),
+                          const Icon(
+                            Icons.account_tree_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '${project.subAssembly} ✎',
                             style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -450,32 +569,58 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ...project.bammWorkOrders.map((wo) => BammChip(
-                worNo: wo,
-                onDeleted: () => ref.read(projectProvider.notifier).removeBammFromProject(project.id, wo),
-              )),
+              ...project.bammWorkOrders.map(
+                (wo) => BammChip(
+                  worNo: wo,
+                  onDeleted: () => ref
+                      .read(projectProvider.notifier)
+                      .removeBammFromProject(project.id, wo),
+                ),
+              ),
               InkWell(
                 onTap: () async {
-                  final res = await BammAssignDialog.show(context, currentSelections: project.bammWorkOrders);
+                  final res = await BammAssignDialog.show(
+                    context,
+                    currentSelections: project.bammWorkOrders,
+                  );
                   if (res != null) {
-                    await ref.read(projectProvider.notifier).setProjectBammWorkOrders(project.id, res);
+                    await ref
+                        .read(projectProvider.notifier)
+                        .setProjectBammWorkOrders(project.id, res);
                   }
                 },
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: AppTheme.of(
+                        context,
+                      ).primary.withValues(alpha: 0.5),
+                    ),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add, size: 13, color: AppTheme.of(context).primary),
+                      Icon(
+                        Icons.add,
+                        size: 13,
+                        color: AppTheme.of(context).primary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                        project.bammWorkOrders.isEmpty ? '+ Assign BAMM' : '+ BAMM',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
+                        project.bammWorkOrders.isEmpty
+                            ? '+ Assign BAMM'
+                            : '+ BAMM',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.of(context).primary,
+                        ),
                       ),
                     ],
                   ),
@@ -489,11 +634,19 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.check_circle_outline, size: 14, color: AppTheme.of(context).emerald),
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 14,
+                  color: AppTheme.of(context).emerald,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Completed at: ${dateFormat.format(project.completedAt!)}',
-                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).emerald, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.of(context).emerald,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -508,7 +661,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                color: isDark
+                    ? AppTheme.of(context).textSecondary
+                    : AppTheme.of(context).textSecondary,
               ),
             ),
           ],
@@ -519,26 +674,44 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             Tooltip(
               message: 'Tap to edit tags',
               child: InkWell(
-                onTap: () => _showEditTagsDialog(context, project),
+                onTap: () => _openProjectEditor(
+                  () => _showEditTagsDialog(context, project),
+                ),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: Wrap(
                   spacing: 4,
                   runSpacing: 4,
-                  children: project.tags.map((tag) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.of(context).primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                      border: Border.all(
-                        color: AppTheme.of(context).primaryBlue.withValues(alpha: 0.4),
-                        width: 0.6,
-                      ),
-                    ),
-                    child: Text(
-                      '#$tag',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  )).toList(),
+                  children: project.tags
+                      .map(
+                        (tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.of(
+                              context,
+                            ).primaryBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusXs,
+                            ),
+                            border: Border.all(
+                              color: AppTheme.of(
+                                context,
+                              ).primaryBlue.withValues(alpha: 0.4),
+                              width: 0.6,
+                            ),
+                          ),
+                          child: Text(
+                            '#$tag',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),
@@ -548,7 +721,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.sticky_note_2_outlined, size: 14, color: AppTheme.of(context).amber),
+              Icon(
+                Icons.sticky_note_2_outlined,
+                size: 14,
+                color: AppTheme.of(context).amber,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -561,14 +738,19 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 ),
               ),
               TextButton.icon(
-                onPressed: () => _showEditNotesDialog(context, project),
+                onPressed: () => _openProjectEditor(
+                  () => _showEditNotesDialog(context, project),
+                ),
                 icon: const Icon(Icons.edit_outlined, size: 14),
                 label: Text(
                   project.notes.isEmpty ? 'Add' : 'Edit',
                   style: const TextStyle(fontSize: 11),
                 ),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   foregroundColor: AppTheme.of(context).amber,
@@ -612,7 +794,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       color: AppTheme.of(context).amber.withValues(alpha: 0.15),
       child: Row(
         children: [
-          Icon(Icons.pending_actions_rounded, size: 18, color: AppTheme.of(context).amber),
+          Icon(
+            Icons.pending_actions_rounded,
+            size: 18,
+            color: AppTheme.of(context).amber,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(
@@ -624,7 +810,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 children: [
                   TextSpan(
                     text: 'NEXT PENDING: ',
-                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.of(context).amber),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.of(context).amber,
+                    ),
                   ),
                   TextSpan(
                     text: task.description,
@@ -633,7 +822,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   if (task.pendingReason.isNotEmpty)
                     TextSpan(
                       text: ' (${task.pendingReason})',
-                      style: TextStyle(fontStyle: FontStyle.italic, color: AppTheme.of(context).amber),
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.of(context).amber,
+                      ),
                     ),
                 ],
               ),
@@ -643,5 +835,4 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       ),
     );
   }
-
 }

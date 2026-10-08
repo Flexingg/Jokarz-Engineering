@@ -137,7 +137,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                             ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                              onPressed: () => _showAddTaskDialog(context, existingTask: task),
+                              onPressed: () => _openTaskEditor(task),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
