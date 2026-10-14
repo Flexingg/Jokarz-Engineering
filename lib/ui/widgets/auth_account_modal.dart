@@ -309,6 +309,56 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.cloud_download_rounded, size: 18),
+                        label: const Text('Pull from cloud'),
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                syncNotifier.resyncFromCloud();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Re-syncing with the cloud...'),
+                                  ),
+                                );
+                              },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.fact_check_outlined, size: 18),
+                        label: const Text('Check sync'),
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                final report = await syncNotifier.diagnose();
+                                if (!context.mounted) return;
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Sync check'),
+                                    content: SelectableText(
+                                      report,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Close'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
                   label: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

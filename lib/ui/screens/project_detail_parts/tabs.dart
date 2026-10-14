@@ -122,6 +122,15 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                           color: AppTheme.of(context).amber,
                                           fontSize: 10,
                                         ),
+                                      if (task.isCompleted)
+                                        ExpressiveBadge(
+                                          label: task.completedAt != null
+                                              ? 'Done ${DateFormat('MMM d, y').format(task.completedAt!)}'
+                                              : 'Done (date not recorded)',
+                                          icon: Icons.check_circle_outline_rounded,
+                                          color: AppTheme.of(context).emerald,
+                                          fontSize: 10,
+                                        ),
                                       if (dateText != null)
                                         ExpressiveBadge(
                                           label: 'Scheduled: $dateText',

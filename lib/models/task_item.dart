@@ -6,6 +6,9 @@ class TaskItem {
   final DateTime? scheduledDate;
   final String pendingReason; // e.g. "Pending parts", "Pending email", "Pending downtime"
   final bool isCompleted;
+  /// When the task was last checked off (null while open, or for tasks
+  /// completed before dates were recorded and not found in the activity log).
+  final DateTime? completedAt;
   /// Explicit sort order for drag-and-drop reordering (0-based index)
   final int sortOrder;
   /// Assigned BAMM Work Order numbers (e.g. ['185586'])
@@ -17,6 +20,7 @@ class TaskItem {
     this.scheduledDate,
     this.pendingReason = '',
     this.isCompleted = false,
+    this.completedAt,
     this.sortOrder = 0,
     List<String>? bammWorkOrders,
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
@@ -28,6 +32,8 @@ class TaskItem {
     bool clearScheduledDate = false,
     String? pendingReason,
     bool? isCompleted,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     int? sortOrder,
     List<String>? bammWorkOrders,
   }) {
@@ -37,6 +43,7 @@ class TaskItem {
       scheduledDate: clearScheduledDate ? null : (scheduledDate ?? this.scheduledDate),
       pendingReason: pendingReason ?? this.pendingReason,
       isCompleted: isCompleted ?? this.isCompleted,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       sortOrder: sortOrder ?? this.sortOrder,
       bammWorkOrders: bammWorkOrders ?? this.bammWorkOrders,
     );
@@ -49,6 +56,7 @@ class TaskItem {
       'scheduledDate': scheduledDate?.toIso8601String(),
       'pendingReason': pendingReason,
       'isCompleted': isCompleted,
+      'completedAt': completedAt?.toIso8601String(),
       'sortOrder': sortOrder,
       'bammWorkOrders': bammWorkOrders,
     };
@@ -63,6 +71,9 @@ class TaskItem {
           : null,
       pendingReason: json['pendingReason'] as String? ?? '',
       isCompleted: json['isCompleted'] as bool? ?? false,
+      completedAt: json['completedAt'] != null
+          ? DateTime.tryParse(json['completedAt'] as String)
+          : null,
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
       bammWorkOrders: (json['bammWorkOrders'] as List<dynamic>?)
               ?.map((e) => e.toString())

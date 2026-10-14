@@ -224,12 +224,11 @@ class SyncNotifier extends Notifier<SyncState> {
         (snapshot) => _handleSnapshot(c, snapshot),
         onError: (Object e) {
           log.error('sync', 'Firestore ${c.label} sync error', e);
-          // Only the projects listener drives the visible error status
-          // (matches the previous behaviour); the rest are logged.
-          if (identical(c, _projects)) {
-            state = state.copyWith(
-                status: SyncStatus.error, errorMessage: e.toString());
-          }
+          // Any collection failing (typically a permission-denied from the
+          // Firestore rules) must be visible, not just the projects one.
+          state = state.copyWith(
+              status: SyncStatus.error,
+              errorMessage: '${c.label}: $e');
         },
       ));
     }
@@ -268,7 +267,23 @@ class SyncNotifier extends Notifier<SyncState> {
         }
       }
 
-      final remote = snapshot.docs.map((d) => c.fromJson(d.data())).toList();
+      // One unreadable document must not hide the rest of the collection.
+      final remote = <T>[];
+      var unreadable = 0;
+      for (final d in snapshot.docs) {
+        try {
+          remote.add(c.fromJson(d.data()));
+        } catch (e, stack) {
+          unreadable++;
+          log.error('sync', 'Skipped unreadable ${c.label} doc ${d.id}', e, stack);
+        }
+      }
+      if (unreadable > 0) {
+        state = state.copyWith(
+            status: SyncStatus.error,
+            errorMessage: '$unreadable ${c.label} from the cloud could not be '
+                'read (see Diagnostics Log).');
+      }
       final hadLocal = c.items(_ref.read(projectProvider)).isNotEmpty;
 
       if (remote.isNotEmpty) {
@@ -294,7 +309,7 @@ class SyncNotifier extends Notifier<SyncState> {
 
       if (c.marksInitialSync) {
         _initialRemoteReceived = true;
-        state = state.copyWith(
+        if (unreadable == 0) state = state.copyWith(
           status: SyncStatus.synced,
           lastSyncedAt: DateTime.now(),
         );
@@ -350,6 +365,41 @@ class SyncNotifier extends Notifier<SyncState> {
   Future<void> deleteCloudVendor(String id) => _deleteDoc(_vendors, id);
   Future<void> syncTemplate(ProjectTemplate t) => _pushDoc(_templates, t);
   Future<void> deleteCloudTemplate(String id) => _deleteDoc(_templates, id);
+
+  /// Re-attaches the cloud listeners: the first snapshot merges everything
+  /// the cloud has into this device and uploads anything it is missing.
+  void resyncFromCloud() {
+    final user = _authService.currentUser;
+    if (user == null) return;
+    _initialRemoteReceived = false;
+    _startListeningToCloud(user.uid);
+  }
+
+  /// A plain-text report for "why is my other device blank?": the signed-in
+  /// account, and for every collection how many records this device holds
+  /// versus how many the cloud server returns (or the exact error).
+  Future<String> diagnose() async {
+    final user = _authService.currentUser;
+    if (user == null) return 'Not signed in on this device.';
+    final firestore = _firestore;
+    if (firestore == null) return 'Cloud sync is not available on this device.';
+    final local = _ref.read(projectProvider);
+    final b = StringBuffer('Account: ${user.email ?? '(no email)'}\n')
+      ..writeln('Account id: ${user.uid}')
+      ..writeln();
+    for (final c in _all) {
+      String cloud;
+      try {
+        final snap = await _col(user.uid, c.name)!
+            .get(const GetOptions(source: Source.server));
+        cloud = '${snap.size}';
+      } catch (e) {
+        cloud = 'ERROR $e';
+      }
+      b.writeln('${c.label}: this device ${c.items(local).length}, cloud $cloud');
+    }
+    return b.toString();
+  }
 
   /// Deletes a voice/written note from BOTH local state and Firestore so it is
   /// not resurrected by the next cloud snapshot.

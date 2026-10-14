@@ -70,6 +70,37 @@ class ProjectNotifier extends EngineeringNotifierCore
       isLoading: false,
     );
     await applyDueParks();
+    await backfillTaskCompletionDates();
+  }
+
+  /// Tasks checked off before completion dates existed get theirs from the
+  /// activity log ("Completed task: ..." entries), when the entry is still
+  /// there. Runs once per task; tasks with no matching entry stay undated.
+  Future<void> backfillTaskCompletionDates() async {
+    final done = state.activityLog
+        .where((a) => a.type == ActivityType.taskCompleted && a.projectId != null)
+        .toList(); // newest first
+    if (done.isEmpty) return;
+    var changed = false;
+    final projects = state.projects.map((p) {
+      var touched = false;
+      final tasks = p.tasks.map((t) {
+        if (!t.isCompleted || t.completedAt != null) return t;
+        final label = 'Completed task: ${t.description}';
+        final hit = done
+            .where((a) => a.projectId == p.id && a.text == label)
+            .firstOrNull;
+        if (hit == null) return t;
+        touched = true;
+        return t.copyWith(completedAt: hit.timestamp);
+      }).toList();
+      if (!touched) return p;
+      changed = true;
+      return p.copyWith(tasks: tasks);
+    }).toList();
+    if (!changed) return;
+    state = state.copyWith(projects: projects);
+    await persist();
   }
 
   /// Records a timestamped action for traceability (persisted separately).
@@ -454,7 +485,9 @@ class ProjectNotifier extends EngineeringNotifierCore
 
     final updatedTasks = project.tasks.map((t) {
       if (t.id == taskId) {
-        return t.copyWith(isCompleted: !t.isCompleted);
+        return t.isCompleted
+            ? t.copyWith(isCompleted: false, clearCompletedAt: true)
+            : t.copyWith(isCompleted: true, completedAt: DateTime.now());
       }
       return t;
     }).toList();
