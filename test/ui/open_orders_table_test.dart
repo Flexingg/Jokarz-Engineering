@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/standalone_order.dart';
@@ -121,6 +122,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Open details'), findsOneWidget);
     expect(find.text('Copy PO #'), findsOneWidget);
+  });
+
+  group('keyboard navigation', () {
+    testWidgets('arrows move, Enter opens the panel which then follows, Esc closes', (tester) async {
+      await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown); // first row: Servo drive (soonest ETA)
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Part / Material Description *'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, 'Part / Material Description *')).controller!.text,
+        'Servo drive',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, 'Part / Material Description *')).controller!.text,
+        'Gearbox seal kit',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Part / Material Description *'), findsNothing);
+    });
+
+    testWidgets('D marks the highlighted order delivered', (tester) async {
+      final c = await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+      await tester.pumpAndSettle();
+      final delivered = c.read(projectProvider).standaloneOrders.where((o) => o.delivered);
+      expect(delivered.map((o) => o.id), ['b']);
+    });
+
+    testWidgets('Space ticks the row for bulk actions', (tester) async {
+      await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(find.text('1 selected'), findsOneWidget);
+    });
   });
 
   group('sidebar editor (autosave)', () {

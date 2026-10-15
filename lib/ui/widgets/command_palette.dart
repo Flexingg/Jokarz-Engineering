@@ -6,6 +6,7 @@ import '../../models/key_bindings.dart';
 import '../../providers/keybindings_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../router/app_router.dart';
+import '../keynav/key_nav.dart';
 import '../../theme/app_theme.dart';
 import '../motion/motion.dart';
 import '../../utils/text_utils.dart';
@@ -162,6 +163,20 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         'Machines',
         Icons.settings_applications_rounded,
         (_) => appRouter.push('/machines'),
+      ),
+      _Entry(
+        'Action',
+        'Keyboard shortcuts',
+        Icons.keyboard_outlined,
+        (_) {
+          final ctx = appRootContext;
+          if (ctx != null) {
+            showKeyboardHelp(ctx, const {
+              'Orders, Projects, Notes, Fab list': 'Press ? on any list to see its own keys',
+              'Project tasks': 'Click the list, then Space to check, E edit, F fab list',
+            });
+          }
+        },
       ),
       _Entry(
         'Action',

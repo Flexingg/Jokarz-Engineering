@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +16,7 @@ import '../widgets/expressive_badge.dart';
 import '../widgets/voice_memo_modal.dart';
 import '../widgets/note_dialogs.dart';
 import '../adaptive/breakpoints.dart';
+import '../keynav/key_nav.dart';
 import '../panels/note_editor_panel.dart';
 import '../panels/resizable_panel.dart';
 
@@ -33,6 +35,13 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   /// Record open in the side editor on wide windows: 'n:<noteId>' for a field
   /// note, 'p:<projectId>' for a project's notes.
   String? _activeKey;
+  final _nav = KeyNavController();
+
+  @override
+  void dispose() {
+    _nav.dispose();
+    super.dispose();
+  }
 
   bool get _wide => Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
 
@@ -49,7 +58,8 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
   @override
   void didUpdateWidget(covariant VoiceNotesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.targetNoteId != null && widget.targetNoteId != oldWidget.targetNoteId) {
+    if (widget.targetNoteId != null &&
+        widget.targetNoteId != oldWidget.targetNoteId) {
       _handledTargetNote = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _handleTargetNote();
@@ -61,7 +71,9 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     if (!mounted || _handledTargetNote || widget.targetNoteId == null) return;
     _handledTargetNote = true;
     final state = ref.read(projectProvider);
-    final note = state.voiceNotes.where((n) => n.id == widget.targetNoteId).firstOrNull;
+    final note = state.voiceNotes
+        .where((n) => n.id == widget.targetNoteId)
+        .firstOrNull;
     if (note != null) {
       if (_wide) {
         setState(() => _activeKey = 'n:${note.id}');
@@ -124,7 +136,8 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                         ),
                       ),
                     ],
-                    onChanged: (val) => setDialogState(() => selectedProjId = val),
+                    onChanged: (val) =>
+                        setDialogState(() => selectedProjId = val),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -151,7 +164,9 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                     projectId: selectedProjId,
                     clearProjectId: selectedProjId == null,
                   );
-                  await ref.read(projectProvider.notifier).updateVoiceNote(updated);
+                  await ref
+                      .read(projectProvider.notifier)
+                      .updateVoiceNote(updated);
                   if (context.mounted) Navigator.pop(ctx);
                 },
                 child: const Text('Update Note'),
@@ -170,13 +185,13 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.sticky_note_2_outlined, color: AppTheme.of(context).amber),
+            Icon(
+              Icons.sticky_note_2_outlined,
+              color: AppTheme.of(context).amber,
+            ),
             SizedBox(width: 8),
             Flexible(
-              child: Text(
-                'Project Notes',
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text('Project Notes', overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
@@ -186,7 +201,11 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
           children: [
             Text(
               project.title,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).primary),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.of(context).primary,
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -195,7 +214,8 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
               autofocus: true,
               decoration: const InputDecoration(
                 labelText: 'Notes',
-                hintText: 'Key observations, measurements, decisions, follow-ups...',
+                hintText:
+                    'Key observations, measurements, decisions, follow-ups...',
                 alignLabelWithHint: true,
               ),
             ),
@@ -231,26 +251,30 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     final entries = <_NoteEntry>[];
     for (final n in state.voiceNotes) {
       final proj = n.projectId != null ? projectById[n.projectId] : null;
-      entries.add(_NoteEntry(
-        voiceNote: n,
-        title: n.title,
-        content: n.transcript,
-        timestamp: n.timestamp,
-        projectId: n.projectId,
-        projectTitle: proj?.title,
-      ));
+      entries.add(
+        _NoteEntry(
+          voiceNote: n,
+          title: n.title,
+          content: n.transcript,
+          timestamp: n.timestamp,
+          projectId: n.projectId,
+          projectTitle: proj?.title,
+        ),
+      );
     }
     for (final p in state.projects) {
       if (p.notes.trim().isNotEmpty) {
-        entries.add(_NoteEntry(
-          project: p,
-          isProjectNote: true,
-          title: p.title,
-          content: p.notes,
-          timestamp: p.updatedAt,
-          projectId: p.id,
-          projectTitle: p.title,
-        ));
+        entries.add(
+          _NoteEntry(
+            project: p,
+            isProjectNote: true,
+            title: p.title,
+            content: p.notes,
+            timestamp: p.updatedAt,
+            projectId: p.id,
+            projectTitle: p.title,
+          ),
+        );
       }
     }
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -267,17 +291,21 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.edit_note_rounded, color: AppTheme.of(context).primary, size: 28),
-            SizedBox(width: 8),
-            Text(
-              'Notes',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Icon(
+              Icons.edit_note_rounded,
+              color: AppTheme.of(context).primary,
+              size: 28,
             ),
+            SizedBox(width: 8),
+            Text('Notes', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.photo_camera_outlined, color: AppTheme.of(context).coral),
+            icon: Icon(
+              Icons.photo_camera_outlined,
+              color: AppTheme.of(context).coral,
+            ),
             tooltip: 'Photo Note',
             onPressed: () => _pickPhotoNote(context),
           ),
@@ -294,265 +322,386 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: _withPanel(entries, Column(
-        children: [
-          // Search Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _search.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () => setState(() => _search = ''),
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      body: _withPanel(
+        entries,
+        KeyNav(
+          controller: _nav,
+          count: filtered.length,
+          onMoved: (i) {
+            // With the editor open, it follows the highlight.
+            if (_activeKey != null && i >= 0 && i < filtered.length) {
+              setState(() => _activeKey = _keyOf(filtered[i]));
+            }
+          },
+          onActivate: (i) => setState(() {
+            final k = _keyOf(filtered[i]);
+            _activeKey = _activeKey == k ? null : k;
+          }),
+          onEscape: () {
+            if (_activeKey != null) setState(() => _activeKey = null);
+          },
+          keys: {
+            LogicalKeyboardKey.keyE: (i) =>
+                setState(() => _activeKey = _keyOf(filtered[i])),
+            LogicalKeyboardKey.keyN: (_) => _showNewTextNoteDialog(context),
+          },
+          help: const {
+            'E': 'Edit the note in the side panel',
+            'N': 'New written note',
+          },
+          child: Column(
+            children: [
+              // Search Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _search.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded),
+                            onPressed: () => setState(() => _search = ''),
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onChanged: (val) => setState(() => _search = val),
+                ),
               ),
-              onChanged: (val) => setState(() => _search = val),
-            ),
-          ),
 
-          // Notes List
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.note_alt_outlined,
-                          size: 56,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No engineering notes recorded yet',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Type a field observation or tap the mic for hands-free speech dictation.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 12,
-                          runSpacing: 8,
+              // Notes List
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ElevatedButton.icon(
-                              onPressed: () => _showNewTextNoteDialog(context),
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Write Note'),
+                            const Icon(
+                              Icons.note_alt_outlined,
+                              size: 56,
+                              color: Colors.grey,
                             ),
-                            OutlinedButton.icon(
-                              onPressed: () => VoiceMemoModal.show(context),
-                              icon: Icon(Icons.mic, color: AppTheme.of(context).amber),
-                              label: const Text('Voice Dictate'),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No engineering notes recorded yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Type a field observation or tap the mic for hands-free speech dictation.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppTheme.of(context).textSecondary
+                                    : AppTheme.of(context).textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _showNewTextNoteDialog(context),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text('Write Note'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => VoiceMemoModal.show(context),
+                                  icon: Icon(
+                                    Icons.mic,
+                                    color: AppTheme.of(context).amber,
+                                  ),
+                                  label: const Text('Voice Dictate'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final entry = filtered[index];
-                      final isProjectNote = entry.isProjectNote;
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final entry = filtered[index];
+                          final isProjectNote = entry.isProjectNote;
 
-                      final key = isProjectNote
-                          ? 'p:${entry.project!.id}'
-                          : 'n:${entry.voiceNote!.id}';
-                      final card = ExpressiveCard(
-                        margin: EdgeInsets.zero,
-                        onTap: _wide
-                            ? () => setState(() => _activeKey = key)
-                            : entry.isProjectNote
-                                ? () => context.push('/projects/${entry.project!.id}')
-                                : null,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                if (isProjectNote)
-                                  ExpressiveBadge(
-                                    label: '📌 Project Note',
-                                    color: AppTheme.of(context).amber,
-                                    fontSize: 10,
+                          final key = isProjectNote
+                              ? 'p:${entry.project!.id}'
+                              : 'n:${entry.voiceNote!.id}';
+                          final card = ExpressiveCard(
+                            margin: EdgeInsets.zero,
+                            onTap: _wide
+                                ? () {
+                                _nav.select(index);
+                                setState(() => _activeKey = key);
+                              }
+                                : entry.isProjectNote
+                                ? () => context.push(
+                                    '/projects/${entry.project!.id}',
                                   )
-                                else
-                                  ExpressiveBadge(
-                                    label: entry.voiceNote!.durationSeconds > 0
-                                        ? '🎙️ Voice (${entry.voiceNote!.durationSeconds}s)'
-                                        : '📝 Written Note',
-                                    color: entry.voiceNote!.durationSeconds > 0
-                                        ? AppTheme.of(context).amber
-                                        : AppTheme.of(context).primary,
-                                    fontSize: 10,
+                                : null,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (isProjectNote)
+                                      ExpressiveBadge(
+                                        label: '📌 Project Note',
+                                        color: AppTheme.of(context).amber,
+                                        fontSize: 10,
+                                      )
+                                    else
+                                      ExpressiveBadge(
+                                        label:
+                                            entry.voiceNote!.durationSeconds > 0
+                                            ? '🎙️ Voice (${entry.voiceNote!.durationSeconds}s)'
+                                            : '📝 Written Note',
+                                        color:
+                                            entry.voiceNote!.durationSeconds > 0
+                                            ? AppTheme.of(context).amber
+                                            : AppTheme.of(context).primary,
+                                        fontSize: 10,
+                                      ),
+                                    if (entry.projectId != null) ...[
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          '• ${entry.projectTitle ?? ''}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                    const Spacer(),
+                                    Flexible(
+                                      child: Text(
+                                        DateFormat(
+                                          'MMM d, y • h:mm a',
+                                        ).format(entry.timestamp),
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isDark
+                                              ? AppTheme.of(
+                                                  context,
+                                                ).textSecondary
+                                              : AppTheme.of(
+                                                  context,
+                                                ).textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isProjectNote)
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          size: 16,
+                                          color: AppTheme.of(context).amber,
+                                        ),
+                                        tooltip: 'Edit Project Notes',
+                                        onPressed: () => _wide
+                                            ? setState(
+                                                () => _activeKey =
+                                                    'p:${entry.project!.id}',
+                                              )
+                                            : _showEditProjectNotesDialog(
+                                                context,
+                                                entry.project!,
+                                              ),
+                                      )
+                                    else ...[
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          size: 16,
+                                          color: AppTheme.of(context).primary,
+                                        ),
+                                        tooltip: 'Edit Note',
+                                        onPressed: () => _wide
+                                            ? setState(
+                                                () => _activeKey =
+                                                    'n:${entry.voiceNote!.id}',
+                                              )
+                                            : _showEditNoteDialog(
+                                                context,
+                                                entry.voiceNote!,
+                                              ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          size: 16,
+                                          color: Colors.grey,
+                                        ),
+                                        tooltip: 'Delete Note',
+                                        onPressed: () async {
+                                          final note = entry.voiceNote!;
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Delete Note?'),
+                                              content: Text(
+                                                'Delete "${note.title}"? This cannot be undone.',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton(
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            AppTheme.of(
+                                                              context,
+                                                            ).coral,
+                                                      ),
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, true),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            await ref
+                                                .read(
+                                                  syncStatusProvider.notifier,
+                                                )
+                                                .deleteVoiceNoteEverywhere(
+                                                  note.id,
+                                                );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  decodeUnicodeEscapes(entry.title),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                if (entry.projectId != null) ...[
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      '• ${entry.projectTitle ?? ''}',
-                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                      overflow: TextOverflow.ellipsis,
+                                ),
+                                if (entry.voiceNote?.photoPath != null) ...[
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 200,
+                                      ),
+                                      child: Image.file(
+                                        File(entry.voiceNote!.photoPath!),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            const SizedBox.shrink(),
+                                      ),
                                     ),
                                   ),
                                 ],
-                                const Spacer(),
-                                Flexible(
-                                  child: Text(
-                                  DateFormat('MMM d, y • h:mm a').format(entry.timestamp),
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                                if (entry.content.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  SelectableText(
+                                    decodeUnicodeEscapes(entry.content),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      color: isDark
+                                          ? AppTheme.of(context).textSecondary
+                                          : AppTheme.of(context).textSecondary,
+                                    ),
                                   ),
-                                  ),
-                                ),
-                                if (isProjectNote)
-                                  IconButton(
-                                    icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).amber),
-                                    tooltip: 'Edit Project Notes',
-                                    onPressed: () => _wide
-                                        ? setState(() => _activeKey = 'p:${entry.project!.id}')
-                                        : _showEditProjectNotesDialog(context, entry.project!),
-                                  )
-                                else ...[
-                                  IconButton(
-                                    icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.of(context).primary),
-                                    tooltip: 'Edit Note',
-                                    onPressed: () => _wide
-                                        ? setState(() => _activeKey = 'n:${entry.voiceNote!.id}')
-                                        : _showEditNoteDialog(context, entry.voiceNote!),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
-                                    tooltip: 'Delete Note',
-                                    onPressed: () async {
-                                      final note = entry.voiceNote!;
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Delete Note?'),
-                                          content: Text(
-                                            'Delete "${note.title}"? This cannot be undone.',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(ctx, false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppTheme.of(context).coral,
-                                              ),
-                                              onPressed: () => Navigator.pop(ctx, true),
-                                              child: const Text('Delete'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirm == true) {
+                                ],
+                                if (isProjectNote) ...[
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: () async {
                                         await ref
-                                            .read(syncStatusProvider.notifier)
-                                            .deleteVoiceNoteEverywhere(note.id);
-                                      }
-                                    },
+                                            .read(projectProvider.notifier)
+                                            .updateProjectNotes(
+                                              entry.project!.id,
+                                              '',
+                                            );
+                                      },
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 14,
+                                      ),
+                                      label: const Text(
+                                        'Clear Notes',
+                                        style: TextStyle(fontSize: 11),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.grey,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              decodeUnicodeEscapes(entry.title),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                            if (entry.voiceNote?.photoPath != null) ...[
-                              const SizedBox(height: 8),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxHeight: 200),
-                                  child: Image.file(
-                                    File(entry.voiceNote!.photoPath!),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: KeyNavItem(
+                              controller: _nav,
+                              index: index,
+                              radius: AppTheme.radiusMd,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusMd,
+                                  ),
+                                  border: Border.all(
+                                    color: _wide && _activeKey == key
+                                        ? AppTheme.of(context).primary
+                                        : Colors.transparent,
+                                    width: 1.5,
                                   ),
                                 ),
+                                child: card,
                               ),
-                            ],
-                            if (entry.content.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              SelectableText(
-                                decodeUnicodeEscapes(entry.content),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.4,
-                                  color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
-                                ),
-                              ),
-                            ],
-                            if (isProjectNote) ...[
-                              const SizedBox(height: 6),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () async {
-                                    await ref
-                                        .read(projectProvider.notifier)
-                                        .updateProjectNotes(entry.project!.id, '');
-                                  },
-                                  icon: const Icon(Icons.delete_outline, size: 14),
-                                  label: const Text('Clear Notes', style: TextStyle(fontSize: 11)),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.grey,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                            border: Border.all(
-                              color: _wide && _activeKey == key
-                                  ? AppTheme.of(context).primary
-                                  : Colors.transparent,
-                              width: 1.5,
                             ),
-                          ),
-                          child: card,
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
-      )),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showNewTextNoteDialog(context),
         child: const Icon(Icons.edit_note_rounded),
       ),
     );
   }
+
+  String _keyOf(_NoteEntry e) =>
+      e.isProjectNote ? 'p:${e.project!.id}' : 'n:${e.voiceNote!.id}';
 
   /// Puts the feed beside the note editor on wide windows.
   Widget _withPanel(List<_NoteEntry> entries, Widget feed) {

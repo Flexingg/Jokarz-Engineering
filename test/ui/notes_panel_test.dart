@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/project.dart';
@@ -61,6 +62,18 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(c.read(projectProvider).projects.single.notes, 'revised');
+  });
+
+  testWidgets('keyboard: Down + Enter opens the first note, Esc closes it', (tester) async {
+    await _pump(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    // Newest entry first: the project note was updated after the field note.
+    expect(find.byTooltip('Close'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Close'), findsNothing);
   });
 
   testWidgets('phone keeps the edit dialog', (tester) async {

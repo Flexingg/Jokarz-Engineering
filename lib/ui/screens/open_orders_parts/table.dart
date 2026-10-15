@@ -365,7 +365,10 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
       color: bg,
       child: InkWell(
         hoverColor: colors.textPrimary.withValues(alpha: 0.04),
-        onTap: () => _rebuild(() => _activeKey = active ? null : e.key),
+        onTap: () {
+          _nav.select(index);
+          _rebuild(() => _activeKey = active ? null : e.key);
+        },
         onSecondaryTapUp: (d) => _showRowMenu(d.globalPosition, e, notifier),
         child: Container(
           height: 52,
@@ -533,69 +536,120 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
     final allChecked =
         rows.isNotEmpty && rows.every((e) => _selected.contains(e.key));
 
-    final table = Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
+    final table = KeyNav(
+      controller: _nav,
+      count: rows.length,
+      // With the panel open, it follows the highlight.
+      onMoved: (i) {
+        if (_activeKey != null && i >= 0 && i < rows.length) {
+          _rebuild(() => _activeKey = rows[i].key);
+        }
+      },
+      onActivate: (i) => _rebuild(
+        () => _activeKey = _activeKey == rows[i].key ? null : rows[i].key,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final width = c.maxWidth < _tableMinWidth
-              ? _tableMinWidth
-              : c.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: width,
-              height: c.maxHeight,
-              child: Column(
-                children: [
-                  Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: colors.border)),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 48,
-                          child: Checkbox(
-                            value: allChecked,
-                            visualDensity: VisualDensity.compact,
-                            onChanged: (v) => _rebuild(() {
-                              if (v == true) {
-                                _selected.addAll(rows.map((e) => e.key));
-                              } else {
-                                _selected.clear();
-                              }
-                            }),
-                          ),
-                        ),
-                        _headerCell('Status / ETA', 'eta', width: 190),
-                        _headerCell('PO', 'po', width: 130),
-                        _headerCell('Description', 'desc', flex: 5),
-                        _headerCell('Vendor', 'vendor', width: 150),
-                        _headerCell('Project', 'project', flex: 3),
-                        _headerCell('Price', 'price', width: 110, right: true),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: rows.length,
-                      itemBuilder: (context, i) =>
-                          _orderRow(rows[i], i, currency, notifier),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
+      onToggle: (i) => _rebuild(() {
+        final k = rows[i].key;
+        if (!_selected.remove(k)) _selected.add(k);
+      }),
+      onEscape: () {
+        if (_activeKey != null) _rebuild(() => _activeKey = null);
+      },
+      keys: {
+        LogicalKeyboardKey.keyD: (i) {
+          final targets = _selected.isNotEmpty
+              ? rows.where((e) => _selected.contains(e.key)).toList()
+              : [rows[i]];
+          final allDone = targets.every((e) => e.delivered);
+          _setDelivered(targets, !allDone, notifier);
         },
+        LogicalKeyboardKey.keyE: (i) =>
+            _rebuild(() => _activeKey = rows[i].key),
+        LogicalKeyboardKey.keyC: (i) {
+          if (rows[i].po.isNotEmpty) _copyText(rows[i].po, 'PO ${rows[i].po}');
+        },
+      },
+      help: const {
+        'Space': 'Tick / untick the row for bulk actions',
+        'D': 'Mark delivered / not delivered (all ticked rows, or this one)',
+        'E': 'Edit the order in the side panel',
+        'C': 'Copy the PO number',
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final width = c.maxWidth < _tableMinWidth
+                ? _tableMinWidth
+                : c.maxWidth;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: width,
+                height: c.maxHeight,
+                child: Column(
+                  children: [
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: colors.border),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            child: Checkbox(
+                              value: allChecked,
+                              visualDensity: VisualDensity.compact,
+                              onChanged: (v) => _rebuild(() {
+                                if (v == true) {
+                                  _selected.addAll(rows.map((e) => e.key));
+                                } else {
+                                  _selected.clear();
+                                }
+                              }),
+                            ),
+                          ),
+                          _headerCell('Status / ETA', 'eta', width: 190),
+                          _headerCell('PO', 'po', width: 130),
+                          _headerCell('Description', 'desc', flex: 5),
+                          _headerCell('Vendor', 'vendor', width: 150),
+                          _headerCell('Project', 'project', flex: 3),
+                          _headerCell(
+                            'Price',
+                            'price',
+                            width: 110,
+                            right: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: rows.length,
+                        itemBuilder: (context, i) => KeyNavItem(
+                          controller: _nav,
+                          index: i,
+                          radius: 0,
+                          child: _orderRow(rows[i], i, currency, notifier),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
 
