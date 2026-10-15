@@ -54,7 +54,7 @@ class BackupTiles extends ConsumerWidget {
       try {
         await Share.shareXFiles([
           XFile(file.path, mimeType: 'application/zip'),
-        ], text: 'Jokarz Engineering backup');
+        ], text: 'AOR Engineering backup');
       } catch (e) {
         log.warn('backup', 'Share sheet unavailable; file kept on disk', e);
       }

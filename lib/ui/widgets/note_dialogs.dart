@@ -8,11 +8,14 @@ import 'searchable_dropdown.dart';
 /// and the universal search quick-add. [prefillTitle] / [prefillContent] are
 /// populated from search text when launched from the search flow.
 Future<void> showNewFieldNoteDialog(
-  BuildContext context,
-  WidgetRef ref, {
+  BuildContext context, {
   String prefillTitle = '',
   String prefillContent = '',
 }) {
+  // Read through the app's container, not a widget's `ref`: callers such as the
+  // command palette close right after launching this dialog, which disposes
+  // their `ref` while the dialog (and its rebuilds) is still alive.
+  final container = ProviderScope.containerOf(context, listen: false);
   final titleCtrl = TextEditingController(text: prefillTitle);
   final contentCtrl = TextEditingController(text: prefillContent);
   String? selectedProjId;
@@ -21,7 +24,7 @@ Future<void> showNewFieldNoteDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {
-        final projects = ref.read(projectProvider).projects;
+        final projects = container.read(projectProvider).projects;
 
         return AlertDialog(
           title: const Text('New Engineering Field Note'),
@@ -72,7 +75,7 @@ Future<void> showNewFieldNoteDialog(
                   durationSeconds: 0,
                   projectId: selectedProjId,
                 );
-                await ref.read(projectProvider.notifier).addVoiceNote(newNote);
+                await container.read(projectProvider.notifier).addVoiceNote(newNote);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Save Note'),

@@ -13,7 +13,6 @@ import '../ui/screens/tasks_calendar_screen.dart';
 import '../ui/screens/overdue_tasks_screen.dart';
 import '../ui/screens/what_next_screen.dart';
 import '../ui/screens/report_screen.dart';
-import '../ui/screens/search_screen.dart';
 import '../ui/screens/photo_note_editor_screen.dart';
 import '../ui/screens/inbox_screen.dart';
 import '../ui/screens/vendors_screen.dart';
@@ -22,6 +21,7 @@ import '../ui/screens/machine_detail_screen.dart';
 import '../ui/screens/bamm_screen.dart';
 import '../ui/screens/bamm_batch_update_screen.dart';
 import '../ui/screens/day_schedule_screen.dart';
+import '../ui/screens/fab_list_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -200,13 +200,6 @@ final appRouter = GoRouter(
       builder: (context, state) => const ReportScreen(),
     ),
     GoRoute(
-      path: '/search',
-      parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
-        child: SearchScreen(),
-      ),
-    ),
-    GoRoute(
       path: '/photo-note',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => NoTransitionPage(
@@ -220,6 +213,13 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const NoTransitionPage(
         child: InboxScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/fab',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: FabListScreen(),
       ),
     ),
     GoRoute(

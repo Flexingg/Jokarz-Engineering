@@ -14,6 +14,9 @@ abstract class EngineeringNotifierCore extends Notifier<EngineeringState> {
   /// Writes the current state to disk.
   Future<void> persist();
 
+  /// Writes the fabricators' list to its own file.
+  Future<void> persistFabJobs();
+
   /// Records a timestamped, user-visible activity entry.
   Future<void> logActivity(ActivityType type, String text,
       {String? pid, String? ptitle});
@@ -22,6 +25,9 @@ abstract class EngineeringNotifierCore extends Notifier<EngineeringState> {
   List<Project> rebalancePriorities(List<Project> list);
 
   Project? getProjectById(String id);
+
+  /// Ends any "park until" whose date has arrived; returns the titles.
+  Future<List<String>> applyDueParks({DateTime? now});
   Future<void> updateProject(Project updated);
   Future<void> addTask(String projectId, TaskItem task);
   Future<void> addStandaloneOrder(StandaloneOrder order);

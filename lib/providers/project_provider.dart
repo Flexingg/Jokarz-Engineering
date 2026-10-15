@@ -18,6 +18,8 @@ import 'project_ops/bamm_link_ops.dart';
 import 'project_ops/cloud_merge_ops.dart';
 import 'project_ops/inbox_vendor_ops.dart';
 import 'project_ops/notifier_core.dart';
+import 'project_ops/parking_ops.dart';
+import 'project_ops/fab_ops.dart';
 import 'project_ops/standalone_order_ops.dart';
 
 export 'engineering_state.dart';
@@ -28,7 +30,7 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 });
 
 class ProjectNotifier extends EngineeringNotifierCore
-    with CloudMergeOps, StandaloneOrderOps, BammLinkOps, InboxVendorOps {
+    with CloudMergeOps, StandaloneOrderOps, BammLinkOps, InboxVendorOps, ParkingOps, FabOps {
   /// [storage] is a test seam; production resolves [storageServiceProvider].
   ProjectNotifier([StorageService? storage]) : _injectedStorage = storage;
 
@@ -68,6 +70,47 @@ class ProjectNotifier extends EngineeringNotifierCore
       downtimes: await _storage.loadDowntimes(),
       isLoading: false,
     );
+    await applyDueParks();
+    await backfillTaskCompletionDates();
+    // Loaded after the main data so a slow read never delays first paint;
+    // anything added in the meantime is kept.
+    final fab = await _storage.loadFabJobs();
+    if (fab.isNotEmpty) {
+      final have = {for (final j in state.fabJobs) j.id};
+      state = state.copyWith(
+        fabJobs: [...state.fabJobs, ...fab.where((j) => !have.contains(j.id))],
+      );
+    }
+  }
+
+  /// Tasks checked off before completion dates existed get theirs from the
+  /// activity log ("Completed task: ..." entries), when the entry is still
+  /// there. Runs once per task; tasks with no matching entry stay undated.
+  Future<void> backfillTaskCompletionDates() async {
+    final done = state.activityLog
+        .where((a) => a.type == ActivityType.taskCompleted && a.projectId != null)
+        .toList(); // newest first
+    if (done.isEmpty) return;
+    var changed = false;
+    final projects = state.projects.map((p) {
+      var touched = false;
+      final tasks = p.tasks.map((t) {
+        if (!t.isCompleted || t.completedAt != null) return t;
+        final label = 'Completed task: ${t.description}';
+        final hit = done
+            .where((a) => a.projectId == p.id && a.text == label)
+            .firstOrNull;
+        if (hit == null) return t;
+        touched = true;
+        return t.copyWith(completedAt: hit.timestamp);
+      }).toList();
+      if (!touched) return p;
+      changed = true;
+      return p.copyWith(tasks: tasks);
+    }).toList();
+    if (!changed) return;
+    state = state.copyWith(projects: projects);
+    await persist();
   }
 
   /// Records a timestamped action for traceability (persisted separately).
@@ -100,6 +143,9 @@ class ProjectNotifier extends EngineeringNotifierCore
         downtimes: state.downtimes.where((e) => e.id != id).toList());
     await _storage.saveDowntimes(state.downtimes);
   }
+
+  @override
+  Future<void> persistFabJobs() => _storage.saveFabJobs(state.fabJobs);
 
   @override
   Future<void> persist() async {
@@ -254,18 +300,10 @@ class ProjectNotifier extends EngineeringNotifierCore
   }
 
   @override
-  List<Project> rebalancePriorities(List<Project> list) {
-    final active = list.where((p) => !p.isCompletedOrCancelled).toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
-    final terminal = list.where((p) => p.isCompletedOrCancelled).toList();
-
-    final rebalancedActive = <Project>[];
-    for (int i = 0; i < active.length; i++) {
-      rebalancedActive.add(active[i].copyWith(priority: i + 1));
-    }
-
-    return [...rebalancedActive, ...terminal];
-  }
+  List<Project> rebalancePriorities(List<Project> list) => renumberQueue(
+        ParkingOps.queueOrder(list),
+        list.where((p) => p.isCompletedOrCancelled).toList(),
+      );
 
   // --- Project CRUD & Priority Ranking ---
   Future<void> addProject(Project project) async {
@@ -280,20 +318,15 @@ class ProjectNotifier extends EngineeringNotifierCore
       );
       currentProjects.add(prepared);
     } else {
-      final active = currentProjects.where((p) => !p.isCompletedOrCancelled).toList()
-        ..sort((a, b) => a.priority.compareTo(b.priority));
-      
-      int targetPriority = prepared.priority.clamp(1, active.length + 1);
-      // Shift active items
-      active.insert(targetPriority - 1, prepared);
-
-      final rebalancedActive = <Project>[];
-      for (int i = 0; i < active.length; i++) {
-        rebalancedActive.add(active[i].copyWith(priority: i + 1));
-      }
+      final active = ParkingOps.queueOrder(currentProjects);
+      // A new project goes among the unparked ones, never below a parked one.
+      final unparkedCount = active.where((p) => !p.isParked).length;
+      int targetPriority = prepared.priority.clamp(1, unparkedCount + 1);
+      active.insert(targetPriority - 1, prepared.copyWith(clearPark: true));
       final terminal = currentProjects.where((p) => p.isCompletedOrCancelled).toList();
-      currentProjects.clear();
-      currentProjects.addAll([...rebalancedActive, ...terminal]);
+      currentProjects
+        ..clear()
+        ..addAll(renumberQueue(active, terminal));
     }
 
     await logActivity(ActivityType.projectAdded, 'Project: ${project.title}', pid: project.id, ptitle: project.title);
@@ -325,22 +358,27 @@ class ProjectNotifier extends EngineeringNotifierCore
       );
     }
 
+    // Closing a project, or re-ranking a parked one by hand, ends its park.
+    if (isNowTerminal && modified.parkedUntil != null) {
+      modified = modified.copyWith(clearPark: true);
+    } else if (oldProject.isParked &&
+        modified.isParked &&
+        modified.priority != oldProject.priority) {
+      modified = modified.copyWith(clearPark: true);
+    }
+
     var list = state.projects.map((p) => p.id == modified.id ? modified : p).toList();
 
     // If active priority changed, reorder active projects
     if (!isNowTerminal) {
-      final active = list.where((p) => !p.isCompletedOrCancelled && p.id != modified.id).toList()
-        ..sort((a, b) => a.priority.compareTo(b.priority));
-
-      int targetPos = (modified.priority - 1).clamp(0, active.length);
-      active.insert(targetPos, modified);
-
-      final rebalancedActive = <Project>[];
-      for (int i = 0; i < active.length; i++) {
-        rebalancedActive.add(active[i].copyWith(priority: i + 1));
-      }
-      final terminal = list.where((p) => p.isCompletedOrCancelled).toList();
-      list = [...rebalancedActive, ...terminal];
+      final others = ParkingOps.queueOrder(list.where((p) => p.id != modified.id));
+      final unparkedCount = others.where((p) => !p.isParked).length;
+      // A parked project stays at the bottom; others never land below one.
+      final targetPos = modified.isParked
+          ? others.length
+          : (modified.priority - 1).clamp(0, unparkedCount);
+      others.insert(targetPos, modified);
+      list = renumberQueue(others, list.where((p) => p.isCompletedOrCancelled).toList());
     } else {
       list = rebalancePriorities(list);
     }
@@ -361,27 +399,28 @@ class ProjectNotifier extends EngineeringNotifierCore
   /// displayed sorted order (active projects come first, then terminal).
   /// Only active projects are reordered; priorities are rebalanced 1..X.
   Future<void> reorderProjects(int oldIndex, int newIndex) async {
-    final active = state.projects
-        .where((p) => !p.isCompletedOrCancelled)
-        .toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
+    final active = ParkingOps.queueOrder(state.projects);
 
     if (oldIndex < 0 || oldIndex >= active.length) return;
     newIndex = newIndex.clamp(0, active.length);
     if (newIndex > oldIndex) newIndex--;
 
-    final item = active.removeAt(oldIndex);
+    var item = active.removeAt(oldIndex);
+    if (item.isParked) {
+      // Dragging a parked project is taking manual control of its rank.
+      item = item.copyWith(clearPark: true);
+    } else {
+      // An unparked project cannot be dropped below a parked one.
+      newIndex = newIndex.clamp(0, active.where((p) => !p.isParked).length);
+    }
     active.insert(newIndex, item);
 
-    final reindexed = active
-        .asMap()
-        .entries
-        .map((e) => e.value.copyWith(priority: e.key + 1))
-        .toList();
-    final terminal =
-        state.projects.where((p) => p.isCompletedOrCancelled).toList();
-
-    state = state.copyWith(projects: [...reindexed, ...terminal]);
+    state = state.copyWith(
+      projects: renumberQueue(
+        active,
+        state.projects.where((p) => p.isCompletedOrCancelled).toList(),
+      ),
+    );
     await persist();
   }
 
@@ -459,7 +498,9 @@ class ProjectNotifier extends EngineeringNotifierCore
 
     final updatedTasks = project.tasks.map((t) {
       if (t.id == taskId) {
-        return t.copyWith(isCompleted: !t.isCompleted);
+        return t.isCompleted
+            ? t.copyWith(isCompleted: false, clearCompletedAt: true)
+            : t.copyWith(isCompleted: true, completedAt: DateTime.now());
       }
       return t;
     }).toList();

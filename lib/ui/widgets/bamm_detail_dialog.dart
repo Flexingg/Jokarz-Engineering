@@ -30,7 +30,19 @@ class BammDetailDialog extends ConsumerStatefulWidget {
   /// `bamm_report_integrity.dart`.
   final String? staleWarning;
 
-  const BammDetailDialog({super.key, required this.workOrder, this.staleWarning});
+  /// Render as a side pane (no dialog chrome) instead of an [AlertDialog].
+  /// BAMM writes go to the live system, so editing keeps its explicit Save
+  /// rather than autosaving.
+  final bool embedded;
+  final VoidCallback? onClose;
+
+  const BammDetailDialog({
+    super.key,
+    required this.workOrder,
+    this.staleWarning,
+    this.embedded = false,
+    this.onClose,
+  });
 
   static Future<void> show(BuildContext context, BammWorkOrder workOrder, {String? staleWarning}) {
     return showDialog(
@@ -273,8 +285,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
     ref.watch(projectProvider);
     final linkedItems = ref.read(projectProvider.notifier).findItemsLinkedToBamm(_wo.worNoSeq);
 
-    return AlertDialog(
-      title: Row(
+    final titleRow = Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
@@ -297,11 +308,8 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
             onPressed: () => setState(() => _isEditing = !_isEditing),
           ),
         ],
-      ),
-      content: SizedBox(
-        width: 580,
-        child: SingleChildScrollView(
-          child: Column(
+      );
+    final bodyColumn = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.staleWarning != null) ...[
@@ -753,7 +761,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                       title: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 13),
                       onTap: () {
-                        Navigator.pop(context);
+                        if (!widget.embedded) Navigator.pop(context);
                         if (type == 'project' || type == 'task' || type == 'order') {
                           final pId = item['projectId'] as String;
                           context.push('/projects/$pId');
@@ -765,8 +773,52 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   );
                 }),
             ],
+          );
+
+    if (widget.embedded) {
+      final colors = AppTheme.of(context);
+      return Container(
+        margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 4, 4),
+                child: Row(
+                  children: [
+                    Expanded(child: titleRow),
+                    IconButton(
+                      tooltip: 'Close',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: widget.onClose,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: bodyColumn,
+                ),
+              ),
+            ],
           ),
         ),
+      );
+    }
+
+    return AlertDialog(
+      title: titleRow,
+      content: SizedBox(
+        width: 580,
+        child: SingleChildScrollView(child: bodyColumn),
       ),
       actions: [
         TextButton(

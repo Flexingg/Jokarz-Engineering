@@ -1,6 +1,7 @@
 import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../keynav/key_nav.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +16,8 @@ import '../widgets/expressive_badge.dart';
 import '../widgets/order_dialogs.dart';
 import '../widgets/bamm_chip.dart';
 import '../motion/motion.dart';
+import '../panels/order_editor_panel.dart';
+import '../panels/resizable_panel.dart';
 
 part 'open_orders_parts/dialogs.dart';
 part 'open_orders_parts/rows.dart';
@@ -39,6 +42,7 @@ class _OrderEntry {
   bool get storeRequested => order?.storeRequested ?? standalone?.storeRequested ?? false;
   String get storeRequestNumber => order?.storeRequestNumber ?? standalone?.storeRequestNumber ?? '';
   String get vendorName => order?.vendorName ?? standalone?.vendorName ?? '';
+  String? get vendorId => order?.vendorId ?? standalone?.vendorId;
   String get vendorQuoteNumber => order?.vendorQuoteNumber ?? standalone?.vendorQuoteNumber ?? '';
   String get trackingUrl => order?.trackingUrl ?? standalone?.trackingUrl ?? '';
   String get projectTitle => project?.title ?? 'Unlinked';
@@ -71,7 +75,13 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
   bool _sortAsc = true;
   final Set<String> _selected = {};
   String? _activeKey;
-  _OrderEntry? _lastActive;
+  final _nav = KeyNavController();
+
+  @override
+  void dispose() {
+    _nav.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {

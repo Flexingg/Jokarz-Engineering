@@ -4,6 +4,7 @@ import '../models/order_item.dart';
 import '../models/voice_note.dart';
 import '../models/activity_log.dart';
 import '../models/downtime_event.dart';
+import '../models/fab_job.dart';
 import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
 import '../models/inbox_item.dart';
@@ -30,6 +31,7 @@ class EngineeringState {
   final Map<String, String> snoozedProjects;
   final List<ActivityLog> activityLog;
   final List<DowntimeEvent> downtimes;
+  final List<FabJob> fabJobs;
   final bool isLoading;
   final String searchQuery;
   final ProjectCategory? selectedCategory;
@@ -47,6 +49,7 @@ class EngineeringState {
     this.snoozedProjects = const {},
     this.activityLog = const [],
     this.downtimes = const [],
+    this.fabJobs = const [],
     this.isLoading = true,
     this.searchQuery = '',
     this.selectedCategory,
@@ -148,6 +151,8 @@ class EngineeringState {
     final today = todayString;
     final active = activeProjects
         .where((p) => snoozedProjects[p.id] != today)
+        // Parked projects are waiting on purpose; do not nag about them.
+        .where((p) => !p.isParked)
         .toList();
     final scored = active.map((p) {
       final days = p.daysSinceLastAction.toDouble();
@@ -454,6 +459,7 @@ class EngineeringState {
     Map<String, String>? snoozedProjects,
     List<ActivityLog>? activityLog,
     List<DowntimeEvent>? downtimes,
+    List<FabJob>? fabJobs,
     bool? isLoading,
     String? searchQuery,
     ProjectCategory? selectedCategory,
@@ -474,6 +480,7 @@ class EngineeringState {
       snoozedProjects: snoozedProjects ?? this.snoozedProjects,
       activityLog: activityLog ?? this.activityLog,
       downtimes: downtimes ?? this.downtimes,
+      fabJobs: fabJobs ?? this.fabJobs,
       isLoading: isLoading ?? this.isLoading,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory: clearCategory

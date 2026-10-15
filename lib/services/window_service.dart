@@ -39,7 +39,7 @@ class WindowService with WindowListener {
         size: saved?.size ?? defaultSize,
         minimumSize: minimumSize,
         center: saved?.position == null,
-        title: 'Jokarz Engineering',
+        title: 'AOR Engineering',
       );
       await windowManager.waitUntilReadyToShow(options, () async {
         final pos = saved?.position;

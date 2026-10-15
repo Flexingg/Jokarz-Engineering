@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +10,10 @@ import '../widgets/expressive_card.dart';
 import '../widgets/expressive_badge.dart';
 import '../widgets/bamm_chip.dart';
 import '../widgets/context_menu.dart';
+import '../widgets/park_dialog.dart';
 import '../adaptive/breakpoints.dart';
 import '../adaptive/master_detail.dart';
+import '../keynav/key_nav.dart';
 import 'project_detail_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
@@ -22,6 +25,13 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   String? _selectedProjectId;
+  final _nav = KeyNavController();
+
+  @override
+  void dispose() {
+    _nav.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +85,26 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       ),
       body: AdaptiveMasterDetail(
         masterWidth: 420,
-        list: Column(
+        list: KeyNav(
+          controller: _nav,
+          count: projects.length,
+          // On desktop the detail pane follows the highlight.
+          onMoved: (i) {
+            if (isDesktop && i >= 0 && i < projects.length) {
+              setState(() => _selectedProjectId = projects[i].id);
+            }
+          },
+          onActivate: (i) => context.push('/projects/${projects[i].id}'),
+          keys: {
+            LogicalKeyboardKey.keyE: (i) =>
+                context.push('/projects/${projects[i].id}/edit'),
+          },
+          help: const {
+            'Up / Down': 'Move through projects (the detail follows on desktop)',
+            'Enter': 'Open the project full screen',
+            'E': 'Edit the project',
+          },
+          child: Column(
         children: [
           // Search & Filter Header
           Padding(
@@ -201,11 +230,15 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                     ? ListView.builder(
                         padding: const EdgeInsets.all(16.0),
                         itemCount: projects.length,
-                        itemBuilder: (context, index) => _ProjectCard(
-                                key: ValueKey(projects[index].id),
-                                project: projects[index],
-                                onTap: () => selectProject(projects[index].id),
-                              ),
+                        itemBuilder: (context, index) => KeyNavItem(
+                          key: ValueKey(projects[index].id),
+                          controller: _nav,
+                          index: index,
+                          child: _ProjectCard(
+                            project: projects[index],
+                            onTap: () => selectProject(projects[index].id),
+                          ),
+                        ),
                       )
                     : ReorderableListView.builder(
                         padding: const EdgeInsets.all(16.0),
@@ -213,15 +246,19 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                         onReorder: (oldIndex, newIndex) {
                           notifier.reorderProjects(oldIndex, newIndex);
                         },
-                        itemBuilder: (context, index) => _ProjectCard(
-                                key: ValueKey(projects[index].id),
-                                project: projects[index],
-                                onTap: () => selectProject(projects[index].id),
-                              ),
+                        itemBuilder: (context, index) => KeyNavItem(
+                          key: ValueKey(projects[index].id),
+                          controller: _nav,
+                          index: index,
+                          child: _ProjectCard(
+                            project: projects[index],
+                            onTap: () => selectProject(projects[index].id),
+                          ),
+                        ),
                       )),
           ),
         ],
-        ),
+        )),
         detailBuilder: (ctx) {
           final effectiveId = _selectedProjectId ?? (projects.isNotEmpty ? projects.first.id : null);
           if (effectiveId == null) {
@@ -365,7 +402,7 @@ class _EditablePhaseBadge extends ConsumerWidget {
 class _ProjectCard extends ConsumerWidget {
   final Project project;
   final VoidCallback onTap;
-  const _ProjectCard({super.key, required this.project, required this.onTap});
+  const _ProjectCard({required this.project, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -387,6 +424,18 @@ class _ProjectCard extends ConsumerWidget {
         if (!isTerminal && project.priority != 1)
           MenuAction('Move to #1', Icons.vertical_align_top_rounded,
               () => notifier.setProjectPriority(project.id, 1)),
+        if (!isTerminal)
+          MenuAction(
+            project.isParked ? 'Change park date...' : 'Park until...',
+            Icons.pause_circle_outline_rounded,
+            () => parkWithDialog(context, ref, project),
+          ),
+        if (project.isParked)
+          MenuAction(
+            'Return to #${project.parkRestorePriority ?? project.priority} now',
+            Icons.play_circle_outline_rounded,
+            () => notifier.unparkProject(project.id),
+          ),
         if (!isTerminal)
           MenuAction('Mark complete', Icons.check_circle_outline_rounded,
               () => notifier.updateProject(project.copyWith(phase: ProjectPhases.complete)))
@@ -446,6 +495,16 @@ class _ProjectCard extends ConsumerWidget {
                       fontSize: 10,
                     ),
                     _EditablePhaseBadge(project: project),
+                    if (project.isParked)
+                      Tooltip(
+                        message: project.parkReason.isEmpty ? 'Parked' : project.parkReason,
+                        child: ExpressiveBadge(
+                          label: parkBadgeText(project),
+                          icon: Icons.pause_circle_outline_rounded,
+                          color: AppTheme.of(context).textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
                   ],
                 ),
               ),

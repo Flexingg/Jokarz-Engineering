@@ -5,6 +5,21 @@ part of '../open_orders_screen.dart';
 extension _OpenOrdersTable on _OpenOrdersScreenState {
   static const double _tableMinWidth = 1020;
 
+  /// SAP vendor code for an order's vendor (matched by id, else by name).
+  String _sapCode(_OrderEntry e) {
+    final vendors = ref.read(projectProvider).vendors;
+    final v =
+        vendors.where((v) => v.id == e.vendorId).firstOrNull ??
+        (e.vendorName.isEmpty
+            ? null
+            : vendors
+                  .where(
+                    (v) => v.name.toLowerCase() == e.vendorName.toLowerCase(),
+                  )
+                  .firstOrNull);
+    return v?.accountNumber.trim() ?? '';
+  }
+
   List<_OrderEntry> _sortedEntries(List<_OrderEntry> list) {
     final key = _sortKey;
     if (key == null) return list;
@@ -256,16 +271,18 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   Widget _etaChip(DateTime eta) {
     final colors = AppTheme.of(context);
     final now = DateTime.now();
-    final days = DateTime(eta.year, eta.month, eta.day)
-        .difference(DateTime(now.year, now.month, now.day))
-        .inDays;
+    final days = DateTime(
+      eta.year,
+      eta.month,
+      eta.day,
+    ).difference(DateTime(now.year, now.month, now.day)).inDays;
     final (label, color) = days < 0
         ? ('Overdue ${-days}d', colors.coral)
         : days == 0
-            ? ('Due today', colors.amber)
-            : days <= 3
-                ? ('In ${days}d', colors.amber)
-                : ('In ${days}d', colors.primary);
+        ? ('Due today', colors.amber)
+        : days <= 3
+        ? ('In ${days}d', colors.amber)
+        : ('In ${days}d', colors.primary);
     return Tooltip(
       message: DateFormat('EEE, MMM d, y').format(eta),
       child: ExpressiveBadge(label: label, color: color, fontSize: 11),
@@ -348,7 +365,10 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
       color: bg,
       child: InkWell(
         hoverColor: colors.textPrimary.withValues(alpha: 0.04),
-        onTap: () => _rebuild(() => _activeKey = active ? null : e.key),
+        onTap: () {
+          _nav.select(index);
+          _rebuild(() => _activeKey = active ? null : e.key);
+        },
         onSecondaryTapUp: (d) => _showRowMenu(d.globalPosition, e, notifier),
         child: Container(
           height: 52,
@@ -437,11 +457,27 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
                 width: 150,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    e.vendorName.isEmpty ? '-' : e.vendorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.vendorName.isEmpty ? '-' : e.vendorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      if (_sapCode(e).isNotEmpty)
+                        Text(
+                          'SAP ${_sapCode(e)}',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -497,110 +533,142 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         .where((e) => _selected.contains(e.key))
         .toList();
     final active = all.where((e) => e.key == _activeKey).firstOrNull;
-    if (active != null) _lastActive = active;
     final allChecked =
         rows.isNotEmpty && rows.every((e) => _selected.contains(e.key));
 
-    final table = Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
+    final table = KeyNav(
+      controller: _nav,
+      count: rows.length,
+      // With the panel open, it follows the highlight.
+      onMoved: (i) {
+        if (_activeKey != null && i >= 0 && i < rows.length) {
+          _rebuild(() => _activeKey = rows[i].key);
+        }
+      },
+      onActivate: (i) => _rebuild(
+        () => _activeKey = _activeKey == rows[i].key ? null : rows[i].key,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final width = c.maxWidth < _tableMinWidth
-              ? _tableMinWidth
-              : c.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: width,
-              height: c.maxHeight,
-              child: Column(
-                children: [
-                  Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: colors.border)),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 48,
-                          child: Checkbox(
-                            value: allChecked,
-                            visualDensity: VisualDensity.compact,
-                            onChanged: (v) => _rebuild(() {
-                              if (v == true) {
-                                _selected.addAll(rows.map((e) => e.key));
-                              } else {
-                                _selected.clear();
-                              }
-                            }),
-                          ),
-                        ),
-                        _headerCell('Status / ETA', 'eta', width: 190),
-                        _headerCell('PO', 'po', width: 130),
-                        _headerCell('Description', 'desc', flex: 5),
-                        _headerCell('Vendor', 'vendor', width: 150),
-                        _headerCell('Project', 'project', flex: 3),
-                        _headerCell('Price', 'price', width: 110, right: true),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: rows.length,
-                      itemBuilder: (context, i) =>
-                          _orderRow(rows[i], i, currency, notifier),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
+      onToggle: (i) => _rebuild(() {
+        final k = rows[i].key;
+        if (!_selected.remove(k)) _selected.add(k);
+      }),
+      onEscape: () {
+        if (_activeKey != null) _rebuild(() => _activeKey = null);
+      },
+      keys: {
+        LogicalKeyboardKey.keyD: (i) {
+          final targets = _selected.isNotEmpty
+              ? rows.where((e) => _selected.contains(e.key)).toList()
+              : [rows[i]];
+          final allDone = targets.every((e) => e.delivered);
+          _setDelivered(targets, !allDone, notifier);
         },
+        LogicalKeyboardKey.keyE: (i) =>
+            _rebuild(() => _activeKey = rows[i].key),
+        LogicalKeyboardKey.keyC: (i) {
+          if (rows[i].po.isNotEmpty) _copyText(rows[i].po, 'PO ${rows[i].po}');
+        },
+      },
+      help: const {
+        'Space': 'Tick / untick the row for bulk actions',
+        'D': 'Mark delivered / not delivered (all ticked rows, or this one)',
+        'E': 'Edit the order in the side panel',
+        'C': 'Copy the PO number',
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final width = c.maxWidth < _tableMinWidth
+                ? _tableMinWidth
+                : c.maxWidth;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: width,
+                height: c.maxHeight,
+                child: Column(
+                  children: [
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: colors.border),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            child: Checkbox(
+                              value: allChecked,
+                              visualDensity: VisualDensity.compact,
+                              onChanged: (v) => _rebuild(() {
+                                if (v == true) {
+                                  _selected.addAll(rows.map((e) => e.key));
+                                } else {
+                                  _selected.clear();
+                                }
+                              }),
+                            ),
+                          ),
+                          _headerCell('Status / ETA', 'eta', width: 190),
+                          _headerCell('PO', 'po', width: 130),
+                          _headerCell('Description', 'desc', flex: 5),
+                          _headerCell('Vendor', 'vendor', width: 150),
+                          _headerCell('Project', 'project', flex: 3),
+                          _headerCell(
+                            'Price',
+                            'price',
+                            width: 110,
+                            right: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: rows.length,
+                        itemBuilder: (context, i) => KeyNavItem(
+                          controller: _nav,
+                          index: i,
+                          radius: 0,
+                          child: _orderRow(rows[i], i, currency, notifier),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
 
-    final drawerOpen = active != null;
     return Stack(
       children: [
         Row(
           children: [
             Expanded(child: table),
-            TweenAnimationBuilder<double>(
-              tween: Tween(end: drawerOpen ? 1 : 0),
-              duration: motion.sheet,
-              curve: motion.spring,
-              builder: (context, t, _) {
-                final w = (_drawerWidth * t).clamp(0.0, _drawerWidth + 24);
-                if (w < 1) return const SizedBox.shrink();
-                return SizedBox(
-                  width: w,
-                  child: ClipRect(
-                    child: OverflowBox(
-                      alignment: Alignment.centerLeft,
-                      minWidth: 0,
-                      maxWidth: _drawerWidth,
-                      child: SizedBox(
-                        width: _drawerWidth,
-                        child: _orderDrawer(
-                          active ?? _lastActive,
-                          currency,
-                          dateFormat,
-                          notifier,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            if (active != null)
+              ResizablePanel(
+                prefKey: 'orders',
+                defaultWidth: 440,
+                // Each order gets its own editor; selecting another disposes
+                // the old one, which saves its edits first.
+                child: _SlideIn(
+                  key: ValueKey('slide-${active.key}'),
+                  child: _orderPanel(active, notifier),
+                ),
+              ),
           ],
         ),
         Positioned(
@@ -629,8 +697,6 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
       ],
     );
   }
-
-  static const double _drawerWidth = 380;
 
   Widget _bulkBar(List<_OrderEntry> sel, dynamic notifier) {
     final colors = AppTheme.of(context);
@@ -682,124 +748,65 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
     );
   }
 
-  Widget _orderDrawer(
-    _OrderEntry? e,
-    NumberFormat currency,
-    DateFormat dateFormat,
-    dynamic notifier,
-  ) {
-    final colors = AppTheme.of(context);
-    if (e == null) return const SizedBox.shrink();
-    Widget field(String label, String value) => SizedBox(
-      width: 150,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: colors.textSecondary),
+  Widget _orderPanel(_OrderEntry e, dynamic notifier) {
+    return OrderEditorPanel(
+      key: ValueKey('order-${e.key}'),
+      order: e.order,
+      projectId: e.project?.id,
+      standalone: e.standalone,
+      projectTitle: e.projectTitle,
+      onClose: () => _rebuild(() => _activeKey = null),
+      statusBadge: e.delivered
+          ? ExpressiveBadge(
+              label: 'Delivered',
+              color: AppTheme.of(context).emerald,
+              fontSize: 12,
+            )
+          : (e.eta != null
+                ? _buildEtaBadge(e.eta!)
+                : Text(
+                    'No ETA set',
+                    style: TextStyle(color: AppTheme.of(context).textSecondary),
+                  )),
+      actions: [
+        ElevatedButton(
+          onPressed: () => _setDelivered([e], !e.delivered, notifier),
+          child: Text(e.delivered ? 'Mark not delivered' : 'Mark delivered'),
+        ),
+        if (e.po.isNotEmpty)
+          OutlinedButton(
+            onPressed: () => _copyText(e.po, 'PO ${e.po}'),
+            child: const Text('Copy PO #'),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value.isEmpty ? '-' : value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        if (e.isStandalone)
+          OutlinedButton(
+            onPressed: () => _showAttachToProjectDialog(context, e),
+            child: const Text('Link to project...'),
           ),
-        ],
-      ),
+      ],
     );
+  }
+}
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    e.po.isEmpty ? 'No PO yet' : 'PO ${e.po}',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Close details',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _rebuild(() => _activeKey = null),
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                ),
-              ],
-            ),
-            Text(
-              e.description.isEmpty ? 'Parts / Material Order' : e.description,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            e.delivered
-                ? ExpressiveBadge(
-                    label: 'Delivered',
-                    color: colors.emerald,
-                    fontSize: 12,
-                  )
-                : (e.eta != null
-                      ? _buildEtaBadge(e.eta!)
-                      : Text(
-                          'No ETA set',
-                          style: TextStyle(color: colors.textSecondary),
-                        )),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 12,
-              runSpacing: 14,
-              children: [
-                field('Vendor', e.vendorName),
-                field('Price', currency.format(e.price)),
-                field('Project', e.projectTitle),
-                field('PR', e.pr),
-                field('ETA', e.eta == null ? '' : dateFormat.format(e.eta!)),
-                field('Quote #', e.vendorQuoteNumber),
-              ],
-            ),
-            if (e.bammWorkOrders.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final wo in e.bammWorkOrders)
-                    BammChip(worNo: wo, isDense: true),
-                ],
-              ),
-            ],
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: () => _setDelivered([e], !e.delivered, notifier),
-                  child: Text(
-                    e.delivered ? 'Mark not delivered' : 'Mark delivered',
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () => _openEntry(e),
-                  child: const Text('Edit'),
-                ),
-                if (e.po.isNotEmpty)
-                  OutlinedButton(
-                    onPressed: () => _copyText(e.po, 'PO ${e.po}'),
-                    child: const Text('Copy PO #'),
-                  ),
-              ],
-            ),
-          ],
+/// Eases its child in from the right when first built.
+class _SlideIn extends StatelessWidget {
+  final Widget child;
+  const _SlideIn({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = Motion.of(context);
+    if (!motion.enabled) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: motion.sheet,
+      curve: motion.spring,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: (t * 2).clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset((1 - t) * 36, 0),
+          child: child,
         ),
       ),
     );

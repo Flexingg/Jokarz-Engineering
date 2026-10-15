@@ -63,6 +63,16 @@ class Project {
   /// (logged a note, toggled a task, changed a phase). Used for queue scoring.
   final DateTime? lastActionAt;
 
+  /// "Park until": while set, the project sits at the bottom of the active
+  /// queue (waiting on parts, a downtime window, ...) and returns to
+  /// [parkRestorePriority] on the morning of [parkedUntil]. Date-only.
+  final DateTime? parkedUntil;
+  final int? parkRestorePriority;
+  final String parkReason;
+
+  /// True while parked (a closed project is never parked).
+  bool get isParked => parkedUntil != null && !ProjectPhases.isTerminal(phase);
+
   /// Returns individual machine names split on '/' separator.
   /// e.g. "Line 3 / Packer A" → ['Line 3', 'Packer A']
   List<String> get machineList {
@@ -98,6 +108,9 @@ class Project {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.lastActionAt,
+    this.parkedUntil,
+    this.parkRestorePriority,
+    this.parkReason = '',
   })  : id = (id != null && id.trim().isNotEmpty) ? id.trim() : const Uuid().v4(),
         tags = tags ?? [],
         tasks = tasks ?? [],
@@ -164,6 +177,10 @@ class Project {
     DateTime? updatedAt,
     DateTime? lastActionAt,
     bool clearLastActionAt = false,
+    DateTime? parkedUntil,
+    int? parkRestorePriority,
+    String? parkReason,
+    bool clearPark = false,
   }) {
     return Project(
       id: id,
@@ -189,6 +206,9 @@ class Project {
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       lastActionAt: clearLastActionAt ? null : (lastActionAt ?? this.lastActionAt),
+      parkedUntil: clearPark ? null : (parkedUntil ?? this.parkedUntil),
+      parkRestorePriority: clearPark ? null : (parkRestorePriority ?? this.parkRestorePriority),
+      parkReason: clearPark ? '' : (parkReason ?? this.parkReason),
     );
   }
 
@@ -215,6 +235,9 @@ class Project {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastActionAt': lastActionAt?.toIso8601String(),
+      'parkedUntil': parkedUntil?.toIso8601String(),
+      'parkRestorePriority': parkRestorePriority,
+      'parkReason': parkReason,
     };
   }
 
@@ -271,6 +294,11 @@ class Project {
       lastActionAt: json['lastActionAt'] != null
           ? DateTime.tryParse(json['lastActionAt'] as String)
           : null,
+      parkedUntil: json['parkedUntil'] != null
+          ? DateTime.tryParse(json['parkedUntil'] as String)
+          : null,
+      parkRestorePriority: (json['parkRestorePriority'] as num?)?.toInt(),
+      parkReason: json['parkReason'] as String? ?? '',
     );
   }
 }

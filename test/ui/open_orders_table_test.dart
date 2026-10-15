@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/standalone_order.dart';
@@ -113,37 +114,156 @@ void main() {
     },
   );
 
-  testWidgets(
-    'right-click opens the row menu; clicking a row opens the details drawer',
-    (tester) async {
+  testWidgets('right-click opens the row menu', (tester) async {
+    await _pump(tester);
+    final row = find.text('Servo drive');
+    final gesture = await tester.startGesture(tester.getCenter(row), buttons: kSecondaryButton);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Open details'), findsOneWidget);
+    expect(find.text('Copy PO #'), findsOneWidget);
+  });
+
+  group('keyboard navigation', () {
+    testWidgets('arrows move, Enter opens the panel which then follows, Esc closes', (tester) async {
       await _pump(tester);
-
-      final row = find.text('Servo drive');
-      final gesture = await tester.startGesture(
-        tester.getCenter(row),
-        buttons: kSecondaryButton,
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown); // first row: Servo drive (soonest ETA)
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Part / Material Description *'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, 'Part / Material Description *')).controller!.text,
+        'Servo drive',
       );
-      await gesture.up();
-      await tester.pumpAndSettle();
-      expect(find.text('Open details'), findsOneWidget);
-      expect(find.text('Copy PO #'), findsOneWidget);
-      await tester.tapAt(const Offset(5, 5)); // dismiss
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Servo drive'));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
       expect(
-        find.text('PO 4500187302'),
-        findsOneWidget,
-        reason: 'drawer header',
+        tester.widget<TextField>(find.widgetWithText(TextField, 'Part / Material Description *')).controller!.text,
+        'Gearbox seal kit',
       );
-      expect(
-        find.text('Close details'),
-        findsNothing,
-      ); // tooltip text only, not visible
-      await tester.tap(find.byTooltip('Close details'));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.text('PO 4500187302'), findsNothing);
-    },
-  );
+      expect(find.widgetWithText(TextField, 'Part / Material Description *'), findsNothing);
+    });
+
+    testWidgets('D marks the highlighted order delivered', (tester) async {
+      final c = await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+      await tester.pumpAndSettle();
+      final delivered = c.read(projectProvider).standaloneOrders.where((o) => o.delivered);
+      expect(delivered.map((o) => o.id), ['b']);
+    });
+
+    testWidgets('Space ticks the row for bulk actions', (tester) async {
+      await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(find.text('1 selected'), findsOneWidget);
+    });
+  });
+
+  group('sidebar editor (autosave)', () {
+    Future<void> openRow(WidgetTester tester, String desc) async {
+      await tester.tap(find.text(desc));
+      await tester.pumpAndSettle();
+    }
+
+    Finder descField() => find.widgetWithText(TextField, 'Part / Material Description *');
+    String descOf(ProviderContainer c, String id) =>
+        c.read(projectProvider).standaloneOrders.firstWhere((o) => o.id == id).description;
+
+    testWidgets("clicking a row opens an editable panel with the order's values", (tester) async {
+      await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      expect(find.text('PO 4500187302'), findsOneWidget);
+      expect(tester.widget<TextField>(descField()).controller!.text, 'Servo drive');
+      expect(find.text('Vendor / Supplier'), findsOneWidget);
+    });
+
+    testWidgets('selecting another order saves the edits to the first', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), 'Servo drive 2.2 kW');
+      await tester.pump();
+      expect(descOf(c, 'b'), 'Servo drive', reason: 'not saved yet');
+
+      await tester.tap(find.text('Bearing set'));
+      await tester.pumpAndSettle();
+
+      expect(descOf(c, 'b'), 'Servo drive 2.2 kW');
+      expect(tester.widget<TextField>(descField()).controller!.text, 'Bearing set');
+    });
+
+    testWidgets('clicking off the form (focus leaves) saves', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), 'Servo drive (rush)');
+      await tester.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(descOf(c, 'b'), 'Servo drive (rush)');
+      expect(find.text('Saved'), findsOneWidget);
+    });
+
+    testWidgets('a pause in typing saves', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), 'Servo drive v2');
+      await tester.pump(const Duration(milliseconds: 1600));
+      await tester.pump();
+      expect(descOf(c, 'b'), 'Servo drive v2');
+    });
+
+    testWidgets('closing the panel saves first', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), 'Servo drive closed');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(descOf(c, 'b'), 'Servo drive closed');
+      expect(descField(), findsNothing);
+    });
+
+    testWidgets('an empty description is never saved', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), '');
+      await tester.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(descOf(c, 'b'), 'Servo drive');
+    });
+
+    testWidgets('untouched panels do not rewrite the order', (tester) async {
+      final c = await _pump(tester);
+      final before = c.read(projectProvider).standaloneOrders.firstWhere((o) => o.id == 'b').updatedAt;
+      await openRow(tester, 'Servo drive');
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      final after = c.read(projectProvider).standaloneOrders.firstWhere((o) => o.id == 'b').updatedAt;
+      expect(after, before);
+    });
+
+    testWidgets('Mark delivered works from the panel without losing typed edits', (tester) async {
+      final c = await _pump(tester);
+      await openRow(tester, 'Servo drive');
+      await tester.enterText(descField(), 'Servo drive final');
+      await tester.pump();
+      final btn = find.widgetWithText(ElevatedButton, 'Mark delivered');
+      await tester.tap(btn.first);
+      await tester.pumpAndSettle();
+      final o = c.read(projectProvider).standaloneOrders.firstWhere((o) => o.id == 'b');
+      expect(o.delivered, isTrue);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      final after = c.read(projectProvider).standaloneOrders.firstWhere((o) => o.id == 'b');
+      expect(after.description, 'Servo drive final');
+      expect(after.delivered, isTrue, reason: 'autosave must not undo the delivery');
+    });
+  });
 }

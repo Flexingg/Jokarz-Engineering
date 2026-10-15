@@ -1,7 +1,44 @@
 part of '../project_detail_screen.dart';
 
 extension _ProjectDetailTabs on _ProjectDetailScreenState {
+  /// Open tasks in their drag order, then finished ones: the order shown, and
+  /// the order the keyboard moves through.
+  List<TaskItem> _tasksInDisplayOrder(Project project) {
+    final incomplete = project.tasks.where((t) => !t.isCompleted).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final completed = project.tasks.where((t) => t.isCompleted).toList();
+    return [...incomplete, ...completed];
+  }
+
   Widget _buildTasksTab(BuildContext context, Project project, bool isDark) {
+    final ordered = _tasksInDisplayOrder(project);
+    return KeyNav(
+      controller: _taskNav,
+      autofocus: !_wide,
+      count: ordered.length,
+      onActivate: (i) => _openTaskEditor(ordered[i]),
+      onToggle: (i) => ref
+          .read(projectProvider.notifier)
+          .toggleTaskCompleted(project.id, ordered[i].id),
+      onEscape: _panelTaskId != null || _projectPanelOpen ? _closePanel : null,
+      keys: {
+        LogicalKeyboardKey.keyE: (i) => _openTaskEditor(ordered[i]),
+        LogicalKeyboardKey.keyF: (i) => _addTaskToFab(ordered[i]),
+        LogicalKeyboardKey.delete: (i) => ref
+            .read(projectProvider.notifier)
+            .deleteTask(project.id, ordered[i].id),
+      },
+      help: const {
+        'Space': 'Check / uncheck the task',
+        'E': 'Edit the task',
+        'F': 'Add the task to the fab list',
+        'Delete': 'Delete the task',
+      },
+      child: _tasksColumn(context, project, isDark),
+    );
+  }
+
+  Widget _tasksColumn(BuildContext context, Project project, bool isDark) {
     return Column(
       children: [
         Container(
@@ -12,7 +49,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
               Expanded(
                 child: Text(
                   'Tasks (${project.completedTasksCount} of ${project.tasks.length} Complete)',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -31,7 +71,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.checklist_rounded, size: 48, color: Colors.grey),
+                      const Icon(
+                        Icons.checklist_rounded,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(height: 12),
                       const Text(
                         'No tasks created for this project yet',
@@ -46,111 +90,200 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                     ],
                   ),
                 )
-              : Builder(builder: (ctx) {
-                  // Sort: incomplete by sortOrder first, then completed
-                  final incomplete = project.tasks
-                      .where((t) => !t.isCompleted)
-                      .toList()
-                    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-                  final completed = project.tasks
-                      .where((t) => t.isCompleted)
-                      .toList();
-                  final sorted = [...incomplete, ...completed];
+              : Builder(
+                  builder: (ctx) {
+                    // Sort: incomplete by sortOrder first, then completed
+                    final sorted = _tasksInDisplayOrder(project);
+                    final incomplete = project.tasks
+                        .where((t) => !t.isCompleted)
+                        .toList();
 
-                  return ReorderableListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    itemCount: sorted.length,
-                    onReorder: (oldIndex, newIndex) {
-                      // Only allow reordering within incomplete tasks
-                      if (oldIndex < incomplete.length) {
-                        ref.read(projectProvider.notifier)
-                            .reorderTasks(project.id, oldIndex, newIndex);
-                      }
-                    },
-                    itemBuilder: (context, index) {
-                      final task = sorted[index];
-                      final dateText = task.scheduledDate != null
-                          ? DateFormat('MMM d, y').format(task.scheduledDate!)
-                          : null;
-                      final canDrag = !task.isCompleted;
+                    return ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      itemCount: sorted.length,
+                      onReorder: (oldIndex, newIndex) {
+                        // Only allow reordering within incomplete tasks
+                        if (oldIndex < incomplete.length) {
+                          ref
+                              .read(projectProvider.notifier)
+                              .reorderTasks(project.id, oldIndex, newIndex);
+                        }
+                      },
+                      itemBuilder: (context, index) {
+                        final task = sorted[index];
+                        final dateText = task.scheduledDate != null
+                            ? DateFormat('MMM d, y').format(task.scheduledDate!)
+                            : null;
+                        final canDrag = !task.isCompleted;
 
-                      return ExpressiveCard(
-                        key: ValueKey(task.id),
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Drag handle (incomplete tasks only)
-                            if (canDrag)
-                              const Icon(Icons.drag_handle_rounded, size: 20, color: Colors.grey)
-                            else
-                              const SizedBox(width: 20),
-                            Checkbox(
-                              value: task.isCompleted,
-                              activeColor: AppTheme.of(context).emerald,
-                              onChanged: (_) {
-                                ref
-                                    .read(projectProvider.notifier)
-                                    .toggleTaskCompleted(project.id, task.id);
-                              },
+                        return KeyNavItem(
+                          key: ValueKey(task.id),
+                          controller: _taskNav,
+                          index: index,
+                          child: ExpressiveCard(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 10,
                             ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    task.description,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      decoration: task.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 4,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Drag handle (incomplete tasks only)
+                                if (canDrag)
+                                  const Icon(
+                                    Icons.drag_handle_rounded,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  )
+                                else
+                                  const SizedBox(width: 20),
+                                Checkbox(
+                                  value: task.isCompleted,
+                                  activeColor: AppTheme.of(context).emerald,
+                                  onChanged: (_) {
+                                    ref
+                                        .read(projectProvider.notifier)
+                                        .toggleTaskCompleted(
+                                          project.id,
+                                          task.id,
+                                        );
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      if (task.pendingReason.isNotEmpty)
-                                        ExpressiveBadge(
-                                          label: task.pendingReason,
-                                          icon: Icons.hourglass_empty_rounded,
-                                          color: AppTheme.of(context).amber,
-                                          fontSize: 10,
+                                      Text(
+                                        task.description,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          decoration: task.isCompleted
+                                              ? TextDecoration.lineThrough
+                                              : null,
                                         ),
-                                      if (dateText != null)
-                                        ExpressiveBadge(
-                                          label: 'Scheduled: $dateText',
-                                          icon: Icons.calendar_today_rounded,
-                                          color: AppTheme.of(context).primary,
-                                          fontSize: 10,
-                                        ),
-                                      ...task.bammWorkOrders.map((wo) => BammChip(worNo: wo, isDense: true)),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        children: [
+                                          if (task.pendingReason.isNotEmpty)
+                                            ExpressiveBadge(
+                                              label: task.pendingReason,
+                                              icon:
+                                                  Icons.hourglass_empty_rounded,
+                                              color: AppTheme.of(context).amber,
+                                              fontSize: 10,
+                                            ),
+                                          if (task.isCompleted)
+                                            ExpressiveBadge(
+                                              label: task.completedAt != null
+                                                  ? 'Done ${DateFormat('MMM d, y').format(task.completedAt!)}'
+                                                  : 'Done (date not recorded)',
+                                              icon: Icons
+                                                  .check_circle_outline_rounded,
+                                              color: AppTheme.of(
+                                                context,
+                                              ).emerald,
+                                              fontSize: 10,
+                                            ),
+                                          if (dateText != null)
+                                            ExpressiveBadge(
+                                              label: 'Scheduled: $dateText',
+                                              icon:
+                                                  Icons.calendar_today_rounded,
+                                              color: AppTheme.of(
+                                                context,
+                                              ).primary,
+                                              fontSize: 10,
+                                            ),
+                                          ...task.bammWorkOrders.map(
+                                            (wo) => BammChip(
+                                              worNo: wo,
+                                              isDense: true,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                if (MediaQuery.sizeOf(context).width >=
+                                    Breakpoints.compactMax)
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 36,
+                                      minHeight: 36,
+                                    ),
+                                    icon: Icon(
+                                      Icons.construction_rounded,
+                                      size: 18,
+                                      color:
+                                          ref
+                                                  .read(
+                                                    projectProvider.notifier,
+                                                  )
+                                                  .fabJobForTask(task.id) !=
+                                              null
+                                          ? AppTheme.of(context).primary
+                                          : Colors.grey,
+                                    ),
+                                    tooltip:
+                                        ref
+                                                .read(projectProvider.notifier)
+                                                .fabJobForTask(task.id) !=
+                                            null
+                                        ? 'On the fab list'
+                                        : 'Add to fab list',
+                                    onPressed: () => _addTaskToFab(task),
+                                  ),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () => _openTaskEditor(task),
+                                ),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () => ref
+                                      .read(projectProvider.notifier)
+                                      .deleteTask(project.id, task.id),
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                              onPressed: () => _showAddTaskDialog(context, existingTask: task),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                              onPressed: () => ref
-                                  .read(projectProvider.notifier)
-                                  .deleteTask(project.id, task.id),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                }),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -174,13 +307,18 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                 children: [
                   Text(
                     'Total Orders: ${currency.format(project.totalOrdersCost)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   Text(
                     '${project.undeliveredOrdersCount} Undelivered',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                      color: isDark
+                          ? AppTheme.of(context).textSecondary
+                          : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -194,14 +332,25 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                     label: const Text('Add Order'),
                   ),
                   TextButton.icon(
-                    onPressed: () => _showLinkUnlinkedOrderDialog(context, project),
-                    icon: Icon(Icons.link_rounded, size: 14, color: AppTheme.of(context).emerald),
-                    label: Text('Link Unlinked',
-                        style: TextStyle(fontSize: 12, color: AppTheme.of(context).emerald)),
+                    onPressed: () =>
+                        _showLinkUnlinkedOrderDialog(context, project),
+                    icon: Icon(
+                      Icons.link_rounded,
+                      size: 14,
+                      color: AppTheme.of(context).emerald,
+                    ),
+                    label: Text(
+                      'Link Unlinked',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.of(context).emerald,
+                      ),
+                    ),
                     style: TextButton.styleFrom(
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        padding: EdgeInsets.zero),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                 ],
               ),
@@ -214,7 +363,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.local_shipping_outlined, size: 48, color: Colors.grey),
+                      const Icon(
+                        Icons.local_shipping_outlined,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(height: 12),
                       const Text(
                         'No purchase orders created for this build',
@@ -230,7 +383,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   itemCount: project.orders.length,
                   itemBuilder: (context, index) {
                     final order = project.orders[index];
@@ -240,7 +396,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
 
                     return ExpressiveCard(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -252,7 +411,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                 onChanged: (_) {
                                   ref
                                       .read(projectProvider.notifier)
-                                      .toggleOrderDelivered(project.id, order.id);
+                                      .toggleOrderDelivered(
+                                        project.id,
+                                        order.id,
+                                      );
                                 },
                               ),
                               const SizedBox(width: 6),
@@ -272,15 +434,24 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                           const SizedBox(width: 4),
                                           ExpressiveBadge(
                                             label: 'PR: ${order.pr}',
-                                            color: AppTheme.of(context).primaryBlue,
+                                            color: AppTheme.of(
+                                              context,
+                                            ).primaryBlue,
                                             isOutlined: true,
                                             fontSize: 10,
                                           ),
                                         ],
-                                        ...order.bammWorkOrders.map((wo) => Padding(
-                                          padding: const EdgeInsets.only(left: 4),
-                                          child: BammChip(worNo: wo, isDense: true),
-                                        )),
+                                        ...order.bammWorkOrders.map(
+                                          (wo) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 4,
+                                            ),
+                                            child: BammChip(
+                                              worNo: wo,
+                                              isDense: true,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
@@ -297,7 +468,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                     const SizedBox(height: 2),
                                     Text(
                                       'ETA: $etaText',
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -325,18 +499,34 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                 ],
                               ),
                               IconButton(
-                                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                                onPressed: () => _showAddOrderDialog(context, existingOrder: order),
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => _showAddOrderDialog(
+                                  context,
+                                  existingOrder: order,
+                                ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
                                 onPressed: () => ref
                                     .read(projectProvider.notifier)
                                     .deleteOrder(project.id, order.id),
                               ),
                             ],
                           ),
-                          _buildOrderStoresSection(context, project, order, isDark),
+                          _buildOrderStoresSection(
+                            context,
+                            project,
+                            order,
+                            isDark,
+                          ),
                         ],
                       ),
                     );
@@ -348,11 +538,15 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
   }
 
   /// Search standalone (unlinked) orders and link one to this project.
-  Future<void> _showLinkUnlinkedOrderDialog(BuildContext context, Project project) async {
+  Future<void> _showLinkUnlinkedOrderDialog(
+    BuildContext context,
+    Project project,
+  ) async {
     final standalone = ref.read(projectProvider).standaloneOrders;
     if (standalone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No unlinked orders available to link.')));
+        const SnackBar(content: Text('No unlinked orders available to link.')),
+      );
       return;
     }
     final searchCtrl = TextEditingController();
@@ -360,71 +554,126 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
-        final q = searchCtrl.text.trim().toLowerCase();
-        final matches = q.isEmpty
-            ? standalone
-            : standalone
-                .where((o) => o.description.toLowerCase().contains(q) ||
-                    o.pr.toLowerCase().contains(q) ||
-                    o.po.toLowerCase().contains(q))
-                .toList();
-        return AlertDialog(
-          title: const Text('Link Unlinked Order'),
-          content: SizedBox(
-            width: 420,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(
-                controller: searchCtrl,
-                onChanged: (_) => setDialogState(() {}),
-                decoration: const InputDecoration(
-                    labelText: 'Search order',
-                    hintText: 'Type to filter...',
-                    prefixIcon: Icon(Icons.search_rounded),
-                    isDense: true),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: matches.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(12), child: Text('No matching unlinked orders', style: TextStyle(fontSize: 12, color: Colors.grey)))
-                    : ListView(
-                        shrinkWrap: true,
-                        children: matches.map((o) => Card(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          color: selectedId == o.id ? AppTheme.of(context).emerald.withValues(alpha: 0.15) : null,
-                          child: ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.link_off_rounded, size: 20, color: Colors.orange),
-                            title: Text(o.description.isEmpty ? '(No description)' : o.description,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                            subtitle: Text('PO ${o.po.isEmpty ? '—' : o.po} • PR ${o.pr.isEmpty ? '—' : o.pr}',
-                                style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
-                            onTap: () => setDialogState(() => selectedId = o.id),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final q = searchCtrl.text.trim().toLowerCase();
+          final matches = q.isEmpty
+              ? standalone
+              : standalone
+                    .where(
+                      (o) =>
+                          o.description.toLowerCase().contains(q) ||
+                          o.pr.toLowerCase().contains(q) ||
+                          o.po.toLowerCase().contains(q),
+                    )
+                    .toList();
+          return AlertDialog(
+            title: const Text('Link Unlinked Order'),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: searchCtrl,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Search order',
+                      hintText: 'Type to filter...',
+                      prefixIcon: Icon(Icons.search_rounded),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: matches.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Text(
+                              'No matching unlinked orders',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : ListView(
+                            shrinkWrap: true,
+                            children: matches
+                                .map(
+                                  (o) => Card(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    color: selectedId == o.id
+                                        ? AppTheme.of(
+                                            context,
+                                          ).emerald.withValues(alpha: 0.15)
+                                        : null,
+                                    child: ListTile(
+                                      dense: true,
+                                      leading: const Icon(
+                                        Icons.link_off_rounded,
+                                        size: 20,
+                                        color: Colors.orange,
+                                      ),
+                                      title: Text(
+                                        o.description.isEmpty
+                                            ? '(No description)'
+                                            : o.description,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      subtitle: Text(
+                                        'PO ${o.po.isEmpty ? '—' : o.po} • PR ${o.pr.isEmpty ? '—' : o.pr}',
+                                        style: const TextStyle(fontSize: 11),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onTap: () => setDialogState(
+                                        () => selectedId = o.id,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
-                        )).toList(),
-                      ),
+                  ),
+                ],
               ),
-            ]),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: selectedId == null
-                  ? null
-                  : () async {
-                      await ref.read(projectProvider.notifier).linkOrderToProject(selectedId!, project.id);
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Order linked to project!'), backgroundColor: AppTheme.of(context).emerald));
-                      }
-                    },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: Colors.white),
-              child: const Text('Link'),
             ),
-          ],
-        );
-      }),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: selectedId == null
+                    ? null
+                    : () async {
+                        await ref
+                            .read(projectProvider.notifier)
+                            .linkOrderToProject(selectedId!, project.id);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Order linked to project!'),
+                              backgroundColor: AppTheme.of(context).emerald,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.of(context).emerald,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Link'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -439,15 +688,20 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
     final notifier = ref.read(projectProvider.notifier);
     final storesColor = order.addToStores
         ? AppTheme.of(context).emerald
-        : (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary);
+        : (isDark
+              ? AppTheme.of(context).textSecondary
+              : AppTheme.of(context).textSecondary);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 16),
         InkWell(
-          onTap: () =>
-              notifier.setOrderAddToStores(project.id, order.id, !order.addToStores),
+          onTap: () => notifier.setOrderAddToStores(
+            project.id,
+            order.id,
+            !order.addToStores,
+          ),
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: Row(
             children: [
@@ -479,8 +733,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
               padding: const EdgeInsets.only(left: 2),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded,
-                      size: 14, color: AppTheme.of(context).amber),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 14,
+                    color: AppTheme.of(context).amber,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -520,7 +777,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                     ),
                   );
                   if (confirm == true) {
-                    await notifier.markOrderStoreRequested(project.id, order.id);
+                    await notifier.markOrderStoreRequested(
+                      project.id,
+                      order.id,
+                    );
                   }
                 },
                 icon: const Icon(Icons.warehouse_rounded, size: 16),
@@ -595,7 +855,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
             onPressed: () {
               ref
                   .read(projectProvider.notifier)
-                  .setOrderStoreRequestNumber(project.id, order.id, ctrl.text.trim());
+                  .setOrderStoreRequestNumber(
+                    project.id,
+                    order.id,
+                    ctrl.text.trim(),
+                  );
               Navigator.pop(ctx);
             },
             child: const Text('Save'),
@@ -605,7 +869,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
     );
   }
 
-  Widget _buildLogsAndPhotosTab(BuildContext context, Project project, bool isDark) {
+  Widget _buildLogsAndPhotosTab(
+    BuildContext context,
+    Project project,
+    bool isDark,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -636,9 +904,15 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.camera_alt_outlined, size: 24, color: Colors.grey),
+                      const Icon(
+                        Icons.camera_alt_outlined,
+                        size: 24,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('No photos attached yet. Tap Attach Photo to upload.'),
+                      const Text(
+                        'No photos attached yet. Tap Attach Photo to upload.',
+                      ),
                     ],
                   ),
                 ),
@@ -658,7 +932,9 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
-                        color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
+                        color: isDark
+                            ? AppTheme.of(context).border
+                            : AppTheme.of(context).border,
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -681,7 +957,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
             children: [
               Text(
                 'Engineering Logs (${project.logs.length})',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: () => _showAddLogDialog(context),
@@ -700,7 +979,11 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.history_edu_outlined, size: 24, color: Colors.grey),
+                      const Icon(
+                        Icons.history_edu_outlined,
+                        size: 24,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 8),
                       const Text('No field logs recorded yet.'),
                     ],
@@ -722,8 +1005,8 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                           color: log.type == LogType.voice
                               ? AppTheme.of(context).amber
                               : (log.type == LogType.milestone
-                                  ? AppTheme.of(context).emerald
-                                  : AppTheme.of(context).primary),
+                                    ? AppTheme.of(context).emerald
+                                    : AppTheme.of(context).primary),
                           fontSize: 10,
                         ),
                         const Spacer(),
@@ -731,11 +1014,17 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                           DateFormat('MMM d, y • h:mm a').format(log.timestamp),
                           style: TextStyle(
                             fontSize: 10,
-                            color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                            color: isDark
+                                ? AppTheme.of(context).textSecondary
+                                : AppTheme.of(context).textSecondary,
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
                           onPressed: () {
                             ref
                                 .read(projectProvider.notifier)
@@ -747,7 +1036,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                     const SizedBox(height: 6),
                     Text(
                       log.title,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     if (log.content.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -756,7 +1048,9 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.4,
-                          color: isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary,
+                          color: isDark
+                              ? AppTheme.of(context).textSecondary
+                              : AppTheme.of(context).textSecondary,
                         ),
                       ),
                     ],

@@ -7,6 +7,7 @@ import '../models/filament_profile.dart';
 import '../models/standalone_order.dart';
 import '../models/activity_log.dart';
 import '../models/downtime_event.dart';
+import '../models/fab_job.dart';
 import '../models/inbox_item.dart';
 import '../models/vendor.dart';
 import '../models/project_template.dart';
@@ -24,6 +25,7 @@ class StorageService {
   Future<Directory> _docs() => (_docsDirOverride ?? getApplicationDocumentsDirectory)();
 
   static const String _downtimesFile = 'jokarz_downtimes.json';
+  static const String _fabJobsFile = 'jokarz_fab_jobs.json';
   static const String _dataFile = 'jokarz_engineering_data.json';
 
   /// Writes content atomically: write to a temp file in the same directory,
@@ -286,6 +288,29 @@ class StorageService {
           file, jsonEncode(logs.map((l) => l.toJson()).toList()));
     } catch (e) {
       log.error('storage', 'Error saving activity log', e);
+    }
+  }
+
+  Future<List<FabJob>> loadFabJobs() async {
+    try {
+      final dir = await _docs();
+      final file = File('${dir.path}/$_fabJobsFile');
+      if (!await file.exists()) return [];
+      final list = jsonDecode(await file.readAsString()) as List;
+      return list.map((e) => FabJob.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      log.warn('storage', 'Failed to read fab jobs; using none', e);
+      return [];
+    }
+  }
+
+  Future<void> saveFabJobs(List<FabJob> jobs) async {
+    try {
+      final dir = await _docs();
+      await _atomicWrite(File('${dir.path}/$_fabJobsFile'),
+          jsonEncode(jobs.map((j) => j.toJson()).toList()));
+    } catch (e) {
+      log.error('storage', 'Error saving fab jobs', e);
     }
   }
 

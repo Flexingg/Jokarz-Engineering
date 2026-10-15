@@ -20,7 +20,7 @@ Future<ProviderContainer> _pump(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  final rexel = Vendor(id: 'v1', name: 'Rexel', contactPerson: 'Dana');
+  final rexel = Vendor(id: 'v1', name: 'Rexel', contactPerson: 'Dana', accountNumber: '100234');
   final grainger = Vendor(id: 'v2', name: 'Grainger');
   final storage = MemoryStorage(
     vendors: [rexel, grainger],
@@ -98,6 +98,12 @@ void main() {
       );
     },
   );
+
+  testWidgets('the SAP vendor code shows in the list and detail pane', (tester) async {
+    await _pump(tester);
+    expect(find.text('SAP 100234'), findsOneWidget, reason: 'badge on the list card');
+    expect(find.text('100234'), findsOneWidget, reason: 'chip in the detail header');
+  });
 
   testWidgets('selecting another vendor swaps the detail pane', (tester) async {
     await _pump(tester);

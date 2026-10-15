@@ -97,6 +97,8 @@ mixin CloudMergeOps on EngineeringNotifierCore {
     );
     state = state.copyWith(projects: rebalancePriorities(out.merged));
     await persist();
+    // A park that ended while another device was offline ends here too.
+    await applyDueParks();
     return _record(out.conflicts);
   }
 

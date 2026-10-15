@@ -6,9 +6,13 @@ import '../../models/key_bindings.dart';
 import '../../providers/keybindings_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../router/app_router.dart';
+import '../keynav/key_nav.dart';
 import '../../theme/app_theme.dart';
 import '../motion/motion.dart';
+import '../../utils/text_utils.dart';
 import '../shell/app_actions.dart';
+import 'note_dialogs.dart';
+import 'order_dialogs.dart';
 
 /// Opens the Ctrl+K command palette over the whole app: one box that jumps to
 /// any page, creates things, and finds projects, orders, tasks and notes.
@@ -22,7 +26,7 @@ Future<void> showCommandPalette(WidgetRef ref) async {
     barrierLabel: 'Close command palette',
     barrierColor: const Color(0x8C06080B),
     transitionDuration: motion.sheet,
-    pageBuilder: (context, _, __) => const _CommandPalette(),
+    pageBuilder: (context, _, __) => _CommandPalette(runRef: ref),
     transitionBuilder: (context, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -66,7 +70,10 @@ class _Entry {
 }
 
 class _CommandPalette extends ConsumerStatefulWidget {
-  const _CommandPalette();
+  /// The launcher's `ref`. Actions run after this palette has closed (and its
+  /// own `ref` is disposed), so they must use one that outlives it.
+  final WidgetRef runRef;
+  const _CommandPalette({required this.runRef});
 
   @override
   ConsumerState<_CommandPalette> createState() => _CommandPaletteState();
@@ -141,13 +148,6 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
       ),
       _Entry(
         'Action',
-        'Search everything (full page)',
-        Icons.search_rounded,
-        (r) => dispatchAppAction(r, 'search'),
-        hint: hint('search'),
-      ),
-      _Entry(
-        'Action',
         'Calendar',
         Icons.calendar_month_rounded,
         (_) => appRouter.push('/calendar'),
@@ -163,6 +163,26 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         'Machines',
         Icons.settings_applications_rounded,
         (_) => appRouter.push('/machines'),
+      ),
+      _Entry(
+        'Action',
+        'Keyboard shortcuts',
+        Icons.keyboard_outlined,
+        (_) {
+          final ctx = appRootContext;
+          if (ctx != null) {
+            showKeyboardHelp(ctx, const {
+              'Orders, Projects, Notes, Fab list': 'Press ? on any list to see its own keys',
+              'Project tasks': 'Click the list, then Space to check, E edit, F fab list',
+            });
+          }
+        },
+      ),
+      _Entry(
+        'Action',
+        'Fab list',
+        Icons.construction_rounded,
+        (_) => appRouter.push('/fab'),
       ),
       _Entry(
         'Action',
@@ -188,6 +208,22 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
       ...commands.where(
         (c) => ('${c.kind} ${c.label}').toLowerCase().contains(q),
       ),
+    ];
+    final text = _query.trim();
+    // Anything typed can become a new project, order or note right here.
+    final creates = <_Entry>[
+      _Entry('Create', 'Create project "${titleCase(text)}"', Icons.add_box_outlined,
+          (_) => appRouter.push('/projects/new', extra: {'initialTitle': titleCase(text)})),
+      _Entry('Create', 'Create order "$text"', Icons.add_shopping_cart_rounded, (_) {
+        final ctx = appRootContext;
+        if (ctx != null) showStandaloneOrderDialog(ctx, prefillDescription: text);
+      }),
+      _Entry('Create', 'Create note "$text"', Icons.note_add_outlined, (_) {
+        final ctx = appRootContext;
+        if (ctx != null) {
+          showNewFieldNoteDialog(ctx, prefillTitle: 'Quick Note', prefillContent: text);
+        }
+      }),
     ];
     final hits = ref.read(projectProvider).searchAll(_query);
     for (final h in hits.projects.take(5)) {
@@ -254,13 +290,14 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         ),
       );
     }
-    return out;
+    return [...out, ...creates];
   }
 
   void _run(_Entry e) {
     Navigator.of(context).pop();
     // Let the dialog finish closing before navigating or opening another.
-    Future.microtask(() => e.run(ref));
+    final runRef = widget.runRef;
+    Future.microtask(() => e.run(runRef));
   }
 
   void _move(int delta, int count) {

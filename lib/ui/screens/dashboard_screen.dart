@@ -8,6 +8,7 @@ import '../../models/activity_log.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../motion/motion.dart';
+import '../shell/app_actions.dart';
 import '../widgets/dashboard_customizer.dart';
 import '../widgets/inbox_quick_capture_modal.dart';
 
@@ -75,6 +76,11 @@ class DashboardScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: 'Search and commands',
+            onPressed: () => dispatchAppAction(ref, 'palette'),
+          ),
           IconButton(
             icon: Badge(
               isLabelVisible: state.unprocessedInboxCount > 0,

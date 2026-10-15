@@ -110,6 +110,28 @@ void main() {
     expect(find.text('Type a command, project, PO or note'), findsNothing);
   });
 
+  testWidgets('Ctrl+F also opens the palette (the old Search screen is gone)', (tester) async {
+    await _pumpApp(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('Type a command, project, PO or note'), findsOneWidget);
+  });
+
+  testWidgets('typing text offers to create a project, order or note from it', (tester) async {
+    await _pumpApp(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'conveyor belt tracking');
+    await tester.pumpAndSettle();
+    expect(find.text('Create project "Conveyor Belt Tracking"'), findsOneWidget);
+    expect(find.text('Create order "conveyor belt tracking"'), findsOneWidget);
+    expect(find.text('Create note "conveyor belt tracking"'), findsOneWidget);
+  });
+
   testWidgets('Escape closes the palette without navigating', (tester) async {
     await _pumpApp(tester);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);

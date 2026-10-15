@@ -8,6 +8,7 @@ import '../../providers/project_provider.dart';
 import '../../services/bamm_local_search.dart';
 import '../../services/bamm_report_integrity.dart';
 import '../../theme/app_theme.dart';
+import '../panels/resizable_panel.dart';
 import '../widgets/bamm_detail_dialog.dart';
 import '../widgets/bamm_table_columns.dart';
 
@@ -102,7 +103,44 @@ class _BammScreenState extends ConsumerState<BammScreen> {
         warning = 'This sheet is out of date$printedAtText - BAMM has changed since it was printed.';
       }
     }
-    BammDetailDialog.show(context, wo, staleWarning: warning);
+    _openWo(wo, staleWarning: warning);
+  }
+
+  /// The work order open in the side pane on desktop (dialog elsewhere).
+  BammWorkOrder? _activeWo;
+  String? _activeWarning;
+
+  void _openWo(BammWorkOrder wo, {String? staleWarning}) {
+    if (MediaQuery.of(context).size.width >= 900) {
+      setState(() {
+        _activeWo = wo;
+        _activeWarning = staleWarning;
+      });
+    } else {
+      BammDetailDialog.show(context, wo, staleWarning: staleWarning);
+    }
+  }
+
+  Widget _withDetailPane(bool isDesktop, Widget table) {
+    final wo = _activeWo;
+    if (!isDesktop || wo == null) return table;
+    return Row(
+      children: [
+        Expanded(child: table),
+        ResizablePanel(
+          prefKey: 'bamm',
+          defaultWidth: 560,
+          maxWidth: 900,
+          child: BammDetailDialog(
+            key: ValueKey('wo-${wo.worNoSeq}'),
+            workOrder: wo,
+            staleWarning: _activeWarning,
+            embedded: true,
+            onClose: () => setState(() => _activeWo = null),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -235,7 +273,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: _withDetailPane(isDesktop, Column(
         children: [
           // Offline Warning Banner (if offline)
           if (!bammState.isOnline)
@@ -335,7 +373,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                       ),
           ),
         ],
-      ),
+      )),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewWorkOrderDialog,
         icon: const Icon(Icons.add_rounded),

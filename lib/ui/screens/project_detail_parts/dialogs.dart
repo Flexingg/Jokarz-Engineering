@@ -170,10 +170,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
   }
 
   void _showAddOrderDialog(BuildContext context, {OrderItem? existingOrder}) {
-    showOrderDialog(
-      context,
-      ref,
-      existingOrder: existingOrder,
+    showOrderDialog(context, existingOrder: existingOrder,
       existingOrderProjectId: widget.projectId,
       fixedProjectId: widget.projectId,
     );
