@@ -19,6 +19,7 @@ import 'project_ops/cloud_merge_ops.dart';
 import 'project_ops/inbox_vendor_ops.dart';
 import 'project_ops/notifier_core.dart';
 import 'project_ops/parking_ops.dart';
+import 'project_ops/fab_ops.dart';
 import 'project_ops/standalone_order_ops.dart';
 
 export 'engineering_state.dart';
@@ -29,7 +30,7 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 });
 
 class ProjectNotifier extends EngineeringNotifierCore
-    with CloudMergeOps, StandaloneOrderOps, BammLinkOps, InboxVendorOps, ParkingOps {
+    with CloudMergeOps, StandaloneOrderOps, BammLinkOps, InboxVendorOps, ParkingOps, FabOps {
   /// [storage] is a test seam; production resolves [storageServiceProvider].
   ProjectNotifier([StorageService? storage]) : _injectedStorage = storage;
 
@@ -71,6 +72,15 @@ class ProjectNotifier extends EngineeringNotifierCore
     );
     await applyDueParks();
     await backfillTaskCompletionDates();
+    // Loaded after the main data so a slow read never delays first paint;
+    // anything added in the meantime is kept.
+    final fab = await _storage.loadFabJobs();
+    if (fab.isNotEmpty) {
+      final have = {for (final j in state.fabJobs) j.id};
+      state = state.copyWith(
+        fabJobs: [...state.fabJobs, ...fab.where((j) => !have.contains(j.id))],
+      );
+    }
   }
 
   /// Tasks checked off before completion dates existed get theirs from the
@@ -133,6 +143,9 @@ class ProjectNotifier extends EngineeringNotifierCore
         downtimes: state.downtimes.where((e) => e.id != id).toList());
     await _storage.saveDowntimes(state.downtimes);
   }
+
+  @override
+  Future<void> persistFabJobs() => _storage.saveFabJobs(state.fabJobs);
 
   @override
   Future<void> persist() async {

@@ -197,6 +197,27 @@ class _TaskEditorPanelState extends ConsumerState<TaskEditorPanel>
               ),
             ],
           ),
+          const Divider(height: 20),
+          Consumer(
+            builder: (context, ref, _) {
+              final onList = ref.watch(projectProvider).fabJobs.any((j) => j.taskId == widget.taskId);
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onList
+                      ? null
+                      : () async {
+                          await flush();
+                          await _container
+                              .read(projectProvider.notifier)
+                              .addTaskToFabList(widget.projectId, widget.taskId);
+                        },
+                  icon: const Icon(Icons.construction_rounded, size: 16),
+                  label: Text(onList ? 'On the fab list' : 'Add to fab list'),
+                ),
+              );
+            },
+          ),
           if (_bamms.isNotEmpty)
             Wrap(
               spacing: 6,

@@ -21,6 +21,7 @@ import '../ui/screens/machine_detail_screen.dart';
 import '../ui/screens/bamm_screen.dart';
 import '../ui/screens/bamm_batch_update_screen.dart';
 import '../ui/screens/day_schedule_screen.dart';
+import '../ui/screens/fab_list_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -212,6 +213,13 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const NoTransitionPage(
         child: InboxScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/fab',
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: FabListScreen(),
       ),
     ),
     GoRoute(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/models/project.dart';
@@ -77,6 +78,31 @@ void main() {
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
       expect(_p(c).tasks.single.description, 'Align new gearbox');
+    });
+
+    testWidgets('keyboard: Down + Space checks the task, Enter opens its editor', (tester) async {
+      final c = await _pump(tester);
+      await tester.tap(find.text('Align gearbox')); // clicking the list gives it the keyboard
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(_p(c).tasks.single.isCompleted, isTrue);
+      expect(_p(c).tasks.single.completedAt, isNotNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Task Description *'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Task Description *'), findsNothing);
+    });
+
+    testWidgets('keyboard: F puts the highlighted task on the fab list', (tester) async {
+      final c = await _pump(tester);
+      await tester.tap(find.text('Align gearbox'));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.pumpAndSettle();
+      expect(c.read(projectProvider).fabJobs.single.taskId, 't1');
     });
 
     testWidgets('phone keeps the dialog', (tester) async {

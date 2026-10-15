@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +22,7 @@ import '../widgets/template_dialogs.dart';
 import '../widgets/bamm_chip.dart';
 import '../widgets/bamm_assign_dialog.dart';
 import '../adaptive/breakpoints.dart';
+import '../keynav/key_nav.dart';
 import '../panels/project_editor_panel.dart';
 import '../panels/resizable_panel.dart';
 import '../panels/task_editor_panel.dart';
@@ -51,6 +53,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ImagePicker _picker = ImagePicker();
+  final _taskNav = KeyNavController();
 
   /// Right-hand editor on wide windows: the project's fields, or one task.
   bool _projectPanelOpen = false;
@@ -64,6 +67,19 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       _projectPanelOpen = true;
       _panelTaskId = null;
     });
+  }
+
+  Future<void> _addTaskToFab(TaskItem task) async {
+    final notifier = ref.read(projectProvider.notifier);
+    final already = notifier.fabJobForTask(task.id) != null;
+    await notifier.addTaskToFabList(widget.projectId, task.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(already ? 'Already on the fab list' : 'Added to the fab list'),
+        action: SnackBarAction(label: 'Open', onPressed: () => context.push('/fab')),
+      ),
+    );
   }
 
   void _openTaskEditor(TaskItem task) {
@@ -124,6 +140,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   @override
   void dispose() {
+    _taskNav.dispose();
     _tabController.dispose();
     super.dispose();
   }

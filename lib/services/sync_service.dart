@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../models/voice_note.dart';
 import '../models/standalone_order.dart';
+import '../models/fab_job.dart';
 import '../models/inbox_item.dart';
 import '../models/vendor.dart';
 import '../models/project_template.dart';
@@ -185,8 +186,20 @@ class SyncNotifier extends Notifier<SyncState> {
     removeLocal: (n, id) => n.deleteCustomTemplate(id),
   );
 
+  late final _SyncCollection<FabJob> _fab = _SyncCollection<FabJob>(
+    name: 'fabJobs',
+    label: 'fab jobs',
+    fromJson: FabJob.fromJson,
+    toJson: (j) => j.toJson(),
+    idOf: (j) => j.id,
+    updatedAtOf: (j) => j.updatedAt,
+    items: (s) => s.fabJobs,
+    merge: (n, r, t) => n.mergeCloudFabJobs(r, lastSyncedAt: t),
+    removeLocal: (n, id) => n.removeFabJobLocal(id),
+  );
+
   List<_SyncCollection<dynamic>> get _all =>
-      [_projects, _notes, _orders, _inbox, _vendors, _templates];
+      [_projects, _notes, _orders, _inbox, _vendors, _templates, _fab];
 
   @override
   SyncState build() {
@@ -365,6 +378,8 @@ class SyncNotifier extends Notifier<SyncState> {
   Future<void> deleteCloudVendor(String id) => _deleteDoc(_vendors, id);
   Future<void> syncTemplate(ProjectTemplate t) => _pushDoc(_templates, t);
   Future<void> deleteCloudTemplate(String id) => _deleteDoc(_templates, id);
+  Future<void> syncFabJob(FabJob j) => _pushDoc(_fab, j);
+  Future<void> deleteCloudFabJob(String id) => _deleteDoc(_fab, id);
 
   /// Re-attaches the cloud listeners: the first snapshot merges everything
   /// the cloud has into this device and uploads anything it is missing.
@@ -448,6 +463,7 @@ class SyncNotifier extends Notifier<SyncState> {
       await addAll(_inbox);
       await addAll(_vendors);
       await addAll(_templates);
+      await addAll(_fab);
       await flush();
 
       state = state.copyWith(
@@ -499,6 +515,7 @@ class SyncNotifier extends Notifier<SyncState> {
     diff(_inbox);
     diff(_vendors);
     diff(_templates);
+    diff(_fab);
 
     if (futures.isNotEmpty) {
       await Future.wait(futures);

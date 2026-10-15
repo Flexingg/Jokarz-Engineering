@@ -165,6 +165,12 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
       ),
       _Entry(
         'Action',
+        'Fab list',
+        Icons.construction_rounded,
+        (_) => appRouter.push('/fab'),
+      ),
+      _Entry(
+        'Action',
         'Vendors',
         Icons.storefront_outlined,
         (_) => appRouter.push('/vendors'),

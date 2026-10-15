@@ -14,6 +14,9 @@ abstract class EngineeringNotifierCore extends Notifier<EngineeringState> {
   /// Writes the current state to disk.
   Future<void> persist();
 
+  /// Writes the fabricators' list to its own file.
+  Future<void> persistFabJobs();
+
   /// Records a timestamped, user-visible activity entry.
   Future<void> logActivity(ActivityType type, String text,
       {String? pid, String? ptitle});

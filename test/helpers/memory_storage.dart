@@ -1,5 +1,6 @@
 import 'package:jokarz_engineering/models/activity_log.dart';
 import 'package:jokarz_engineering/models/downtime_event.dart';
+import 'package:jokarz_engineering/models/fab_job.dart';
 import 'package:jokarz_engineering/models/filament_profile.dart';
 import 'package:jokarz_engineering/models/inbox_item.dart';
 import 'package:jokarz_engineering/models/project.dart';
@@ -17,6 +18,7 @@ class MemoryStorage extends StorageService {
   final List<StandaloneOrder> orders;
   final List<Vendor> vendors;
   final List<VoiceNote> voiceNotes;
+  final List<FabJob> fabJobs;
   UiPrefs prefs;
 
   MemoryStorage({
@@ -24,6 +26,7 @@ class MemoryStorage extends StorageService {
     this.orders = const [],
     this.vendors = const [],
     this.voiceNotes = const [],
+    this.fabJobs = const [],
     this.prefs = const UiPrefs(),
   });
 
@@ -50,6 +53,11 @@ class MemoryStorage extends StorageService {
     List<ProjectTemplate> customTemplates = const [],
     Map<String, String> snoozedProjects = const {},
   }) async {}
+
+  @override
+  Future<List<FabJob>> loadFabJobs() async => [...fabJobs];
+  @override
+  Future<void> saveFabJobs(List<FabJob> jobs) async {}
 
   @override
   Future<List<ActivityLog>> loadActivityLog() async => [];
