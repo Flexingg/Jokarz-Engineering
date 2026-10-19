@@ -51,14 +51,20 @@ enum AppThemeFamily {
 /// enough that text contrast is measured and guaranteed (see the theme tests).
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  final Color primary; // main accent
+  final Color primary; // accent as TEXT: tuned to read on every surface
+  /// The accent as a FILL (buttons, selection pills, icon tiles): the vivid
+  /// hue itself; text on it is [AppTheme.onColor].
+  final Color primaryFill;
   final Color primaryBlue; // secondary accent (same as primary in this design)
   final Color amber;
   final Color emerald;
   final Color coral; // alerts: orange, so a red accent never reads as an error
   final Color background; // gradient start (top-left)
   final Color backgroundEnd; // gradient end (bottom-right)
-  final Color backgroundGlow; // soft accent light in the top-left corner
+  final Color backgroundGlow; // the first colour pool (kept for callers)
+  /// Four soft colour pools painted in the corners of the backdrop:
+  /// top-left, top-right, bottom-right, bottom-left.
+  final List<Color> pools;
   final Color surface; // content cards (calm, mostly opaque glass)
   final Color surfaceCard;
   final Color surfaceSolid; // dialogs, menus, sheets, anything over content
@@ -83,6 +89,7 @@ class AppColors extends ThemeExtension<AppColors> {
 
   const AppColors({
     required this.primary,
+    required this.primaryFill,
     required this.primaryBlue,
     required this.amber,
     required this.emerald,
@@ -90,6 +97,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.background,
     required this.backgroundEnd,
     required this.backgroundGlow,
+    required this.pools,
     required this.surface,
     required this.surfaceCard,
     required this.surfaceSolid,
@@ -109,6 +117,7 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors copyWith({
     Color? primary,
+    Color? primaryFill,
     Color? primaryBlue,
     Color? amber,
     Color? emerald,
@@ -116,6 +125,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? background,
     Color? backgroundEnd,
     Color? backgroundGlow,
+    List<Color>? pools,
     Color? surface,
     Color? surfaceCard,
     Color? surfaceSolid,
@@ -133,6 +143,7 @@ class AppColors extends ThemeExtension<AppColors> {
   }) {
     return AppColors(
       primary: primary ?? this.primary,
+      primaryFill: primaryFill ?? this.primaryFill,
       primaryBlue: primaryBlue ?? this.primaryBlue,
       amber: amber ?? this.amber,
       emerald: emerald ?? this.emerald,
@@ -140,6 +151,7 @@ class AppColors extends ThemeExtension<AppColors> {
       background: background ?? this.background,
       backgroundEnd: backgroundEnd ?? this.backgroundEnd,
       backgroundGlow: backgroundGlow ?? this.backgroundGlow,
+      pools: pools ?? this.pools,
       surface: surface ?? this.surface,
       surfaceCard: surfaceCard ?? this.surfaceCard,
       surfaceSolid: surfaceSolid ?? this.surfaceSolid,
@@ -163,6 +175,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color l(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppColors(
       primary: l(primary, other.primary),
+      primaryFill: l(primaryFill, other.primaryFill),
       primaryBlue: l(primaryBlue, other.primaryBlue),
       amber: l(amber, other.amber),
       emerald: l(emerald, other.emerald),
@@ -170,6 +183,10 @@ class AppColors extends ThemeExtension<AppColors> {
       background: l(background, other.background),
       backgroundEnd: l(backgroundEnd, other.backgroundEnd),
       backgroundGlow: l(backgroundGlow, other.backgroundGlow),
+      pools: [
+        for (var i = 0; i < pools.length; i++)
+          l(pools[i], i < other.pools.length ? other.pools[i] : pools[i]),
+      ],
       surface: l(surface, other.surface),
       surfaceCard: l(surfaceCard, other.surfaceCard),
       surfaceSolid: l(surfaceSolid, other.surfaceSolid),
@@ -192,11 +209,14 @@ class AppColors extends ThemeExtension<AppColors> {
   /// tests and by [AppTheme] to tune the accent.
   List<Color> get readableBackdrops {
     // Selected items (rail, segments, nav) put accent text on an accent wash.
-    final wash = primary.withValues(alpha: 0.16);
+    // Badges tint themselves with the text colour, so test that wash too.
+    final wash = primaryFill.withValues(alpha: 0.16);
+    final badge = primary.withValues(alpha: 0.16);
     final base = baseBackdrops;
     return [
       ...base,
       for (final p in base) Color.alphaBlend(wash, p),
+      for (final p in base) Color.alphaBlend(badge, p),
     ];
   }
 
@@ -204,10 +224,12 @@ class AppColors extends ThemeExtension<AppColors> {
   /// ends and glow corner, then cards, glass panes, solid surfaces and
   /// dialogs over them.
   List<Color> get baseBackdrops {
+    // Worst cases on the backdrop: both gradient ends and the centre of
+    // each colour pool.
     final ends = [
       background,
       backgroundEnd,
-      Color.alphaBlend(backgroundGlow, background),
+      for (final p in pools) Color.alphaBlend(p, background),
     ];
     // Dialogs are translucent over a blurred, tinted copy of whatever is
     // behind them, which can be anything: test pure white and pure black.
@@ -297,10 +319,23 @@ class AppTheme {
     final opaque = reduceTransparency;
     // Gradient ends stay close in luminance so text reads the same everywhere.
     final base = dark ? const Color(0xFF07080B) : const Color(0xFFF2F3F5);
-    final start = Color.alphaBlend(
-        accent.withValues(alpha: dark ? 0.10 : 0.05), base);
-    final end = dark ? const Color(0xFF0C0A12) : const Color(0xFFF4F1F5);
-    final glow = accent.withValues(alpha: dark ? 0.12 : 0.06);
+    final start = base;
+    final end = dark ? const Color(0xFF0B0A10) : const Color(0xFFF4F2F6);
+    // Blue, violet, peach and teal light in the corners: colourful, but
+    // pale enough that text reads anywhere on it (tested).
+    final pools = dark
+        ? const [
+            Color.fromRGBO(60, 100, 255, 0.30),
+            Color.fromRGBO(150, 80, 255, 0.26),
+            Color.fromRGBO(255, 120, 40, 0.18),
+            Color.fromRGBO(20, 190, 160, 0.16),
+          ]
+        : const [
+            Color.fromRGBO(80, 130, 255, 0.22),
+            Color.fromRGBO(150, 100, 255, 0.20),
+            Color.fromRGBO(255, 150, 90, 0.20),
+            Color.fromRGBO(30, 200, 170, 0.18),
+          ];
 
     final surface = dark
         ? Color.fromRGBO(30, 30, 33, opaque ? 1 : 0.80)
@@ -323,13 +358,15 @@ class AppTheme {
 
     final draft = AppColors(
       primary: accent,
+      primaryFill: accent,
       primaryBlue: accent,
-      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF6E4500),
+      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF643E00),
       emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF07552D),
       coral: dark ? const Color(0xFFFFA066) : const Color(0xFF822F08),
       background: start,
       backgroundEnd: end,
-      backgroundGlow: glow,
+      backgroundGlow: pools.first,
+      pools: pools,
       surface: surface,
       surfaceCard: surface,
       surfaceSolid: solid,
@@ -350,7 +387,7 @@ class AppTheme {
           : (dark ? const Color(0x0DFFFFFF) : const Color(0x33FFFFFF)),
       border: dark ? const Color(0x1FFFFFFF) : const Color(0x1A000000),
       textPrimary: dark ? const Color(0xFFECECEE) : const Color(0xFF15171B),
-      textSecondary: dark ? const Color(0xFFB5B8C0) : const Color(0xFF4A505C),
+      textSecondary: dark ? const Color(0xFFB5B8C0) : const Color(0xFF424854),
       blurGlass: !opaque,
     );
     // The selection wash is made from the accent itself, so tune twice.
@@ -368,24 +405,33 @@ class AppTheme {
     AppThemeFamily family, {
     Color? accent,
     bool reduceTransparency = false,
+    bool setActive = true,
   }) {
     final brightness = family.brightness;
-    final c = _colors(brightness, accent ?? defaultAccent, reduceTransparency);
-    _active = c;
-    return _build(brightness, c);
+    final hue = accent ?? defaultAccent;
+    final key = '${family.name}/${hue.toARGB32()}/$reduceTransparency';
+    final theme = _cache[key] ??= _build(
+      brightness,
+      _colors(brightness, hue, reduceTransparency),
+    );
+    if (setActive) _active = theme.extension<AppColors>()!;
+    return theme;
   }
+
+  /// Built themes by mode, accent and transparency: section screens ask for
+  /// theirs on every build, so building once each matters.
+  static final Map<String, ThemeData> _cache = {};
 
   static ThemeData _build(Brightness brightness, AppColors c) {
     final isDark = brightness == Brightness.dark;
-    // Text on accent-filled buttons: whichever of dark/white reads better.
-    const darkInk = Color(0xFF081019);
-    final ink = contrast(c.primary, darkInk) >= contrast(c.primary, Colors.white)
-        ? darkInk
-        : Colors.white;
+    // Buttons and other fills use the vivid hue with whichever of near-black
+    // or white reads better on it; the tuned [AppColors.primary] is for text.
+    final fill = c.primaryFill;
+    final ink = onColor(fill);
     final scheme = ColorScheme.fromSeed(seedColor: c.primary, brightness: brightness)
         .copyWith(
       primary: c.primary,
-      onPrimary: ink,
+      onPrimary: onColor(c.primary),
       surface: c.surfaceSolid,
       onSurface: c.textPrimary,
       onSurfaceVariant: c.textSecondary,
@@ -405,7 +451,7 @@ class AppTheme {
     final edge = BorderSide(color: c.border);
     final strongEdge = BorderSide(
         color: isDark ? const Color(0x33FFFFFF) : const Color(0x29000000));
-    final selectedWash = c.primary.withValues(alpha: isDark ? 0.16 : 0.12);
+    final selectedWash = fill.withValues(alpha: 0.16);
     final snackBg = isDark ? const Color(0xFF2A2A2E) : const Color(0xFF1C1D21);
 
     final base = ThemeData(
@@ -456,7 +502,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: c.primary,
+          backgroundColor: fill,
           foregroundColor: ink,
           elevation: 0,
           shape: pill,
@@ -467,7 +513,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: c.primary,
+          backgroundColor: fill,
           foregroundColor: ink,
           shape: pill,
           minimumSize: const Size(0, 40),
@@ -512,7 +558,7 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: c.primary,
+        backgroundColor: fill,
         foregroundColor: ink,
         elevation: 2,
         focusElevation: 3,
@@ -634,12 +680,12 @@ class AppTheme {
         thumbColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected) ? ink : c.textSecondary),
         trackColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? c.primary : c.surfaceHighlight),
+            s.contains(WidgetState.selected) ? fill : c.surfaceHighlight),
         trackOutlineColor: WidgetStatePropertyAll(strongEdge.color),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected) ? c.primary : Colors.transparent),
+            (s) => s.contains(WidgetState.selected) ? fill : Colors.transparent),
         checkColor: WidgetStatePropertyAll(ink),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         side: BorderSide(color: c.textSecondary, width: 1.5),
@@ -649,14 +695,14 @@ class AppTheme {
             (s) => s.contains(WidgetState.selected) ? c.primary : c.textSecondary),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: c.primary,
+        color: fill,
         linearTrackColor: c.surfaceHighlight,
         circularTrackColor: c.surfaceHighlight,
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: c.primary,
+        activeTrackColor: fill,
         inactiveTrackColor: c.surfaceHighlight,
-        thumbColor: c.primary,
+        thumbColor: fill,
         trackHeight: 6,
       ),
       tabBarTheme: TabBarThemeData(

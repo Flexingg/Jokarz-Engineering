@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'app_theme.dart';
 
-/// The app's backdrop: a gentle diagonal gradient with a soft accent light in
-/// the top-left corner. Scaffolds are transparent, so this is what every
+/// The app's backdrop: a gentle diagonal gradient with four soft colour
+/// pools (blue, violet, peach, teal) in the corners. Scaffolds are transparent, so this is what every
 /// screen sits on.
 ///
 /// The gradient is laid out against the whole window, not the widget's own
@@ -21,7 +22,7 @@ class FluidBackground extends StatelessWidget {
       screen: MediaQuery.sizeOf(context),
       start: c.background,
       end: c.backgroundEnd,
-      glow: c.backgroundGlow,
+      pools: c.pools,
       child: child,
     );
   }
@@ -29,18 +30,19 @@ class FluidBackground extends StatelessWidget {
 
 class _ScreenGradient extends SingleChildRenderObjectWidget {
   final Size screen;
-  final Color start, end, glow;
+  final Color start, end;
+  final List<Color> pools;
   const _ScreenGradient({
     required this.screen,
     required this.start,
     required this.end,
-    required this.glow,
+    required this.pools,
     super.child,
   });
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderScreenGradient(screen, start, end, glow);
+      _RenderScreenGradient(screen, start, end, pools);
 
   @override
   void updateRenderObject(BuildContext context, _RenderScreenGradient r) {
@@ -48,15 +50,16 @@ class _ScreenGradient extends SingleChildRenderObjectWidget {
       ..screen = screen
       ..start = start
       ..end = end
-      ..glow = glow;
+      ..pools = pools;
   }
 }
 
 class _RenderScreenGradient extends RenderProxyBox {
-  _RenderScreenGradient(this._screen, this._start, this._end, this._glow);
+  _RenderScreenGradient(this._screen, this._start, this._end, this._pools);
 
   Size _screen;
-  Color _start, _end, _glow;
+  Color _start, _end;
+  List<Color> _pools;
 
   set screen(Size v) {
     if (v == _screen) return;
@@ -76,11 +79,19 @@ class _RenderScreenGradient extends RenderProxyBox {
     markNeedsPaint();
   }
 
-  set glow(Color v) {
-    if (v == _glow) return;
-    _glow = v;
+  set pools(List<Color> v) {
+    if (listEquals(v, _pools)) return;
+    _pools = v;
     markNeedsPaint();
   }
+
+  // Where each pool sits: top-left, top-right, bottom-right, bottom-left.
+  static const _poolCentres = [
+    Alignment(-1.0, -1.05),
+    Alignment(1.0, -0.9),
+    Alignment(0.55, 1.1),
+    Alignment(-1.05, 0.95),
+  ];
 
   @override
   bool get isRepaintBoundary => true;
@@ -107,15 +118,18 @@ class _RenderScreenGradient extends RenderProxyBox {
           stops: const [0, 0.55, 1],
         ).createShader(window),
     );
-    canvas.drawRect(
-      box,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.85, -0.95),
-          radius: 0.9,
-          colors: [_glow, _glow.withValues(alpha: 0)],
-        ).createShader(window),
-    );
+    for (var i = 0; i < _pools.length && i < _poolCentres.length; i++) {
+      final p = _pools[i];
+      canvas.drawRect(
+        box,
+        Paint()
+          ..shader = RadialGradient(
+            center: _poolCentres[i],
+            radius: 0.85,
+            colors: [p, p.withValues(alpha: 0)],
+          ).createShader(window),
+      );
+    }
     super.paint(context, offset);
   }
 }

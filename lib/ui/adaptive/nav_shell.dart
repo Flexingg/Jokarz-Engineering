@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/sections.dart';
 import '../fluid/glass.dart';
 import '../fluid/liquid.dart';
 import '../motion/motion.dart';
@@ -17,17 +18,23 @@ class _RailDest {
   final int branch;
   final IconData icon;
   final String label;
-  const _RailDest(this.branch, this.icon, this.label);
+  final AppSection section;
+  const _RailDest(this.branch, this.icon, this.label, this.section);
 }
 
 const _railDests = [
-  _RailDest(0, Icons.dashboard_rounded, 'Dashboard'),
-  _RailDest(1, Icons.assignment_outlined, 'Projects'),
-  _RailDest(2, Icons.local_shipping_outlined, 'Open Orders'),
-  _RailDest(3, Icons.handyman_rounded, 'Workbench Tools'),
-  _RailDest(6, Icons.precision_manufacturing_rounded, 'BAMM Orders'),
-  _RailDest(4, Icons.edit_note_rounded, 'Notes'),
-  _RailDest(5, Icons.settings_suggest_rounded, 'Settings'),
+  _RailDest(0, Icons.dashboard_rounded, 'Dashboard', AppSection.dashboard),
+  _RailDest(1, Icons.assignment_rounded, 'Projects', AppSection.projects),
+  _RailDest(2, Icons.local_shipping_rounded, 'Open Orders', AppSection.orders),
+  _RailDest(3, Icons.handyman_rounded, 'Workbench Tools', AppSection.tools),
+  _RailDest(
+    6,
+    Icons.precision_manufacturing_rounded,
+    'BAMM Orders',
+    AppSection.bamm,
+  ),
+  _RailDest(4, Icons.edit_note_rounded, 'Notes', AppSection.notes),
+  _RailDest(5, Icons.settings_rounded, 'Settings', AppSection.settings),
 ];
 
 const double _itemHeight = 44;
@@ -124,15 +131,57 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
                 selectedIndex: widget.navigationShell.currentIndex,
                 onSelected: _onTapNav,
                 // Keep this list in branch order: the index IS the branch.
-                destinations: const [
-                  IslandDestination(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Home'),
-                  IslandDestination(Icons.assignment_outlined, Icons.assignment_rounded, 'Projects'),
-                  IslandDestination(Icons.local_shipping_outlined, Icons.local_shipping_rounded, 'Orders'),
-                  IslandDestination(Icons.handyman_outlined, Icons.handyman_rounded, 'Tools'),
-                  IslandDestination(Icons.note_alt_outlined, Icons.edit_note_rounded, 'Notes'),
-                  IslandDestination(Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
-                  IslandDestination(Icons.precision_manufacturing_outlined,
-                      Icons.precision_manufacturing_rounded, 'BAMM'),
+                destinations: [
+                  for (final d in const [
+                    (
+                      Icons.dashboard_outlined,
+                      Icons.dashboard_rounded,
+                      'Home',
+                      AppSection.dashboard,
+                    ),
+                    (
+                      Icons.assignment_outlined,
+                      Icons.assignment_rounded,
+                      'Projects',
+                      AppSection.projects,
+                    ),
+                    (
+                      Icons.local_shipping_outlined,
+                      Icons.local_shipping_rounded,
+                      'Orders',
+                      AppSection.orders,
+                    ),
+                    (
+                      Icons.handyman_outlined,
+                      Icons.handyman_rounded,
+                      'Tools',
+                      AppSection.tools,
+                    ),
+                    (
+                      Icons.note_alt_outlined,
+                      Icons.edit_note_rounded,
+                      'Notes',
+                      AppSection.notes,
+                    ),
+                    (
+                      Icons.settings_outlined,
+                      Icons.settings_rounded,
+                      'Settings',
+                      AppSection.settings,
+                    ),
+                    (
+                      Icons.precision_manufacturing_outlined,
+                      Icons.precision_manufacturing_rounded,
+                      'BAMM',
+                      AppSection.bamm,
+                    ),
+                  ])
+                    IslandDestination(
+                      d.$1,
+                      d.$2,
+                      d.$3,
+                      colors: sectionColors(context, d.$4),
+                    ),
                 ],
               ),
             ),
@@ -247,7 +296,13 @@ class _Rail extends StatelessWidget {
                                   box.maxWidth,
                                   _itemHeight,
                                 ),
-                                decoration: litPill(colors),
+                                decoration: litPill(
+                                  colors,
+                                  hue: sectionColors(
+                                    context,
+                                    _railDests[selectedVisual].section,
+                                  ).primaryFill,
+                                ),
                               ),
                             ],
                           ),
@@ -337,7 +392,7 @@ class _RailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.of(context);
-    final color = selected ? colors.primary : colors.textSecondary;
+    final section = sectionColors(context, dest.section);
     return Semantics(
       button: true,
       selected: selected,
@@ -360,7 +415,11 @@ class _RailItem extends StatelessWidget {
                   duration: motion.pop,
                   curve: motion.spring,
                   offset: selected ? const Offset(0, -0.06) : Offset.zero,
-                  child: Icon(dest.icon, size: 20, color: color),
+                  child: SectionTile(
+                    hue: section.primaryFill,
+                    icon: dest.icon,
+                    size: 30,
+                  ),
                 ),
                 if (showLabel) ...[
                   const SizedBox(width: 12),
@@ -374,7 +433,7 @@ class _RailItem extends StatelessWidget {
                         fontWeight: selected
                             ? FontWeight.w600
                             : FontWeight.w500,
-                        color: selected ? colors.primary : colors.textPrimary,
+                        color: selected ? section.primary : colors.textPrimary,
                       ),
                     ),
                   ),

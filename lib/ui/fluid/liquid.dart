@@ -106,14 +106,22 @@ BoxDecoration litPill(
   AppColors c, {
   double radius = AppTheme.radiusFull,
   bool glow = true,
-}) => BoxDecoration(
-  borderRadius: BorderRadius.circular(radius),
-  color: c.primary.withValues(alpha: 0.16),
-  border: Border.all(color: c.primary.withValues(alpha: 0.55)),
-  boxShadow: glow
-      ? [BoxShadow(color: c.primary.withValues(alpha: 0.20), blurRadius: 12)]
-      : null,
-);
+  Color? hue,
+}) {
+  final h = hue ?? c.primaryFill;
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(radius),
+    gradient: LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [h.withValues(alpha: 0.22), h.withValues(alpha: 0.10)],
+    ),
+    border: Border.all(color: h.withValues(alpha: 0.55)),
+    boxShadow: glow
+        ? [BoxShadow(color: h.withValues(alpha: 0.22), blurRadius: 14)]
+        : null,
+  );
+}
 
 /// Measures where each of [count] children ended up inside the enclosing
 /// Stack, after layout, so a [LiquidIndicator] can move between them.
@@ -339,7 +347,15 @@ class IslandDestination {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
-  const IslandDestination(this.icon, this.selectedIcon, this.label);
+
+  /// The section's palette: its hue lights the pill, its text shade the label.
+  final AppColors? colors;
+  const IslandDestination(
+    this.icon,
+    this.selectedIcon,
+    this.label, {
+    this.colors,
+  });
 }
 
 /// The phone navigation "island": a floating glass pill. The selected
@@ -414,7 +430,13 @@ class _FluidNavIslandState extends State<FluidNavIsland> {
         child: Stack(
           key: _stackKey,
           children: [
-            LiquidIndicator(rect: _rect, decoration: litPill(c)),
+            LiquidIndicator(
+              rect: _rect,
+              decoration: litPill(
+                c,
+                hue: widget.destinations[_shown].colors?.primaryFill,
+              ),
+            ),
             Positioned.fill(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -465,7 +487,10 @@ class _IslandItemState extends State<_IslandItem> {
   Widget build(BuildContext context) {
     final c = AppTheme.of(context);
     final motion = Motion.of(context);
-    final color = widget.selected ? c.primary : c.textSecondary;
+    // Every icon wears its section's colour; the selected one is labelled.
+    final color =
+        widget.dest.colors?.primary ??
+        (widget.selected ? c.primary : c.textSecondary);
     return Tooltip(
       message: widget.dest.label,
       child: Semantics(

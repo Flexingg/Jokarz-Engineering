@@ -29,7 +29,7 @@ class AppearanceControls extends ConsumerWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          'Used for selection, primary buttons and the soft light in the background.',
+          'The Dashboard colour. Every other section has its own: Projects violet, Orders orange, Tools teal, BAMM sky, Fab list pink, Notes amber.',
           style: TextStyle(fontSize: 11, color: colors.textSecondary),
         ),
         const SizedBox(height: 10),

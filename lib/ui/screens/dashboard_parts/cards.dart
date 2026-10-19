@@ -4,28 +4,40 @@ class _KpiCard extends StatelessWidget {
   final String label;
   final int value;
   final IconData icon;
-  final Color color;
-  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
+  final AppSection section;
+  const _KpiCard({required this.label, required this.value, required this.icon, required this.section});
 
   @override
   Widget build(BuildContext context) {
+    final c = sectionColors(context, section);
+    final base = AppTheme.of(context);
+    // A card washed with its section's colour from the corner, a colourful
+    // tile, and the number in the colour's readable shade.
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.alphaBlend(c.primaryFill.withValues(alpha: 0.20), base.surface),
+              base.surface,
+            ],
+            stops: const [0, 0.75],
+          ),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
+          border: Border.all(color: c.primaryFill.withValues(alpha: 0.30)),
         ),
         child: Row(children: [
-          Icon(icon, color: color, size: 20),
+          SectionTile(hue: c.primaryFill, icon: icon, size: 32),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('$value',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: c.primary)),
               Text(label,
-                  style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary),
+                  style: TextStyle(fontSize: 11, color: base.textSecondary),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ]),
@@ -48,7 +60,7 @@ class _TodayTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cal = sectionColors(context, AppSection.calendar);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -58,18 +70,19 @@ class _TodayTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isDark
-                  ? [AppTheme.of(context).primaryBlue.withValues(alpha: 0.28), AppTheme.of(context).surface]
-                  : [AppTheme.of(context).primaryBlue.withValues(alpha: 0.08), AppTheme.of(context).surface],
+              colors: [
+                Color.alphaBlend(cal.primaryFill.withValues(alpha: 0.20), AppTheme.of(context).surface),
+                AppTheme.of(context).surface,
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.3)),
+            border: Border.all(color: cal.primaryFill.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).primary),
+              SectionTile(hue: cal.primaryFill, icon: Icons.calendar_month_rounded, size: 34),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -129,20 +142,19 @@ class _CompactSummary extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  AppTheme.of(context).primaryBlue.withValues(alpha: 0.25),
-                  AppTheme.of(context).surface,
-                ]
-              : [
-                  AppTheme.of(context).primaryBlue.withValues(alpha: 0.08),
-                  AppTheme.of(context).surface,
-                ],
+          // Projects' violet, washed in from the corner.
+          colors: [
+            Color.alphaBlend(
+              sectionColors(context, AppSection.projects).primaryFill.withValues(alpha: 0.20),
+              AppTheme.of(context).surface,
+            ),
+            AppTheme.of(context).surface,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        border: Border.all(color: AppTheme.of(context).primary.withValues(alpha: 0.3)),
+        border: Border.all(color: sectionColors(context, AppSection.projects).primaryFill.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
