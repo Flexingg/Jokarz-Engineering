@@ -112,7 +112,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                         CircleAvatar(
                           radius: 26,
                           backgroundColor: AppTheme.of(context).primary,
-                          child: Icon(Icons.person, color: Colors.white, size: 28),
+                          child: Icon(Icons.person, color: AppTheme.onColor(AppTheme.of(context).primary), size: 28),
                         ),
                       const SizedBox(width: 14),
                       Expanded(

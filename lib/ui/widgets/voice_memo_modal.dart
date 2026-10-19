@@ -303,7 +303,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                         ),
                         child: Icon(
                           _isRecording ? Icons.stop : Icons.mic,
-                          color: _isRecording ? Colors.white : AppTheme.of(context).primary,
+                          color: _isRecording ? AppTheme.onColor(AppTheme.of(context).coral) : AppTheme.of(context).primary,
                           size: 26,
                         ),
                       );

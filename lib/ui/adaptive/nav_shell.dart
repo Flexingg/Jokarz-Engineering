@@ -122,7 +122,8 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
               blur: AppTheme.blurThin,
               child: NavigationBar(
                 height: 64,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                // Seven sections in one pill: only the selected one is labelled.
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
                 selectedIndex: widget.navigationShell.currentIndex,
                 onDestinationSelected: _onTapNav,
                 destinations: [

@@ -171,9 +171,11 @@ class _FabListScreenState extends ConsumerState<FabListScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                SegmentedButton<_FabFilter>(
+            // Filter and search side by side when there is room, stacked on
+            // a phone.
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final filter = SegmentedButton<_FabFilter>(
                   showSelectedIcon: false,
                   segments: [
                     ButtonSegment(
@@ -186,24 +188,34 @@ class _FabListScreenState extends ConsumerState<FabListScreen> {
                     ),
                     const ButtonSegment(
                       value: _FabFilter.done,
-                      label: Text('Completed'),
+                      label: Text('Done'),
                     ),
                   ],
                   selected: {_filter},
                   onSelectionChanged: (v) => setState(() => _filter = v.first),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search',
-                      prefixIcon: Icon(Icons.search_rounded),
-                      isDense: true,
-                    ),
-                    onChanged: (v) => setState(() => _search = v),
+                );
+                final search = TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Search',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    isDense: true,
                   ),
-                ),
-              ],
+                  onChanged: (v) => setState(() => _search = v),
+                );
+                if (c.maxWidth < 560) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [filter, const SizedBox(height: 8), search],
+                  );
+                }
+                return Row(
+                  children: [
+                    filter,
+                    const SizedBox(width: 12),
+                    Expanded(child: search),
+                  ],
+                );
+              },
             ),
           ),
           if (_wide) _header(colors),

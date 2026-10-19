@@ -802,8 +802,13 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppTheme.of(context).amber.withValues(alpha: 0.15),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.of(context).amber.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+        border: Border.all(color: AppTheme.of(context).amber.withValues(alpha: 0.35)),
+      ),
       child: Row(
         children: [
           Icon(

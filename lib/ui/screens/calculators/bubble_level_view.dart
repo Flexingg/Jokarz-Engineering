@@ -430,7 +430,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: _holding
-                  ? c.coral.withValues(alpha: 0.9)
+                  ? c.coral
                   : c.primary.withValues(alpha: 0.12),
               border: Border.all(color: c.primary, width: 2),
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -440,7 +440,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
               children: [
                 Icon(
                   _holding ? Icons.fiber_manual_record : Icons.radio_button_checked,
-                  color: _holding ? Colors.white : c.primary,
+                  color: _holding ? AppTheme.onColor(c.coral) : c.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -449,7 +449,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: _holding ? Colors.white : c.primary),
+                      color: _holding ? AppTheme.onColor(c.coral) : c.primary),
                 ),
               ],
             ),

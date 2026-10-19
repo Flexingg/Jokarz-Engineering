@@ -39,7 +39,7 @@ void main() {
     expect(find.text('Old job'), findsNothing, reason: 'completed jobs are filtered out of Open');
     expect(tester.getTopLeft(find.text('Bracket')).dy < tester.getTopLeft(find.text('Guard plates')).dy, isTrue);
     expect(find.text(r'\\srv\dwg\J-1'), findsOneWidget);
-    await tester.tap(find.text('Completed'));
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Old job'), findsOneWidget);
     expect(find.text('Bracket'), findsNothing);
