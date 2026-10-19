@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'theme/fluid_background.dart';
+import 'ui/fluid/fluid_dialog.dart';
 import 'providers/theme_provider.dart';
 import 'providers/ui_prefs_provider.dart';
 import 'ui/motion/motion.dart';
@@ -67,7 +68,9 @@ class JokarzEngineeringApp extends ConsumerWidget {
             disableAnimations: MediaQuery.disableAnimationsOf(context)),
         child: ParkScheduler(
           child: AppShortcuts(
-            child: FluidBackground(child: child ?? const SizedBox.shrink()),
+            child: TapOriginRecorder(
+              child: FluidBackground(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         ),
       ),
