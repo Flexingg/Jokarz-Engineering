@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -223,7 +224,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 await parkWithDialog(context, ref, project);
                 return;
               }
-              final choice = await showDialog<String>(
+              final choice = await showFluidDialog<String>(
                 context: context,
                 builder: (ctx) => SimpleDialog(
                   title: Text(parkBadgeText(project)),
@@ -270,7 +271,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
           tooltip: 'Delete Project',
           onPressed: () async {
-            final confirm = await showDialog<bool>(
+            final confirm = await showFluidDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('Delete Project?'),

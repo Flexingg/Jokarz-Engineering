@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/router/app_router.dart';
+import 'package:jokarz_engineering/ui/fluid/liquid.dart';
 
 import '../helpers/memory_storage.dart';
 
@@ -24,11 +25,33 @@ void main() {
 
       final fab = find.byType(FloatingActionButton);
       expect(fab, findsWidgets, reason: '$route has a FAB');
-      final navTop = tester.getRect(find.byType(NavigationBar)).top;
+      final navTop = tester.getRect(find.byType(FluidNavIsland)).top;
       for (final e in fab.evaluate()) {
         final r = tester.getRect(find.byWidget(e.widget));
         expect(r.bottom, lessThanOrEqualTo(navTop), reason: route);
       }
     });
   }
+
+  testWidgets('phone: sliding a finger along the island scrubs, release goes there', (tester) async {
+    tester.view.physicalSize = const Size(400, 860);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    appRouter.go('/');
+    await tester.pumpWidget(ProviderScope(
+      overrides: [storageServiceProvider.overrideWithValue(MemoryStorage())],
+      child: MaterialApp.router(routerConfig: appRouter),
+    ));
+    await tester.pumpAndSettle();
+    final from = tester.getCenter(find.byTooltip('Home'));
+    final to = tester.getCenter(find.byTooltip('Orders'));
+    final g = await tester.startGesture(from);
+    await g.moveBy(const Offset(20, 0));
+    await g.moveTo(to);
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(appRouter.routerDelegate.currentConfiguration.uri.path, '/orders');
+  });
 }

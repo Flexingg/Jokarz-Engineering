@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -159,7 +160,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   }
 
   Future<String?> _prompt(String title, String label, String hint, TextEditingController ctrl) {
-    return showDialog<String>(
+    return showFluidDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),

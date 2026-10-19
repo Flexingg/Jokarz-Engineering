@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,7 +34,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     String selectedProjectId = projects.first.id;
     DateTime? scheduledDate = DateTime.now();
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -149,7 +150,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final priceCtrl = TextEditingController();
     DateTime? eta;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -259,7 +260,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final reasonCtrl = TextEditingController(text: item.text);
     String machine = machines.isNotEmpty ? machines.first : 'Line 1';
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {

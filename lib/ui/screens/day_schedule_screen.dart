@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import '../../theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -373,7 +374,7 @@ class _ActionTile extends StatelessWidget {
 
 Future<String?> _promptText(BuildContext context, {required String title}) {
   final ctrl = TextEditingController();
-  return showDialog<String>(
+  return showFluidDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(title),
@@ -388,7 +389,7 @@ Future<String?> _promptText(BuildContext context, {required String title}) {
 
 Future<int?> _promptMinutes(BuildContext context, {required int defaultValue}) {
   final ctrl = TextEditingController(text: '$defaultValue');
-  return showDialog<int>(
+  return showFluidDialog<int>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Actual minutes'),

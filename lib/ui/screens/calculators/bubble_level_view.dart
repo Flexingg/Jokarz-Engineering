@@ -1,3 +1,4 @@
+import '../../fluid/fluid_dialog.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -200,7 +201,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
     final roll = _roll, pitch = _pitch, heading = _heading;
     final labelCtrl =
         TextEditingController(text: 'Point ${_points.length + 1}');
-    final saved = await showDialog<bool>(
+    final saved = await showFluidDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Label measurement'),

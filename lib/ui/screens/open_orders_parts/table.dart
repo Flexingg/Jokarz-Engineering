@@ -231,7 +231,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         if (uri != null)
           await launchUrl(uri, mode: LaunchMode.externalApplication);
       case 'delete':
-        final ok = await showDialog<bool>(
+        final ok = await showFluidDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Delete this order?'),

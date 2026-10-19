@@ -1,3 +1,4 @@
+import '../../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../widgets/expressive_card.dart';
@@ -261,7 +262,7 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
           const SizedBox(height: 12),
 
           // Unit Toggle
-          SegmentedButton<bool>(
+          FluidSegmentedButton<bool>(
             segments: const [
               ButtonSegment(
                   value: true, label: Text('Metric (mm / °C)')),

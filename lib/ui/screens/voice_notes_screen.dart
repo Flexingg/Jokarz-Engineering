@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -99,7 +100,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     final contentCtrl = TextEditingController(text: note.transcript);
     String? selectedProjId = note.projectId;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -180,7 +181,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
 
   void _showEditProjectNotesDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.notes);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -547,7 +548,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         tooltip: 'Delete Note',
                                         onPressed: () async {
                                           final note = entry.voiceNote!;
-                                          final confirm = await showDialog<bool>(
+                                          final confirm = await showFluidDialog<bool>(
                                             context: context,
                                             builder: (ctx) => AlertDialog(
                                               title: const Text('Delete Note?'),

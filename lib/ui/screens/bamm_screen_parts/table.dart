@@ -84,7 +84,7 @@ extension _BammScreenTable on _BammScreenState {
 
   Future<String?> _promptFilterValue(BammColumnDef column) {
     final ctrl = TextEditingController();
-    return showDialog<String>(
+    return showFluidDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Filter by ${column.header}'),

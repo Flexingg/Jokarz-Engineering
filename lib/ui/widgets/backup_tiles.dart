@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -79,7 +80,7 @@ class BackupTiles extends ConsumerWidget {
 
       final BackupInfo info = service.inspect(bytes);
       if (!context.mounted) return;
-      final ok = await showDialog<bool>(
+      final ok = await showFluidDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Restore this backup?'),

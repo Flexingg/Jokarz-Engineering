@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -443,7 +444,7 @@ class _ProjectCard extends ConsumerWidget {
           MenuAction('Reopen', Icons.replay_rounded,
               () => notifier.updateProject(project.copyWith(phase: ProjectPhases.pending))),
         MenuAction('Delete...', Icons.delete_outline_rounded, () async {
-          final ok = await showDialog<bool>(
+          final ok = await showFluidDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               title: const Text('Delete this project?'),

@@ -7,7 +7,7 @@ extension _TasksCalendarDialogs on _TasksCalendarScreenState {
     final machineCtrl = TextEditingController(text: existing?.machine ?? (machines.isNotEmpty ? machines.first : ''));
     final titleCtrl = TextEditingController(text: existing?.title ?? 'Maintenance');
     final timeCtrl = TextEditingController(text: existing?.timeRange ?? '');
-    await showDialog(context: context, builder: (ctx) => AlertDialog(
+    await showFluidDialog(context: context, builder: (ctx) => AlertDialog(
       title: Text(existing == null ? 'Add Downtime' : 'Edit Downtime'),
       content: SizedBox(width: 400, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         DropdownButtonFormField<String>(
@@ -81,7 +81,7 @@ extension _TasksCalendarDialogs on _TasksCalendarScreenState {
         TextEditingController(text: existing?.transcript ?? '');
     final dateLabel = DateFormat('MMM d').format(date);
 
-    final saved = await showDialog<bool>(
+    final saved = await showFluidDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(existing == null ? 'Add Note — $dateLabel' : 'Edit Note — $dateLabel'),
@@ -155,7 +155,7 @@ extension _TasksCalendarDialogs on _TasksCalendarScreenState {
     }
     if (existing == null) return;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showFluidDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Note?'),

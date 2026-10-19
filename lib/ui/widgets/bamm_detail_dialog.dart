@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -46,7 +47,7 @@ class BammDetailDialog extends ConsumerStatefulWidget {
   });
 
   static Future<void> show(BuildContext context, BammWorkOrder workOrder, {String? staleWarning}) {
-    return showDialog(
+    return showFluidDialog(
       context: context,
       builder: (ctx) => BammDetailDialog(workOrder: workOrder, staleWarning: staleWarning),
     );
@@ -878,7 +879,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
 
     if (_closingStatusIds.contains(selected.id)) {
       final label = selected.label.isNotEmpty ? selected.label : 'ID ${selected.id}';
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showFluidDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Confirm status change'),

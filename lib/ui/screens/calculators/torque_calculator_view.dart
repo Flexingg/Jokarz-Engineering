@@ -1,3 +1,4 @@
+import '../../fluid/liquid.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
@@ -168,7 +169,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
           const SizedBox(height: 12),
 
           // Standard Toggle (Metric vs Imperial)
-          SegmentedButton<bool>(
+          FluidSegmentedButton<bool>(
             segments: const [
               ButtonSegment(value: true, label: Text('Metric (ISO mm / MPa)')),
               ButtonSegment(value: false, label: Text('Imperial (SAE in / psi)')),

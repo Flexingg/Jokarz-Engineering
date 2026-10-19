@@ -1,3 +1,5 @@
+import '../fluid/fluid_dialog.dart';
+import '../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -171,7 +173,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: SegmentedButton<int>(
+          child: FluidSegmentedButton<int>(
             segments: const [
               ButtonSegment(value: 0, label: Text('Schedule', style: TextStyle(fontSize: 12))),
               ButtonSegment(value: 1, label: Text('History', style: TextStyle(fontSize: 12))),

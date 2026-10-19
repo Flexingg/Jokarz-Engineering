@@ -552,7 +552,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
     final searchCtrl = TextEditingController();
     String? selectedId;
 
-    await showDialog(
+    await showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -757,7 +757,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  final confirm = await showDialog<bool>(
+                  final confirm = await showFluidDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Request from Stores?'),
@@ -832,7 +832,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
     OrderItem order,
   ) {
     final ctrl = TextEditingController(text: order.storeRequestNumber);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Store Request Number'),

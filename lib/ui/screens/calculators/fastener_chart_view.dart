@@ -1,3 +1,4 @@
+import '../../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/bolt_spec.dart';
@@ -39,7 +40,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
             children: [
               Row(
                 children: [
-                  SegmentedButton<FastenerStandard>(
+                  FluidSegmentedButton<FastenerStandard>(
                     segments: const [
                       ButtonSegment(
                         value: FastenerStandard.metric,

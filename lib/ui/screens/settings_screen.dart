@@ -1,3 +1,4 @@
+import '../fluid/liquid.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -181,7 +182,7 @@ class SettingsScreen extends ConsumerWidget {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
-                SegmentedButton<AppThemeFamily>(
+                FluidSegmentedButton<AppThemeFamily>(
                   showSelectedIcon: false,
                   segments: const [
                     ButtonSegment(

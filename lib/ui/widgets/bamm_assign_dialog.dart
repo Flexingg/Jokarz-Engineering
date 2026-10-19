@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bamm_provider.dart';
@@ -19,7 +20,7 @@ class BammAssignDialog extends ConsumerStatefulWidget {
     required List<String> currentSelections,
     String title = 'Assign BAMM Work Orders',
   }) {
-    return showDialog<List<String>>(
+    return showFluidDialog<List<String>>(
       context: context,
       builder: (ctx) => BammAssignDialog(
         initialSelected: currentSelections,

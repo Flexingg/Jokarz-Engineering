@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../theme/app_theme.dart';
 import '../fluid/glass.dart';
+import '../fluid/liquid.dart';
 import '../motion/motion.dart';
 import '../shell/app_menu_bar.dart';
 import '../widgets/voice_memo_modal.dart';
@@ -119,70 +120,19 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
             child: Glass(
               radius: AppTheme.radiusFull,
               blur: AppTheme.blurThin,
-              child: NavigationBar(
-                height: 64,
-                // Seven sections in one pill: only the selected one is labelled.
-            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+              child: FluidNavIsland(
                 selectedIndex: widget.navigationShell.currentIndex,
-                onDestinationSelected: _onTapNav,
-                destinations: [
-                  NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(
-                      Icons.dashboard_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Home',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.assignment_outlined),
-                    selectedIcon: Icon(
-                      Icons.assignment_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Projects',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.local_shipping_outlined),
-                    selectedIcon: Icon(
-                      Icons.local_shipping_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Orders',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.handyman_outlined),
-                    selectedIcon: Icon(
-                      Icons.handyman_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Tools',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.note_alt_outlined),
-                    selectedIcon: Icon(
-                      Icons.edit_note_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Notes',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(
-                      Icons.settings_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'Settings',
-                  ),
-                  // Keep this list in branch order: selectedIndex IS the branch index.
-                  NavigationDestination(
-                    icon: Icon(Icons.precision_manufacturing_outlined),
-                    selectedIcon: Icon(
-                      Icons.precision_manufacturing_rounded,
-                      color: AppTheme.of(context).primary,
-                    ),
-                    label: 'BAMM',
-                  ),
+                onSelected: _onTapNav,
+                // Keep this list in branch order: the index IS the branch.
+                destinations: const [
+                  IslandDestination(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Home'),
+                  IslandDestination(Icons.assignment_outlined, Icons.assignment_rounded, 'Projects'),
+                  IslandDestination(Icons.local_shipping_outlined, Icons.local_shipping_rounded, 'Orders'),
+                  IslandDestination(Icons.handyman_outlined, Icons.handyman_rounded, 'Tools'),
+                  IslandDestination(Icons.note_alt_outlined, Icons.edit_note_rounded, 'Notes'),
+                  IslandDestination(Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+                  IslandDestination(Icons.precision_manufacturing_outlined,
+                      Icons.precision_manufacturing_rounded, 'BAMM'),
                 ],
               ),
             ),
@@ -287,30 +237,19 @@ class _Rail extends StatelessWidget {
                       // The selection highlight slides (and overshoots a little)
                       // between destinations.
                       if (selectedVisual >= 0)
-                        AnimatedPositioned(
-                          duration: motion.nav,
-                          curve: motion.spring,
-                          top: selectedVisual * (_itemHeight + _itemGap),
-                          left: 0,
-                          right: 0,
-                          height: _itemHeight,
-                          // A lit pill: accent wash, accent edge, soft glow.
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.radiusFull,
-                              ),
-                              color: colors.primary.withValues(alpha: 0.14),
-                              border: Border.all(
-                                color: colors.primary.withValues(alpha: 0.6),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colors.primary.withValues(alpha: 0.22),
-                                  blurRadius: 12,
+                        LayoutBuilder(
+                          builder: (context, box) => Stack(
+                            children: [
+                              LiquidIndicator(
+                                rect: Rect.fromLTWH(
+                                  0,
+                                  selectedVisual * (_itemHeight + _itemGap),
+                                  box.maxWidth,
+                                  _itemHeight,
                                 ),
-                              ],
-                            ),
+                                decoration: litPill(colors),
+                              ),
+                            ],
                           ),
                         ),
                       Column(

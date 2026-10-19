@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,7 +38,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
   void _showAddDowntimeDialog(BuildContext context) {
     final reasonCtrl = TextEditingController();
 
-    showDialog(
+    showFluidDialog(
 
       context: context,
       builder: (ctx) => AlertDialog(

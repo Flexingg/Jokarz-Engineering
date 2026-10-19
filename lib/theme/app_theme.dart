@@ -65,6 +65,8 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color surfaceHighlight; // hover / selected wash, works on any surface
   final Color surfaceVariant;
   final Color glass; // floating chrome fill (rail, nav island, panels)
+  final Color glassThick; // dialogs and the command palette (over a blur)
+  final Color scrim; // tint behind modals
   final Color glassEdgeTop; // contour glow, top of the stroke
   final Color glassEdgeBottom; // contour glow, bottom of the stroke
   final Color border;
@@ -94,6 +96,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.surfaceHighlight,
     required this.surfaceVariant,
     required this.glass,
+    required this.glassThick,
+    required this.scrim,
     required this.glassEdgeTop,
     required this.glassEdgeBottom,
     required this.border,
@@ -118,6 +122,8 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? surfaceHighlight,
     Color? surfaceVariant,
     Color? glass,
+    Color? glassThick,
+    Color? scrim,
     Color? glassEdgeTop,
     Color? glassEdgeBottom,
     Color? border,
@@ -140,6 +146,8 @@ class AppColors extends ThemeExtension<AppColors> {
       surfaceHighlight: surfaceHighlight ?? this.surfaceHighlight,
       surfaceVariant: surfaceVariant ?? this.surfaceVariant,
       glass: glass ?? this.glass,
+      glassThick: glassThick ?? this.glassThick,
+      scrim: scrim ?? this.scrim,
       glassEdgeTop: glassEdgeTop ?? this.glassEdgeTop,
       glassEdgeBottom: glassEdgeBottom ?? this.glassEdgeBottom,
       border: border ?? this.border,
@@ -168,6 +176,8 @@ class AppColors extends ThemeExtension<AppColors> {
       surfaceHighlight: l(surfaceHighlight, other.surfaceHighlight),
       surfaceVariant: l(surfaceVariant, other.surfaceVariant),
       glass: l(glass, other.glass),
+      glassThick: l(glassThick, other.glassThick),
+      scrim: l(scrim, other.scrim),
       glassEdgeTop: l(glassEdgeTop, other.glassEdgeTop),
       glassEdgeBottom: l(glassEdgeBottom, other.glassEdgeBottom),
       border: l(border, other.border),
@@ -193,10 +203,17 @@ class AppColors extends ThemeExtension<AppColors> {
     ];
     // Selected items (rail, segments, nav) put accent text on an accent wash.
     final wash = primary.withValues(alpha: 0.16);
+    // Dialogs are translucent over a blurred, tinted copy of whatever is
+    // behind them, which can be anything: test pure white and pure black.
+    final dialogs = [
+      for (final behind in const [Color(0xFFFFFFFF), Color(0xFF000000)])
+        Color.alphaBlend(glassThick, Color.alphaBlend(scrim, behind)),
+    ];
     return [
       ...ends,
       ...panes,
-      for (final p in panes) Color.alphaBlend(wash, p),
+      ...dialogs,
+      for (final p in [...panes, ...dialogs]) Color.alphaBlend(wash, p),
     ];
   }
 }
@@ -291,12 +308,21 @@ class AppTheme {
             ? const Color.fromRGBO(34, 34, 38, 0.66)
             : const Color.fromRGBO(255, 255, 255, 0.62);
 
+    final glassThick = opaque
+        ? solid
+        : dark
+            // As translucent as legibility allows over a black or white
+            // screen behind the blur (checked in the theme tests).
+            ? const Color.fromRGBO(30, 30, 33, 0.93)
+            : const Color.fromRGBO(251, 251, 253, 0.95);
+    final scrim = dark ? const Color(0x66000000) : const Color(0x2E000000);
+
     final draft = AppColors(
       primary: accent,
       primaryBlue: accent,
-      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF7F5000),
+      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF784B00),
       emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF0B6338),
-      coral: dark ? const Color(0xFFFF8C42) : const Color(0xFF9A3B08),
+      coral: dark ? const Color(0xFFFF8C42) : const Color(0xFF943807),
       background: start,
       backgroundEnd: end,
       backgroundGlow: glow,
@@ -310,6 +336,8 @@ class AppTheme {
           ? const Color.fromRGBO(255, 255, 255, 0.07)
           : const Color.fromRGBO(0, 0, 0, 0.045),
       glass: glass,
+      glassThick: glassThick,
+      scrim: scrim,
       glassEdgeTop: opaque
           ? (dark ? const Color(0x1FFFFFFF) : const Color(0x14000000))
           : (dark ? const Color(0x38FFFFFF) : const Color(0xCCFFFFFF)),
@@ -485,9 +513,10 @@ class AppTheme {
         shape: pill,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: c.surfaceSolid,
+        // Thick glass: dialogs open over a blur of the screen behind them.
+        backgroundColor: c.glassThick,
         surfaceTintColor: Colors.transparent,
-        barrierColor: isDark ? const Color(0x66000000) : const Color(0x2E000000),
+        barrierColor: c.scrim,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusXl),
           side: BorderSide(color: c.glassEdgeTop),
@@ -498,8 +527,7 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: c.surfaceSolid,
         surfaceTintColor: Colors.transparent,
-        modalBarrierColor:
-            isDark ? const Color(0x66000000) : const Color(0x2E000000),
+        modalBarrierColor: c.scrim,
         dragHandleColor: c.textSecondary.withValues(alpha: 0.5),
         dragHandleSize: const Size(36, 4),
         shape: const RoundedRectangleBorder(

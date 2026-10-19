@@ -52,7 +52,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
     ProjectTemplate? selectedTemplate;
 
     try {
-      await showDialog(
+      await showFluidDialog(
         context: ctx,
         builder: (dialogCtx) {
           return StatefulBuilder(
@@ -178,7 +178,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
     final descCtrl = TextEditingController(text: widget.workOrder.displayTitle);
 
     try {
-      await showDialog(
+      await showFluidDialog(
         context: ctx,
         builder: (dialogCtx) {
           return StatefulBuilder(
@@ -275,7 +275,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
     final descCtrl = TextEditingController(text: widget.workOrder.displayTitle);
 
     try {
-      await showDialog(
+      await showFluidDialog(
         context: ctx,
         builder: (dialogCtx) {
           return StatefulBuilder(

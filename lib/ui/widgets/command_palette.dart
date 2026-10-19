@@ -13,6 +13,7 @@ import '../../utils/text_utils.dart';
 import '../shell/app_actions.dart';
 import 'note_dialogs.dart';
 import 'order_dialogs.dart';
+import '../fluid/fluid_dialog.dart';
 
 /// Opens the Ctrl+K command palette over the whole app: one box that jumps to
 /// any page, creates things, and finds projects, orders, tasks and notes.
@@ -24,7 +25,7 @@ Future<void> showCommandPalette(WidgetRef ref) async {
     context: ctx,
     barrierDismissible: true,
     barrierLabel: 'Close command palette',
-    barrierColor: const Color(0x8C06080B),
+    barrierColor: AppTheme.of(ctx).scrim,
     transitionDuration: motion.sheet,
     pageBuilder: (context, _, __) => _CommandPalette(runRef: ref),
     transitionBuilder: (context, animation, _, child) {
@@ -33,19 +34,22 @@ Future<void> showCommandPalette(WidgetRef ref) async {
         curve: motion.spring,
         reverseCurve: motion.exit,
       );
-      return FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: AnimatedBuilder(
-          animation: curved,
-          builder: (context, child) => Transform.translate(
-            offset: Offset(0, (1 - curved.value) * -14),
-            child: Transform.scale(
-              scale: 0.96 + 0.04 * curved.value,
-              alignment: Alignment.topCenter,
-              child: child,
+      return ModalBackdropBlur(
+        animation: animation,
+        child: FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: AnimatedBuilder(
+            animation: curved,
+            builder: (context, child) => Transform.translate(
+              offset: Offset(0, (1 - curved.value) * -14),
+              child: Transform.scale(
+                scale: 0.96 + 0.04 * curved.value,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
             ),
+            child: child,
           ),
-          child: child,
         ),
       );
     },
@@ -164,20 +168,17 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         Icons.settings_applications_rounded,
         (_) => appRouter.push('/machines'),
       ),
-      _Entry(
-        'Action',
-        'Keyboard shortcuts',
-        Icons.keyboard_outlined,
-        (_) {
-          final ctx = appRootContext;
-          if (ctx != null) {
-            showKeyboardHelp(ctx, const {
-              'Orders, Projects, Notes, Fab list': 'Press ? on any list to see its own keys',
-              'Project tasks': 'Click the list, then Space to check, E edit, F fab list',
-            });
-          }
-        },
-      ),
+      _Entry('Action', 'Keyboard shortcuts', Icons.keyboard_outlined, (_) {
+        final ctx = appRootContext;
+        if (ctx != null) {
+          showKeyboardHelp(ctx, const {
+            'Orders, Projects, Notes, Fab list':
+                'Press ? on any list to see its own keys',
+            'Project tasks':
+                'Click the list, then Space to check, E edit, F fab list',
+          });
+        }
+      }),
       _Entry(
         'Action',
         'Fab list',
@@ -212,16 +213,33 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
     final text = _query.trim();
     // Anything typed can become a new project, order or note right here.
     final creates = <_Entry>[
-      _Entry('Create', 'Create project "${titleCase(text)}"', Icons.add_box_outlined,
-          (_) => appRouter.push('/projects/new', extra: {'initialTitle': titleCase(text)})),
-      _Entry('Create', 'Create order "$text"', Icons.add_shopping_cart_rounded, (_) {
-        final ctx = appRootContext;
-        if (ctx != null) showStandaloneOrderDialog(ctx, prefillDescription: text);
-      }),
+      _Entry(
+        'Create',
+        'Create project "${titleCase(text)}"',
+        Icons.add_box_outlined,
+        (_) => appRouter.push(
+          '/projects/new',
+          extra: {'initialTitle': titleCase(text)},
+        ),
+      ),
+      _Entry(
+        'Create',
+        'Create order "$text"',
+        Icons.add_shopping_cart_rounded,
+        (_) {
+          final ctx = appRootContext;
+          if (ctx != null)
+            showStandaloneOrderDialog(ctx, prefillDescription: text);
+        },
+      ),
       _Entry('Create', 'Create note "$text"', Icons.note_add_outlined, (_) {
         final ctx = appRootContext;
         if (ctx != null) {
-          showNewFieldNoteDialog(ctx, prefillTitle: 'Quick Note', prefillContent: text);
+          showNewFieldNoteDialog(
+            ctx,
+            prefillTitle: 'Quick Note',
+            prefillContent: text,
+          );
         }
       }),
     ];
@@ -336,7 +354,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: Material(
-              color: colors.surfaceSolid,
+              color: colors.glassThick,
               elevation: 12,
               shadowColor: AppTheme.of(context).textSecondary,
               shape: RoundedRectangleBorder(

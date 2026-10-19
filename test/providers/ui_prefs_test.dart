@@ -192,7 +192,8 @@ void main() {
 
       final bouncy = peak(const Motion(MotionLevel.bouncy).spring);
       final subtle = peak(const Motion(MotionLevel.subtle).spring);
-      expect(bouncy, greaterThan(1.05));
+      // One visible overshoot of a few percent (3-6%), not a wobble.
+      expect(bouncy, inInclusiveRange(1.03, 1.06));
       expect(subtle, greaterThan(1.0));
       expect(subtle, lessThan(bouncy));
     });

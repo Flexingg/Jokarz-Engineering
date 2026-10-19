@@ -437,7 +437,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
         else if (!e.storeRequested)
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
             onPressed: () async {
-              final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+              final confirm = await showFluidDialog<bool>(context: context, builder: (ctx) => AlertDialog(
                 title: const Text('Request for Stores?'),
                 content: Text('Send "${e.description}" to the storeroom?'),
                 actions: [

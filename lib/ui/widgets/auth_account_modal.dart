@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,7 @@ import '../../services/sync_service.dart';
 import '../../theme/app_theme.dart';
 
 void showAuthAccountModal(BuildContext context) {
-  showDialog(
+  showFluidDialog(
     context: context,
     builder: (ctx) => const AuthAccountModal(),
   );
@@ -329,7 +330,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                             : () async {
                                 final report = await syncNotifier.diagnose();
                                 if (!context.mounted) return;
-                                showDialog(
+                                showFluidDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
                                     title: const Text('Sync check'),

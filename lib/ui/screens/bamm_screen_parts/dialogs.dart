@@ -13,7 +13,7 @@ extension _BammScreenDialogs on _BammScreenState {
     int stepId = 1; // 1 = Normal, 3 = Emergency
     int maintId = 107; // 107 = Corrective, 111 = Kaizen, 108 = PM
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -225,7 +225,7 @@ extension _BammScreenDialogs on _BammScreenState {
 
   void _showSaveFilterDialog() {
     final nameCtrl = TextEditingController();
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Save Current Filter Preset', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -259,7 +259,7 @@ extension _BammScreenDialogs on _BammScreenState {
     final userCtrl = TextEditingController(text: bammState.config.usercode);
     final passCtrl = TextEditingController(text: bammState.config.password);
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('BAMM Connection Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -328,7 +328,7 @@ extension _BammScreenDialogs on _BammScreenState {
     String selectedMaint = criteria.maintenanceType ?? 'All';
     String selectedExec = criteria.executionMode ?? 'All';
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {

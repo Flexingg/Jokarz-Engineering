@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
@@ -17,7 +18,7 @@ class TemplateDialogs {
     final nameCtrl = TextEditingController(text: '${project.title} Template');
     final descCtrl = TextEditingController(text: project.description);
 
-    return showDialog(
+    return showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -92,7 +93,7 @@ class TemplateDialogs {
     final state = ref.read(projectProvider);
     final templates = state.allTemplates;
 
-    return showDialog<ProjectTemplate>(
+    return showFluidDialog<ProjectTemplate>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(

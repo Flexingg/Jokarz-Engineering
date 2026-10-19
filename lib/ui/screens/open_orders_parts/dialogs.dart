@@ -9,7 +9,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
 
   Future<void> _showStoreNumberDialog(_OrderEntry e) async {
     final ctrl = TextEditingController(text: e.storeRequestNumber);
-    final num = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+    final num = await showFluidDialog<String>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('Store Request Number'),
       content: TextField(controller: ctrl, autofocus: true, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Store request #')),
       actions: [
@@ -45,7 +45,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
     final searchCtrl = TextEditingController();
     String? selectedId;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
         final q = searchCtrl.text.trim().toLowerCase();

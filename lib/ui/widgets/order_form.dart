@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -470,7 +471,7 @@ class OrderFields extends ConsumerWidget {
                 ),
                 TextButton.icon(
                   onPressed: () async {
-                    final selected = await showDialog<List<String>>(
+                    final selected = await showFluidDialog<List<String>>(
                       context: context,
                       builder: (c) => BammAssignDialog(
                         initialSelected: draft.bamm,

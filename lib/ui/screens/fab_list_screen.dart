@@ -1,3 +1,5 @@
+import '../fluid/fluid_dialog.dart';
+import '../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,7 +82,7 @@ class _FabListScreenState extends ConsumerState<FabListScreen> {
     if (_wide) {
       setState(() => _activeId = id);
     } else {
-      showDialog(
+      showFluidDialog(
         context: context,
         builder: (ctx) => Dialog.fullscreen(
           child: Scaffold(
@@ -175,7 +177,7 @@ class _FabListScreenState extends ConsumerState<FabListScreen> {
             // a phone.
             child: LayoutBuilder(
               builder: (context, c) {
-                final filter = SegmentedButton<_FabFilter>(
+                final filter = FluidSegmentedButton<_FabFilter>(
                   showSelectedIcon: false,
                   segments: [
                     ButtonSegment(

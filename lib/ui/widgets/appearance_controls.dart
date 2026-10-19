@@ -1,3 +1,4 @@
+import '../fluid/liquid.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -83,7 +84,7 @@ class AppearanceControls extends ConsumerWidget {
           style: TextStyle(fontSize: 11, color: colors.textSecondary),
         ),
         const SizedBox(height: 10),
-        SegmentedButton<MotionLevel>(
+        FluidSegmentedButton<MotionLevel>(
           showSelectedIcon: false,
           segments: [
             for (final m in MotionLevel.values)

@@ -1,3 +1,5 @@
+import '../fluid/fluid_dialog.dart';
+import '../fluid/liquid.dart';
 import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -203,7 +205,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           if (isDesktop)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: SegmentedButton<int>(
+              child: FluidSegmentedButton<int>(
                 showSelectedIcon: false,
                 style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
@@ -230,7 +232,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           IconButton(
             icon: Icon(Icons.help_outline_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Order Workflow Guide',
-            onPressed: () => showDialog(
+            onPressed: () => showFluidDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: Row(children: [
@@ -267,7 +269,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                   Flexible(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: SegmentedButton<int>(
+                      child: FluidSegmentedButton<int>(
                         segments: [
                           ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
                           ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
@@ -343,7 +345,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               child: Column(children: [
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<int>(
+                  child: FluidSegmentedButton<int>(
                     segments: [
                       ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
                       ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
