@@ -71,12 +71,12 @@ class SearchableDropdownFormField<T> extends StatelessWidget {
                   fontSize: 14,
                   color: text == null
                       ? (isDark ? AppTheme.of(context).textSecondary : AppTheme.of(context).textSecondary)
-                      : (isDark ? Colors.white : Colors.black87),
+                      : (AppTheme.of(context).textPrimary),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            Icon(Icons.arrow_drop_down, color: AppTheme.of().textSecondary),
           ],
         ),
       ),

@@ -461,7 +461,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
                                 ? 'No projects yet. Tap "New Project" above to create one and link this BAMM work order.'
                                 : 'No projects, tasks, or orders match "$_searchQuery"',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 13, color: Colors.grey),
+                            style: TextStyle(fontSize: 13, color: AppTheme.of().textSecondary),
                           ),
                         ),
                       )
@@ -515,7 +515,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Tasks in project:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                    Text('Tasks in project:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary)),
                                     InkWell(
                                       key: Key('project_new_task_${p.id}'),
                                       onTap: () => _showCreateTaskDialog(ctx, preselectedProjectId: p.id),
@@ -535,11 +535,11 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
                                 ),
                               ),
                               if (displayedTasks.isEmpty)
-                                const Padding(
+                                Padding(
                                   padding: EdgeInsets.only(left: 32, top: 2, bottom: 6),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
-                                    child: Text('(No tasks)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                    child: Text('(No tasks)', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
                                   ),
                                 ),
                               ...displayedTasks.map((t) {
@@ -572,7 +572,7 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Orders in project:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                    Text('Orders in project:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary)),
                                     InkWell(
                                       key: Key('project_new_order_${p.id}'),
                                       onTap: () => _showCreateOrderDialog(ctx, preselectedProjectId: p.id),
@@ -592,11 +592,11 @@ class _BammLinkSheetState extends ConsumerState<_BammLinkSheet> {
                                 ),
                               ),
                               if (displayedOrders.isEmpty)
-                                const Padding(
+                                Padding(
                                   padding: EdgeInsets.only(left: 32, top: 2, bottom: 6),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
-                                    child: Text('(No orders)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                    child: Text('(No orders)', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
                                   ),
                                 ),
                               ...displayedOrders.map((o) {

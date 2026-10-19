@@ -377,10 +377,10 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.note_alt_outlined,
                               size: 56,
-                              color: Colors.grey,
+                              color: AppTheme.of().textSecondary,
                             ),
                             const SizedBox(height: 12),
                             const Text(
@@ -539,10 +539,10 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                               ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete_outline,
                                           size: 16,
-                                          color: Colors.grey,
+                                          color: AppTheme.of().textSecondary,
                                         ),
                                         tooltip: 'Delete Note',
                                         onPressed: () async {
@@ -649,7 +649,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         style: TextStyle(fontSize: 11),
                                       ),
                                       style: TextButton.styleFrom(
-                                        foregroundColor: Colors.grey,
+                                        foregroundColor: AppTheme.of().textSecondary,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
                                           vertical: 2,

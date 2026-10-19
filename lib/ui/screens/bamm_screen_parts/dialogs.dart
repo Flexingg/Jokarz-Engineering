@@ -293,9 +293,9 @@ extension _BammScreenDialogs on _BammScreenState {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Default plant origin: http://app02-ao-plt:82 on port 82. Requires device to be on the plant network or VPN.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
               ),
             ],
           ),

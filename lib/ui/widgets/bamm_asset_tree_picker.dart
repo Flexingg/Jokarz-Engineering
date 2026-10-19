@@ -12,6 +12,7 @@
 /// than silently refusing to expand further.
 library;
 
+import '../../theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 import '../../bamm/queries/asset_tree.dart';
@@ -250,7 +251,7 @@ class _AssetTreePickerSheetState extends State<_AssetTreePickerSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Level ${level + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+              Text('Level ${level + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary)),
               const SizedBox(height: 4),
               if (_levelLoading[level])
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator())

@@ -348,13 +348,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.search_off_rounded, size: 48, color: Colors.grey.shade400),
+                            Icon(Icons.search_off_rounded, size: 48, color: AppTheme.of().textSecondary),
                             const SizedBox(height: 12),
                             Text(
                               bammState.criteria.isEmpty
                                   ? (bammState.isOnline ? 'No BAMM work orders found on server.' : 'Not connected to plant network. Connect to load work orders.')
                                   : 'No BAMM work orders match your active filters.',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                              style: TextStyle(color: AppTheme.of().textSecondary, fontSize: 14),
                             ),
                             const SizedBox(height: 8),
                             if (bammState.criteria.activeFilterCount > 0)

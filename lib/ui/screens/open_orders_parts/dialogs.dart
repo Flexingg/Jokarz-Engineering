@@ -71,7 +71,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
               const SizedBox(height: 12),
               Flexible(
                 child: matches.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: Colors.grey)))
+                    ? Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)))
                     : ListView(
                         shrinkWrap: true,
                         children: matches.map((p) => Card(
@@ -103,7 +103,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
                         _rebuild(() => _filterTab = 0);
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald)),
               child: const Text('Attach'),
             ),
           ],

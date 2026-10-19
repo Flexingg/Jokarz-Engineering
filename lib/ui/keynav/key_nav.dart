@@ -190,7 +190,7 @@ class KeyNavItem extends StatelessWidget {
     required this.controller,
     required this.index,
     required this.child,
-    this.radius = 14,
+    this.radius = AppTheme.radiusLg,
   });
 
   @override

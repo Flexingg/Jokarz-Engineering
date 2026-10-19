@@ -53,7 +53,7 @@ class _AddActivityLineSheetState extends ConsumerState<_AddActivityLineSheet> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 140, child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+          SizedBox(width: 140, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary))),
           Expanded(child: Text(display, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
           TextButton(onPressed: onTap, child: const Text('Change', style: TextStyle(fontSize: 11))),
         ],

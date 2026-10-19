@@ -370,7 +370,7 @@ class _TorqueCalculatorViewState extends State<TorqueCalculatorView> {
                           _torqueInLbs.toStringAsFixed(0),
                           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                         ),
-                        const Text('in-lbs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+                        Text('in-lbs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.of().textSecondary)),
                       ],
                     ),
                   ],

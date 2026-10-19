@@ -579,7 +579,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(color: colors.border),
         ),
         clipBehavior: Clip.antiAlias,

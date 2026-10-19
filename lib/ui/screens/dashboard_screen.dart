@@ -124,7 +124,7 @@ class DashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
         backgroundColor: AppTheme.of(context).amber,
-        foregroundColor: Colors.black87,
+        foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
       ),
       body: RefreshIndicator(
         onRefresh: () async {},

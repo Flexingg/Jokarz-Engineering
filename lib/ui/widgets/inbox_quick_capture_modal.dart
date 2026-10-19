@@ -212,7 +212,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   label: const Text('Save to Inbox'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.of(context).emerald,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),

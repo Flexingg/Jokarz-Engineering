@@ -163,12 +163,12 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                                 if (isMetric)
                                   Text(
                                     '(${bolt.tapDrillDecimalInch.toStringAsFixed(4)}")',
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                    style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
                                   )
                                 else
                                   Text(
                                     '(${bolt.tapDrillMm.toStringAsFixed(2)} mm)',
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                    style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
                                   ),
                               ],
                             ),
@@ -187,9 +187,9 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'CLOSE CLEARANCE (TIGHT)',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -215,9 +215,9 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'FREE CLEARANCE (STD)',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

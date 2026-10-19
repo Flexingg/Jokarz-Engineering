@@ -232,6 +232,13 @@ class AppTheme {
     return _active;
   }
 
+  /// Text/icon color for something filled with [bg]: near-black or white,
+  /// whichever reads better (accents and status colors flip between modes).
+  static Color onColor(Color bg) {
+    const ink = Color(0xFF081019);
+    return contrast(bg, ink) >= contrast(bg, Colors.white) ? ink : Colors.white;
+  }
+
   static double contrast(Color a, Color b) {
     final la = a.computeLuminance(), lb = b.computeLuminance();
     final hi = la > lb ? la : lb, lo = la > lb ? lb : la;

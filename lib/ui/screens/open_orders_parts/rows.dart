@@ -56,7 +56,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                         'No ETA',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                          color: AppTheme.of(context).textSecondary,
                         ),
                       )),
           ),
@@ -74,7 +74,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       decoration: e.delivered ? TextDecoration.lineThrough : null,
-                      color: e.delivered ? Colors.grey : null,
+                      color: e.delivered ? AppTheme.of().textSecondary : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -130,7 +130,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                   ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.of(context).amber, fontSize: 10),
                 ...e.bammWorkOrders.map((wo) => BammChip(worNo: wo, isDense: true)),
                 if (e.po.isEmpty && e.pr.isEmpty && e.bammWorkOrders.isEmpty)
-                  const Text('—', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
               ],
             ),
           ),
@@ -146,7 +146,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                     icon: Icons.storefront_rounded,
                     fontSize: 10,
                   )
-                : const Text('—', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                : Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
           ),
           const SizedBox(width: 8),
 
@@ -215,7 +215,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                       minimumSize: Size.zero,
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: Colors.grey,
+                      foregroundColor: AppTheme.of().textSecondary,
                     ),
                   ),
           ),
@@ -342,7 +342,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                         ? ExpressiveBadge(label: 'Stores: Requested', color: AppTheme.of(context).amber, fontSize: 10)
                         : e.po.isNotEmpty
                             ? ExpressiveBadge(label: 'Stores: Pending', color: AppTheme.of(context).amber, fontSize: 10)
-                            : const ExpressiveBadge(label: 'Add to Stores', color: Colors.grey, fontSize: 10),
+                            : ExpressiveBadge(label: 'Add to Stores', color: AppTheme.of().textSecondary, fontSize: 10),
             ]),
             if (e.trackingUrl.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -410,7 +410,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Divider(height: 16),
       Row(children: [
-        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.of(context).emerald : Colors.grey),
+        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.of(context).emerald : AppTheme.of().textSecondary),
         const SizedBox(width: 8),
         const Expanded(child: Text('Add to Stores', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
         Switch(

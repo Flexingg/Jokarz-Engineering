@@ -25,7 +25,7 @@ class _KpiCard extends StatelessWidget {
               Text('$value',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
               Text(label,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ]),
@@ -83,7 +83,7 @@ class _TodayTile extends StatelessWidget {
                       taskCount == 1
                           ? '1 task due today • tap to open calendar'
                           : '$taskCount tasks due today • tap to open calendar',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
                     ),
                   ],
                 ),

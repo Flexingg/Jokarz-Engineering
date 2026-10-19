@@ -298,10 +298,10 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.event_available_rounded,
                     size: 44,
-                    color: Colors.grey,
+                    color: AppTheme.of().textSecondary,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -449,10 +449,10 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             ]),
           ),
           if (dayDowntimes.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 2, 16, 4),
               child: Text('No planned downtime. Tap Add to schedule maintenance.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
             )
           else
             ...dayDowntimes.map((d) => Padding(
@@ -468,7 +468,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                     const SizedBox(width: 8),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${d.title}  •  ${d.machine}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      if (d.timeRange.isNotEmpty) Text(d.timeRange, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      if (d.timeRange.isNotEmpty) Text(d.timeRange, style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
                     ])),
                     IconButton(icon: const Icon(Icons.edit_outlined, size: 16), onPressed: () => _showDowntimeDialog(_selectedDate, existing: d), tooltip: 'Edit'),
                     IconButton(icon: Icon(Icons.delete_outline, size: 16, color: AppTheme.of(context).coral), onPressed: () => ref.read(projectProvider.notifier).deleteDowntime(d.id), tooltip: 'Delete'),
@@ -551,10 +551,10 @@ class _DayOfWeekLabel extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: Colors.grey,
+            color: AppTheme.of().textSecondary,
           ),
         ),
       ),

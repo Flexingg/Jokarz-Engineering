@@ -409,19 +409,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               ? AppTheme.of(context).coral
               : AppTheme.of(context).amber);
 
+    // An inset glass card on the backdrop rather than a full-width band.
     return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.of(context).surface
-            : AppTheme.of(context).surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark
-                ? AppTheme.of(context).border
-                : AppTheme.of(context).border,
-          ),
-        ),
+        color: AppTheme.of(context).surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +447,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               if (isTerminal)
                 ExpressiveBadge(
                   label: 'Lifetime #${project.priority} (Closed)',
-                  color: Colors.grey,
+                  color: AppTheme.of().textSecondary,
                   fontSize: 11,
                 )
               else
@@ -530,10 +525,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.precision_manufacturing_outlined,
                             size: 14,
-                            color: Colors.grey,
+                            color: AppTheme.of().textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -558,10 +553,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.account_tree_outlined,
                             size: 14,
-                            color: Colors.grey,
+                            color: AppTheme.of().textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -822,7 +817,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               text: TextSpan(
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: AppTheme.of(context).textPrimary,
                 ),
                 children: [
                   TextSpan(

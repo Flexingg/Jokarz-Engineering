@@ -228,7 +228,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
           const SizedBox(height: 8),
           Text(
             'Every active project has been actioned today.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of().textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -254,11 +254,11 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             children: [
               Text(
                 '$remaining remaining',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of().textSecondary),
               ),
               Text(
                 ' / ',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of().textSecondary),
               ),
             ],
           ),
@@ -305,8 +305,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _snooze(project),
-                  icon: const Icon(Icons.skip_next_rounded, color: Colors.grey),
-                  label: const Text('Skip Today', style: TextStyle(color: Colors.grey)),
+                  icon: Icon(Icons.skip_next_rounded, color: AppTheme.of().textSecondary),
+                  label: Text('Skip Today', style: TextStyle(color: AppTheme.of().textSecondary)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: BorderSide(color: Colors.grey.withValues(alpha: 0.4)),
@@ -330,7 +330,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   label: const Text('Take Action'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.of(context).emerald,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -405,7 +405,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                       ),
                       child: Text(
                         project.phase,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
                       ),
                     ),
                   ],
@@ -421,7 +421,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   const SizedBox(height: 8),
                   Text(
                     project.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of().textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -434,7 +434,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 if (project.machine.isNotEmpty) ...[
                   Row(
                     children: [
-                      const Icon(Icons.precision_manufacturing_rounded, size: 16, color: Colors.grey),
+                      Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of().textSecondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Wrap(
@@ -481,7 +481,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                         const SizedBox(width: 8),
                         Text(
                           dateFormat.format(nextTask.scheduledDate!),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
                         ),
                       ],
                     ],

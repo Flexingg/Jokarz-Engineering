@@ -73,7 +73,7 @@ class _MachinesScreenState extends ConsumerState<MachinesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.precision_manufacturing_outlined, size: 54, color: Colors.grey),
+                        Icon(Icons.precision_manufacturing_outlined, size: 54, color: AppTheme.of().textSecondary),
                         const SizedBox(height: 14),
                         const Text(
                           'No Machines Found',
@@ -220,7 +220,7 @@ class _MachineAssetCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Text('Sub-Assemblies: ', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                Text('Sub-Assemblies: ', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
                 Expanded(
                   child: Text(
                     asset.subAssemblies.join(' • '),

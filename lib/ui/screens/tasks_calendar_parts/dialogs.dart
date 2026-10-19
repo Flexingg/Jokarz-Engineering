@@ -51,7 +51,7 @@ extension _TasksCalendarDialogs on _TasksCalendarScreenState {
         Text('Projects on ${d.machine}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (matches.isEmpty)
-          const Text('No projects on this machine.', style: TextStyle(color: Colors.grey))
+          Text('No projects on this machine.', style: TextStyle(color: AppTheme.of().textSecondary))
         else
           ...matches.map((p) => ListTile(
             dense: true,

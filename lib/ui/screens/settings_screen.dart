@@ -152,10 +152,10 @@ class SettingsScreen extends ConsumerWidget {
                           ? AppTheme.of(context).primary
                           : Colors.white,
                       foregroundColor: user != null
-                          ? Colors.black87
-                          : Colors.black87,
+                          ? AppTheme.onColor(AppTheme.of(context).primary)
+                          : const Color(0xFF15171B),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
                       ),
                     ),
                     onPressed: () => showAuthAccountModal(context),

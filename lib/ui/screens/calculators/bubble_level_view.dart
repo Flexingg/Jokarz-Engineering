@@ -567,7 +567,7 @@ class _BubbleLevelPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2 - 10;
     final bubbleRadius = 24.0;
     final accent = isLevel ? AppTheme.of().emerald : AppTheme.of().coral;
-    final outline = isDark ? Colors.white38 : Colors.black38;
+    final outline = isDark ? Colors.white38 : AppTheme.of().textSecondary;
 
     // Vial face
     final vialPaint = Paint()

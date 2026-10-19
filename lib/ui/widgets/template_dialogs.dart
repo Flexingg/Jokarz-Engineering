@@ -34,7 +34,7 @@ class TemplateDialogs {
             children: [
               Text(
                 'Create a reusable blueprint from "${project.title}" including its ${project.tasks.length} task steps and ${project.orders.length} order items.',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -78,7 +78,7 @@ class TemplateDialogs {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.of(context).primary,
-              foregroundColor: Colors.black87,
+              foregroundColor: AppTheme.onColor(AppTheme.of(context).primary),
             ),
             child: const Text('Save Template'),
           ),
@@ -147,7 +147,7 @@ class TemplateDialogs {
                             children: [
                               ExpressiveBadge(
                                 label: '${t.tasks.length} Tasks',
-                                color: Colors.grey,
+                                color: AppTheme.of().textSecondary,
                                 fontSize: 10,
                               ),
                               ExpressiveBadge(

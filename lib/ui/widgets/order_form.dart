@@ -506,7 +506,7 @@ class OrderFields extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               secondary: Icon(
                 Icons.warehouse_outlined,
-                color: draft.addToStores ? colors.emerald : Colors.grey,
+                color: draft.addToStores ? colors.emerald : AppTheme.of().textSecondary,
               ),
               title: const Text(
                 'Add to Stores',

@@ -338,7 +338,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
             child: Material(
               color: colors.surfaceSolid,
               elevation: 12,
-              shadowColor: Colors.black54,
+              shadowColor: AppTheme.of().textSecondary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 side: BorderSide(color: colors.glassEdgeTop),

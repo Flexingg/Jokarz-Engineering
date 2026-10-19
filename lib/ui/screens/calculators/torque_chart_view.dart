@@ -238,7 +238,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
           ),
           Text(
             'Lubed: ${lubVal.toStringAsFixed(1)} $unit',
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
           ),
         ],
       ),

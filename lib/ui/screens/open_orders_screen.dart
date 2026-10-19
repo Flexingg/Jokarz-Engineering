@@ -330,7 +330,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     label: const Text('Add Order'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.of(context).amber,
-                      foregroundColor: Colors.black87,
+                      foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                     ),
                   ),
@@ -391,7 +391,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           Expanded(
             child: filtered.isEmpty
                 ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+                    Icon(Icons.inbox_outlined, size: 48, color: AppTheme.of().textSecondary),
                     const SizedBox(height: 12),
                     const Text('No Orders Found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
@@ -420,7 +420,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               icon: const Icon(Icons.add_shopping_cart_rounded),
               label: const Text('Add Order'),
               backgroundColor: AppTheme.of(context).amber,
-              foregroundColor: Colors.black87,
+              foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
             ),
     );
   }

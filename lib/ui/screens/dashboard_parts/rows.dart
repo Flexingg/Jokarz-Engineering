@@ -45,7 +45,7 @@ class _EmptyHint extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.check_circle_outline,
-              size: 16, color: isDark ? Colors.grey : Colors.black38),
+              size: 16, color: AppTheme.of(context).textSecondary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -124,7 +124,7 @@ class _ProjectRow extends StatelessWidget {
                   else if (p.machine.isNotEmpty)
                     Text(
                       p.machine,
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
@@ -148,7 +148,7 @@ class _QueueRow extends StatelessWidget {
     final days = p.daysSinceLastAction;
     final col = days >= 7
         ? Colors.red.shade400
-        : (days >= 3 ? AppTheme.of(context).amber : Colors.grey);
+        : (days >= 3 ? AppTheme.of(context).amber : AppTheme.of().textSecondary);
 
     return InkWell(
       onTap: onTap,
@@ -177,7 +177,7 @@ class _QueueRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey),
+            Icon(Icons.chevron_right_rounded, size: 16, color: AppTheme.of().textSecondary),
           ],
         ),
       ),
@@ -216,7 +216,7 @@ class _OrderRow extends StatelessWidget {
                   ),
                   Text(
                     '${entry.project.title} • PO: ${order.po.isNotEmpty ? order.po : "—"}',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

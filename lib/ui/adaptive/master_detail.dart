@@ -41,7 +41,8 @@ class AdaptiveMasterDetail extends StatelessWidget {
         return Row(
           children: [
             SizedBox(width: masterWidth, child: list),
-            const VerticalDivider(width: 1),
+            // Panes float on the shared backdrop; a gap separates them.
+            const SizedBox(width: 4),
             Expanded(child: Builder(builder: detailBuilder)),
           ],
         );
