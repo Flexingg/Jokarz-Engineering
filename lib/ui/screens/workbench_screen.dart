@@ -76,7 +76,6 @@ class WorkbenchScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setSheetState) {
           return SizedBox(

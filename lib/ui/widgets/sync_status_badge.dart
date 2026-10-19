@@ -73,7 +73,7 @@ class SyncStatusBadge extends ConsumerWidget {
                 color: color,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: AppTheme.of(context).surfaceSolid,
                   width: 1.5,
                 ),
               ),

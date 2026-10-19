@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/motion/motion.dart';
+import 'glow_splash.dart';
 
 /// A semantic accent used by const data tables/dictionaries so they stay
 /// theme-dynamic: store the [AccentKey] in const data, then resolve it to the
@@ -16,40 +17,63 @@ extension AccentKeyX on AccentKey {
       };
 }
 
-/// A theme family the user can select. Drives the whole app's palette.
+/// Light or dark. The look itself is one design (soft gradient backgrounds,
+/// frosted glass chrome, pill controls); the accent color is picked
+/// separately.
 enum AppThemeFamily {
-  graphiteDark('Graphite Dark'),
-  graphiteLight('Graphite Light'),
-  bridgestoneDark('Bridgestone Dark'),
-  bridgestoneLight('Bridgestone Light'),
-  vibesDark('Vibes Dark'),
-  vibesLight('Vibes White'),
-  materialLight('Material Light'),
-  materialDark('Material Dark'),
-  brutalistLight('Bridgestone Brutalist Light'),
-  brutalistDark('Bridgestone Brutalist Dark');
+  light('Light'),
+  dark('Dark');
 
   final String label;
   const AppThemeFamily(this.label);
+
+  Brightness get brightness =>
+      this == AppThemeFamily.dark ? Brightness.dark : Brightness.light;
+
+  /// Older builds stored one of ten named themes. Anything that was a light
+  /// theme becomes [light]; everything else (and anything unknown) is [dark].
+  static AppThemeFamily fromStored(String? name) {
+    if (name == null) return AppThemeFamily.dark;
+    for (final f in AppThemeFamily.values) {
+      if (f.name == name) return f;
+    }
+    final n = name.toLowerCase();
+    return n.contains('light') || n.contains('white')
+        ? AppThemeFamily.light
+        : AppThemeFamily.dark;
+  }
 }
 
-/// Semantic color tokens read by the app's widgets. Each theme supplies its own
-/// values, so switching theme re-colors the entire UI (not just the shell).
+/// Semantic color tokens read by the app's widgets.
+///
+/// Surfaces are translucent on purpose: content cards sit on a gentle
+/// gradient and let a little of it through ("glass"), while staying opaque
+/// enough that text contrast is measured and guaranteed (see the theme tests).
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   final Color primary; // main accent
-  final Color primaryBlue; // secondary blue accent
+  final Color primaryBlue; // secondary accent (same as primary in this design)
   final Color amber;
   final Color emerald;
-  final Color coral;
-  final Color background;
-  final Color surface;
+  final Color coral; // alerts: orange, so a red accent never reads as an error
+  final Color background; // gradient start (top-left)
+  final Color backgroundEnd; // gradient end (bottom-right)
+  final Color backgroundGlow; // soft accent light in the top-left corner
+  final Color surface; // content cards (calm, mostly opaque glass)
   final Color surfaceCard;
-  final Color surfaceHighlight;
+  final Color surfaceSolid; // dialogs, menus, sheets, anything over content
+  final Color surfaceHighlight; // hover / selected wash, works on any surface
   final Color surfaceVariant;
+  final Color glass; // floating chrome fill (rail, nav island, panels)
+  final Color glassEdgeTop; // contour glow, top of the stroke
+  final Color glassEdgeBottom; // contour glow, bottom of the stroke
   final Color border;
   final Color textPrimary;
   final Color textSecondary;
+
+  /// Blur behind floating chrome. Off when the user asks for reduced
+  /// transparency (then [glass] is opaque as well).
+  final bool blurGlass;
 
   const AppColors({
     required this.primary,
@@ -58,13 +82,20 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.emerald,
     required this.coral,
     required this.background,
+    required this.backgroundEnd,
+    required this.backgroundGlow,
     required this.surface,
     required this.surfaceCard,
+    required this.surfaceSolid,
     required this.surfaceHighlight,
     required this.surfaceVariant,
+    required this.glass,
+    required this.glassEdgeTop,
+    required this.glassEdgeBottom,
     required this.border,
     required this.textPrimary,
     required this.textSecondary,
+    this.blurGlass = true,
   });
 
   @override
@@ -75,13 +106,20 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? emerald,
     Color? coral,
     Color? background,
+    Color? backgroundEnd,
+    Color? backgroundGlow,
     Color? surface,
     Color? surfaceCard,
+    Color? surfaceSolid,
     Color? surfaceHighlight,
     Color? surfaceVariant,
+    Color? glass,
+    Color? glassEdgeTop,
+    Color? glassEdgeBottom,
     Color? border,
     Color? textPrimary,
     Color? textSecondary,
+    bool? blurGlass,
   }) {
     return AppColors(
       primary: primary ?? this.primary,
@@ -90,45 +128,82 @@ class AppColors extends ThemeExtension<AppColors> {
       emerald: emerald ?? this.emerald,
       coral: coral ?? this.coral,
       background: background ?? this.background,
+      backgroundEnd: backgroundEnd ?? this.backgroundEnd,
+      backgroundGlow: backgroundGlow ?? this.backgroundGlow,
       surface: surface ?? this.surface,
       surfaceCard: surfaceCard ?? this.surfaceCard,
+      surfaceSolid: surfaceSolid ?? this.surfaceSolid,
       surfaceHighlight: surfaceHighlight ?? this.surfaceHighlight,
       surfaceVariant: surfaceVariant ?? this.surfaceVariant,
+      glass: glass ?? this.glass,
+      glassEdgeTop: glassEdgeTop ?? this.glassEdgeTop,
+      glassEdgeBottom: glassEdgeBottom ?? this.glassEdgeBottom,
       border: border ?? this.border,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
+      blurGlass: blurGlass ?? this.blurGlass,
     );
   }
 
   @override
   AppColors lerp(ThemeExtension<AppColors>? other, double t) {
     if (other is! AppColors) return this;
+    Color l(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppColors(
-      primary: Color.lerp(primary, other.primary, t)!,
-      primaryBlue: Color.lerp(primaryBlue, other.primaryBlue, t)!,
-      amber: Color.lerp(amber, other.amber, t)!,
-      emerald: Color.lerp(emerald, other.emerald, t)!,
-      coral: Color.lerp(coral, other.coral, t)!,
-      background: Color.lerp(background, other.background, t)!,
-      surface: Color.lerp(surface, other.surface, t)!,
-      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
-      surfaceHighlight: Color.lerp(surfaceHighlight, other.surfaceHighlight, t)!,
-      surfaceVariant: Color.lerp(surfaceVariant, other.surfaceVariant, t)!,
-      border: Color.lerp(border, other.border, t)!,
-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      primary: l(primary, other.primary),
+      primaryBlue: l(primaryBlue, other.primaryBlue),
+      amber: l(amber, other.amber),
+      emerald: l(emerald, other.emerald),
+      coral: l(coral, other.coral),
+      background: l(background, other.background),
+      backgroundEnd: l(backgroundEnd, other.backgroundEnd),
+      backgroundGlow: l(backgroundGlow, other.backgroundGlow),
+      surface: l(surface, other.surface),
+      surfaceCard: l(surfaceCard, other.surfaceCard),
+      surfaceSolid: l(surfaceSolid, other.surfaceSolid),
+      surfaceHighlight: l(surfaceHighlight, other.surfaceHighlight),
+      surfaceVariant: l(surfaceVariant, other.surfaceVariant),
+      glass: l(glass, other.glass),
+      glassEdgeTop: l(glassEdgeTop, other.glassEdgeTop),
+      glassEdgeBottom: l(glassEdgeBottom, other.glassEdgeBottom),
+      border: l(border, other.border),
+      textPrimary: l(textPrimary, other.textPrimary),
+      textSecondary: l(textSecondary, other.textSecondary),
+      blurGlass: t < 0.5 ? blurGlass : other.blurGlass,
     );
+  }
+
+  /// The worst-case colors text can end up on: each gradient end, the glow
+  /// corner, and a content card over each of those. Used by the contrast
+  /// tests and by [AppTheme] to tune the accent.
+  List<Color> get readableBackdrops {
+    final ends = [
+      background,
+      backgroundEnd,
+      Color.alphaBlend(backgroundGlow, background),
+    ];
+    return [
+      ...ends,
+      for (final e in ends) Color.alphaBlend(surface, e),
+      surfaceSolid,
+    ];
   }
 }
 
-/// Industrial / Material Expressive inspired design tokens.
+/// Design tokens: one corner family, one material scale, light and dark.
 class AppTheme {
-  // --- Corner radii (kept constant; themes set their own shapes) ---
-  static const double radiusXs = 8.0;
-  static const double radiusSm = 12.0;
-  static const double radiusMd = 18.0;
-  static const double radiusLg = 24.0;
-  static const double radiusXl = 32.0;
+  // --- Corner radii: one continuous family, nested = outer - padding ---
+  static const double radiusXs = 8.0; // tags, small inputs
+  static const double radiusSm = 12.0; // chips, thumbnails
+  static const double radiusMd = 16.0; // list items, small cards, text fields
+  static const double radiusLg = 24.0; // cards, grouped lists, panels
+  static const double radiusXl = 32.0; // dialogs, sheets
+  static const double radiusFull = 999.0; // pills: buttons, nav island, search
+
+  // --- Glass blur (logical px) ---
+  static const double blurThin = 24; // nav island, chips over content
+  static const double blurRegular = 32; // menus, panels, top bars
+  static const double blurThick = 44; // dialogs, sheets
 
   // Legacy const accent colors — used only in const data tables/lists that
   // cannot be theme-reactive. Widgets should use `AppTheme.of(context)`.
@@ -137,10 +212,14 @@ class AppTheme {
   static const Color accentAmber = Color(0xFFFFB300);
   static const Color accentEmerald = Color(0xFF00E676);
   static const Color accentCoral = Color(0xFFFF3D71);
+  static const Color bridgestoneRed = Color(0xFFE4002B);
 
-  /// The active palette. Kept in sync with the selected theme so widgets that
+  /// Default accent when the user has not picked one.
+  static const Color defaultAccent = Color(0xFF4DA3FF);
+
+  /// The active palette. Kept in sync with the built theme so widgets that
   /// read tokens without a [BuildContext] (helper/color methods) still resolve.
-  static AppColors _active = _bridgestoneDark;
+  static AppColors _active = _colors(Brightness.dark, defaultAccent, false);
 
   /// The theme's semantic colors. Pass a [BuildContext] from a build method so
   /// the widget correctly rebuilds on theme change; helper methods may call it
@@ -153,359 +232,143 @@ class AppTheme {
     return _active;
   }
 
-  // ==== PALETTES ====
-  static const AppColors _vibesDark = AppColors(
-    primary: Color(0xFF00E5FF),
-    primaryBlue: Color(0xFF0066FF),
-    amber: Color(0xFFFFB300),
-    emerald: Color(0xFF00E676),
-    coral: Color(0xFFFF3D71),
-    background: Color(0xFF0B0F17),
-    surface: Color(0xFF131A26),
-    surfaceCard: Color(0xFF1A2332),
-    surfaceHighlight: Color(0xFF233045),
-    surfaceVariant: Color(0xFF233045),
-    border: Color(0xFF2B3A52),
-    textPrimary: Color(0xFFF1F5F9),
-    textSecondary: Color(0xFF94A3B8),
-  );
-
-  static const AppColors _vibesLight = AppColors(
-    primary: Color(0xFF0066FF),
-    primaryBlue: Color(0xFF0066FF),
-    amber: Color(0xFFFFB300),
-    emerald: Color(0xFF008947),
-    coral: Color(0xFFFF3D71),
-    background: Color(0xFFF4F6FB),
-    surface: Color(0xFFFFFFFF),
-    surfaceCard: Color(0xFFF8FAFC),
-    surfaceHighlight: Color(0xFFE2E8F0),
-    surfaceVariant: Color(0xFFE2E8F0),
-    border: Color(0xFFCBD5E1),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF64748B),
-  );
-
-  // Bridgestone red — the pop accent of the Brutalist themes.
-  static const Color bridgestoneRed = Color(0xFFE4002B);
-
-  // Brutalist uses red for EVERY accent token: the app renders its accent
-  // buttons with mixed hardcoded foregrounds (black AND white), and Bridgestone
-  // red is the single color with enough contrast for both (~5:1 / ~4.2:1),
-  // keeping surfaces monochrome with red as the unified action/pop color.
-  static const AppColors _brutalistLight = AppColors(
-    primary: bridgestoneRed,
-    primaryBlue: bridgestoneRed,
-    amber: bridgestoneRed,
-    emerald: bridgestoneRed,
-    coral: bridgestoneRed,
-    background: Color(0xFFFAFAFA),
-    surface: Color(0xFFFFFFFF),
-    surfaceCard: Color(0xFFFFFFFF),
-    surfaceHighlight: Color(0xFFEDEDED),
-    surfaceVariant: Color(0xFFEDEDED),
-    border: Color(0xFF000000),
-    textPrimary: Color(0xFF000000),
-    textSecondary: Color(0xFF444444),
-  );
-
-  static const AppColors _brutalistDark = AppColors(
-    primary: bridgestoneRed,
-    primaryBlue: bridgestoneRed,
-    amber: bridgestoneRed,
-    emerald: bridgestoneRed,
-    coral: bridgestoneRed,
-    background: Color(0xFF0A0A0A),
-    surface: Color(0xFF141414),
-    surfaceCard: Color(0xFF1A1A1A),
-    surfaceHighlight: Color(0xFF242424),
-    surfaceVariant: Color(0xFF242424),
-    border: Color(0xFF3A3A3A),
-    textPrimary: Color(0xFFF5F5F5),
-    textSecondary: Color(0xFFA0A0A0),
-  );
-
-  // Bridgestone Modern: red/black/white with rounded, soft surfaces. Red is the
-  // brand + action color; green/amber/coral keep their status meanings.
-  static const AppColors _bridgestoneDark = AppColors(
-    primary: Color(0xFFE4002B),
-    primaryBlue: Color(0xFF8A94A6),
-    amber: Color(0xFFFFB020),
-    emerald: Color(0xFF2ECC71),
-    coral: Color(0xFFFF6B6B),
-    background: Color(0xFF0D0D0F),
-    surface: Color(0xFF161618),
-    surfaceCard: Color(0xFF1C1C1F),
-    surfaceHighlight: Color(0xFF2A2A2E),
-    surfaceVariant: Color(0xFF26262A),
-    border: Color(0xFF34343A),
-    textPrimary: Color(0xFFF4F4F5),
-    textSecondary: Color(0xFFA1A1AA),
-  );
-
-  static const AppColors _bridgestoneLight = AppColors(
-    primary: Color(0xFFE4002B),
-    primaryBlue: Color(0xFF52525B),
-    amber: Color(0xFFD97706),
-    emerald: Color(0xFF16A34A),
-    coral: Color(0xFFDC2626),
-    background: Color(0xFFF5F5F6),
-    surface: Color(0xFFFFFFFF),
-    surfaceCard: Color(0xFFFFFFFF),
-    surfaceHighlight: Color(0xFFEDEDEF),
-    surfaceVariant: Color(0xFFE9E9EC),
-    border: Color(0xFFDADADF),
-    textPrimary: Color(0xFF111113),
-    textSecondary: Color(0xFF63636B),
-  );
-
-  static ThemeData _buildBridgestone(AppColors c, Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: bridgestoneRed,
-      brightness: brightness,
-    ).copyWith(
-      primary: bridgestoneRed,
-      onPrimary: Colors.white,
-      surface: c.surface,
-      onSurface: c.textPrimary,
-      outline: c.border,
-      error: c.coral,
-    );
-    final base = _buildTheme(
-      brightness: brightness,
-      colors: c,
-      colorScheme: scheme,
-      radius: radiusSm,
-    );
-    _active = c;
-    final btnShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm));
-    return base.copyWith(
-      appBarTheme: base.appBarTheme.copyWith(
-        backgroundColor: c.surface,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: c.textPrimary,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.2,
-          fontSize: 20,
-        ),
-      ),
-      cardTheme: base.cardTheme.copyWith(
-        elevation: 0,
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
-          side: BorderSide(color: c.border),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bridgestoneRed,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: btnShape,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: bridgestoneRed,
-          foregroundColor: Colors.white,
-          shape: btnShape,
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: c.textPrimary,
-          side: BorderSide(color: c.border, width: 1.4),
-          shape: btnShape,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: isDark ? Colors.white : bridgestoneRed,
-          shape: btnShape,
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: bridgestoneRed,
-        foregroundColor: Colors.white,
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: c.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
-        titleTextStyle: TextStyle(
-            color: c.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: c.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLg)),
-        ),
-      ),
-      dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? Colors.white : c.textSecondary),
-        trackColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? bridgestoneRed : c.surfaceHighlight),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? bridgestoneRed : Colors.transparent),
-        checkColor: const WidgetStatePropertyAll(Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-        side: BorderSide(color: c.textSecondary, width: 1.5),
-      ),
-      tabBarTheme: TabBarThemeData(
-        labelColor: bridgestoneRed,
-        unselectedLabelColor: c.textSecondary,
-        indicatorColor: bridgestoneRed,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? c.surfaceHighlight : const Color(0xFF18181B),
-        contentTextStyle: const TextStyle(color: Colors.white),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm)),
-      ),
-    );
+  static double contrast(Color a, Color b) {
+    final la = a.computeLuminance(), lb = b.computeLuminance();
+    final hi = la > lb ? la : lb, lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
   }
 
-  static ThemeData get bridgestoneDarkTheme =>
-      _buildBridgestone(_bridgestoneDark, Brightness.dark);
-  static ThemeData get bridgestoneLightTheme =>
-      _buildBridgestone(_bridgestoneLight, Brightness.light);
-
-  /// [accent] only affects the Graphite families.
-  static ThemeData themeFor(AppThemeFamily family, {Color? accent}) {
-    switch (family) {
-      case AppThemeFamily.graphiteDark:
-        return _buildGraphite(Brightness.dark, accent ?? graphiteBlue);
-      case AppThemeFamily.graphiteLight:
-        return _buildGraphite(Brightness.light, accent ?? graphiteBlue);
-      case AppThemeFamily.bridgestoneDark:
-        return bridgestoneDarkTheme;
-      case AppThemeFamily.bridgestoneLight:
-        return bridgestoneLightTheme;
-      case AppThemeFamily.vibesDark:
-        return vibesDarkTheme;
-      case AppThemeFamily.vibesLight:
-        return vibesLightTheme;
-      case AppThemeFamily.materialLight:
-        return materialLightTheme;
-      case AppThemeFamily.materialDark:
-        return materialDarkTheme;
-      case AppThemeFamily.brutalistLight:
-        return brutalistLightTheme;
-      case AppThemeFamily.brutalistDark:
-        return brutalistDarkTheme;
-    }
-  }
-
-
-  // ==== GRAPHITE: flat surfaces, hairline borders, one accent ====
-  static const Color graphiteBlue = Color(0xFF4DA3FF);
-
-  /// On a light background an accent needs to be darker to stay readable as
-  /// text and on white buttons.
-  static Color _accentFor(Brightness b, Color accent) {
-    // The accent is used both as a fill and as text/icon color on the surface,
-    // so nudge it (only as far as needed) until it reads at 4.5:1 there.
-    final surface =
-        b == Brightness.dark ? const Color(0xFF15181D) : Colors.white;
+  /// Nudges [accent] (only as far as needed) until it reads at 4.5:1 as text
+  /// on every backdrop it can appear over.
+  static Color _accentFor(Brightness b, Color accent, List<Color> backdrops) {
     var hsl = HSLColor.fromColor(accent);
     var c = accent;
     final step = b == Brightness.dark ? 0.02 : -0.02;
-    while (_contrast(c, surface) < 4.6 &&
-        hsl.lightness > 0.05 &&
-        hsl.lightness < 0.95) {
+    double worst(Color x) =>
+        backdrops.map((d) => contrast(x, d)).reduce((a, b) => a < b ? a : b);
+    while (worst(c) < 4.6 && hsl.lightness > 0.05 && hsl.lightness < 0.95) {
       hsl = hsl.withLightness((hsl.lightness + step).clamp(0.0, 1.0));
       c = hsl.toColor();
     }
     return c;
   }
 
-  static double _contrast(Color a, Color b) {
-    final la = a.computeLuminance(), lb = b.computeLuminance();
-    final hi = la > lb ? la : lb, lo = la > lb ? lb : la;
-    return (hi + 0.05) / (lo + 0.05);
-  }
+  static AppColors _colors(Brightness b, Color accent, bool reduceTransparency) {
+    final dark = b == Brightness.dark;
+    final opaque = reduceTransparency;
+    // Gradient ends stay close in luminance so text reads the same everywhere.
+    final base = dark ? const Color(0xFF07080B) : const Color(0xFFF2F3F5);
+    final start = Color.alphaBlend(
+        accent.withValues(alpha: dark ? 0.10 : 0.05), base);
+    final end = dark ? const Color(0xFF0C0A12) : const Color(0xFFF4F1F5);
+    final glow = accent.withValues(alpha: dark ? 0.12 : 0.06);
 
-  static AppColors _graphiteColors(Brightness b, Color accent) {
-    final a = _accentFor(b, accent);
-    if (b == Brightness.dark) {
-      return AppColors(
-        primary: a,
-        primaryBlue: a,
-        amber: const Color(0xFFF5B841),
-        emerald: const Color(0xFF3DD68C),
-        // Alerts are orange, not red, so a red accent never looks like an error.
-        coral: const Color(0xFFFF8C42),
-        background: const Color(0xFF0D0F12),
-        surface: const Color(0xFF15181D),
-        surfaceCard: const Color(0xFF15181D),
-        surfaceHighlight: const Color(0xFF1D2128),
-        surfaceVariant: const Color(0xFF1D2128),
-        border: const Color(0xFF272C34),
-        textPrimary: const Color(0xFFE9ECF0),
-        textSecondary: const Color(0xFF9BA4AF),
-      );
-    }
-    return AppColors(
-      primary: a,
-      primaryBlue: a,
-      amber: const Color(0xFF9A6200),
-      emerald: const Color(0xFF13804F),
-      coral: const Color(0xFFB8470A),
-      background: const Color(0xFFF3F4F6),
-      surface: const Color(0xFFFFFFFF),
-      surfaceCard: const Color(0xFFFFFFFF),
-      surfaceHighlight: const Color(0xFFEEF0F3),
-      surfaceVariant: const Color(0xFFEEF0F3),
-      border: const Color(0xFFE1E4E9),
-      textPrimary: const Color(0xFF14171C),
-      textSecondary: const Color(0xFF5A6370),
+    final surface = dark
+        ? Color.fromRGBO(30, 30, 33, opaque ? 1 : 0.80)
+        : Color.fromRGBO(255, 255, 255, opaque ? 1 : 0.80);
+    final solid = dark ? const Color(0xFF1C1C1F) : const Color(0xFFFBFBFD);
+    final glass = opaque
+        ? solid
+        : dark
+            ? const Color.fromRGBO(34, 34, 38, 0.66)
+            : const Color.fromRGBO(255, 255, 255, 0.62);
+
+    final draft = AppColors(
+      primary: accent,
+      primaryBlue: accent,
+      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF7F5000),
+      emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF0D6A3E),
+      coral: dark ? const Color(0xFFFF8C42) : const Color(0xFF9A3B08),
+      background: start,
+      backgroundEnd: end,
+      backgroundGlow: glow,
+      surface: surface,
+      surfaceCard: surface,
+      surfaceSolid: solid,
+      surfaceHighlight: dark
+          ? const Color.fromRGBO(255, 255, 255, 0.07)
+          : const Color.fromRGBO(0, 0, 0, 0.045),
+      surfaceVariant: dark
+          ? const Color.fromRGBO(255, 255, 255, 0.07)
+          : const Color.fromRGBO(0, 0, 0, 0.045),
+      glass: glass,
+      glassEdgeTop: opaque
+          ? (dark ? const Color(0x1FFFFFFF) : const Color(0x14000000))
+          : (dark ? const Color(0x38FFFFFF) : const Color(0xCCFFFFFF)),
+      glassEdgeBottom: opaque
+          ? (dark ? const Color(0x1FFFFFFF) : const Color(0x14000000))
+          : (dark ? const Color(0x0DFFFFFF) : const Color(0x33FFFFFF)),
+      border: dark ? const Color(0x1FFFFFFF) : const Color(0x1A000000),
+      textPrimary: dark ? const Color(0xFFECECEE) : const Color(0xFF15171B),
+      textSecondary: dark ? const Color(0xFFA3A6AE) : const Color(0xFF515864),
+      blurGlass: !opaque,
     );
+    final a = _accentFor(b, accent, draft.readableBackdrops);
+    return draft.copyWith(primary: a, primaryBlue: a);
   }
 
-  static ThemeData _buildGraphite(Brightness brightness, Color accent) {
-    final c = _graphiteColors(brightness, accent);
+  /// The one theme builder. [reduceTransparency] swaps every glass surface
+  /// for an opaque one and turns blur off.
+  static ThemeData themeFor(
+    AppThemeFamily family, {
+    Color? accent,
+    bool reduceTransparency = false,
+  }) {
+    final brightness = family.brightness;
+    final c = _colors(brightness, accent ?? defaultAccent, reduceTransparency);
+    _active = c;
+    return _build(brightness, c);
+  }
+
+  static ThemeData _build(Brightness brightness, AppColors c) {
     final isDark = brightness == Brightness.dark;
     // Text on accent-filled buttons: whichever of dark/white reads better.
     const darkInk = Color(0xFF081019);
-    final ink = _contrast(c.primary, darkInk) >= _contrast(c.primary, Colors.white)
+    final ink = contrast(c.primary, darkInk) >= contrast(c.primary, Colors.white)
         ? darkInk
         : Colors.white;
-    final scheme = ColorScheme.fromSeed(seedColor: c.primary, brightness: brightness).copyWith(
+    final scheme = ColorScheme.fromSeed(seedColor: c.primary, brightness: brightness)
+        .copyWith(
       primary: c.primary,
       onPrimary: ink,
-      surface: c.surface,
+      surface: c.surfaceSolid,
       onSurface: c.textPrimary,
+      onSurfaceVariant: c.textSecondary,
+      surfaceContainerLowest: c.surfaceSolid,
+      surfaceContainerLow: c.surfaceSolid,
+      surfaceContainer: c.surfaceSolid,
+      surfaceContainerHigh: c.surfaceSolid,
+      surfaceContainerHighest: c.surfaceSolid,
       outline: c.border,
       outlineVariant: c.border,
       error: c.coral,
+      surfaceTint: Colors.transparent,
     );
-    final base = _buildTheme(
+
+    const pill = StadiumBorder();
+    const btnText = TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5);
+    final edge = BorderSide(color: c.border);
+    final strongEdge = BorderSide(
+        color: isDark ? const Color(0x33FFFFFF) : const Color(0x29000000));
+    final selectedWash = c.primary.withValues(alpha: isDark ? 0.16 : 0.12);
+    final snackBg = isDark ? const Color(0xFF2A2A2E) : const Color(0xFF1C1D21);
+
+    final base = ThemeData(
+      useMaterial3: true,
       brightness: brightness,
-      colors: c,
       colorScheme: scheme,
-      radius: 12,
+      extensions: [c],
+      // Every page paints the shared gradient behind a transparent scaffold.
+      scaffoldBackgroundColor: Colors.transparent,
+      canvasColor: c.surfaceSolid,
+      splashFactory: GlowSplash.splashFactory,
+      highlightColor: c.textPrimary.withValues(alpha: 0.04),
+      hoverColor: c.textPrimary.withValues(alpha: 0.04),
+      splashColor: (isDark ? Colors.white : c.primary)
+          .withValues(alpha: isDark ? 0.10 : 0.14),
+      dividerColor: c.border,
     );
-    _active = c;
-    final btnShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(10));
-    const btnText = TextStyle(fontWeight: FontWeight.w600, fontSize: 13);
-    final selectedWash = c.primary.withValues(alpha: isDark ? 0.14 : 0.10);
+
     return base.copyWith(
       // Segoe UI Variable on current Windows, Roboto on Android.
       textTheme: base.textTheme.apply(
@@ -513,9 +376,12 @@ class AppTheme {
         bodyColor: c.textPrimary,
         displayColor: c.textPrimary,
       ),
-      appBarTheme: base.appBarTheme.copyWith(
-        backgroundColor: c.background,
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: c.textPrimary,
+        elevation: 0,
         scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: c.textPrimary,
@@ -524,12 +390,13 @@ class AppTheme {
           letterSpacing: -0.2,
         ),
       ),
-      cardTheme: base.cardTheme.copyWith(
+      cardTheme: CardThemeData(
+        color: c.surface,
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: c.border),
+          borderRadius: BorderRadius.circular(radiusLg),
+          side: edge,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -537,9 +404,9 @@ class AppTheme {
           backgroundColor: c.primary,
           foregroundColor: ink,
           elevation: 0,
-          shape: btnShape,
+          shape: pill,
           minimumSize: const Size(0, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           textStyle: btnText,
         ),
       ),
@@ -547,73 +414,100 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: c.primary,
           foregroundColor: ink,
-          shape: btnShape,
+          shape: pill,
+          minimumSize: const Size(0, 40),
           textStyle: btnText,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: c.textPrimary,
-          side: BorderSide(color: c.border),
-          shape: btnShape,
+          backgroundColor: c.surfaceHighlight,
+          side: strongEdge,
+          shape: pill,
           minimumSize: const Size(0, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           textStyle: btnText,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: c.primary,
-          shape: btnShape,
+          shape: pill,
           textStyle: btnText,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(shape: const CircleBorder()),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: const WidgetStatePropertyAll(pill),
+          side: WidgetStatePropertyAll(strongEdge),
+          backgroundColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? selectedWash : c.surfaceHighlight),
+          foregroundColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? c.primary : c.textPrimary),
+          textStyle: const WidgetStatePropertyAll(
+              TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: c.primary,
         foregroundColor: ink,
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        focusElevation: 3,
+        hoverElevation: 4,
+        highlightElevation: 1,
+        shape: pill,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: c.surface,
+        backgroundColor: c.surfaceSolid,
         surfaceTintColor: Colors.transparent,
+        barrierColor: isDark ? const Color(0x66000000) : const Color(0x2E000000),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: c.border),
+          borderRadius: BorderRadius.circular(radiusXl),
+          side: BorderSide(color: c.glassEdgeTop),
         ),
         titleTextStyle: TextStyle(
             color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: c.surface,
+        backgroundColor: c.surfaceSolid,
         surfaceTintColor: Colors.transparent,
+        modalBarrierColor:
+            isDark ? const Color(0x66000000) : const Color(0x2E000000),
+        dragHandleColor: c.textSecondary.withValues(alpha: 0.5),
+        dragHandleSize: const Size(36, 4),
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXl)),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: c.surface,
+        color: c.surfaceSolid,
         surfaceTintColor: Colors.transparent,
         elevation: 8,
+        shadowColor: Colors.black.withValues(alpha: isDark ? 0.5 : 0.14),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: c.border),
+          borderRadius: BorderRadius.circular(radiusMd + 4),
+          side: BorderSide(color: c.glassEdgeTop),
         ),
       ),
       menuTheme: MenuThemeData(
         style: MenuStyle(
-          backgroundColor: WidgetStatePropertyAll(c.surface),
+          backgroundColor: WidgetStatePropertyAll(c.surfaceSolid),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(8),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
           shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: c.border),
+            borderRadius: BorderRadius.circular(radiusMd + 4),
+            side: BorderSide(color: c.glassEdgeTop),
           )),
         ),
       ),
       menuBarTheme: MenuBarThemeData(
         style: MenuStyle(
-          backgroundColor: WidgetStatePropertyAll(c.surface),
+          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(0),
           shape: const WidgetStatePropertyAll(RoundedRectangleBorder()),
@@ -625,18 +519,56 @@ class AppTheme {
           overlayColor: WidgetStatePropertyAll(selectedWash),
           textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 13)),
           shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm))),
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(c.surfaceSolid),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+            side: BorderSide(color: c.glassEdgeTop),
+          )),
         ),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isDark ? c.surfaceHighlight : const Color(0xFF14171C),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: c.border),
+          color: snackBg,
+          borderRadius: BorderRadius.circular(radiusSm),
         ),
-        textStyle: TextStyle(
-            color: isDark ? c.textPrimary : Colors.white, fontSize: 12),
+        textStyle: const TextStyle(color: Colors.white, fontSize: 12),
         waitDuration: const Duration(milliseconds: 500),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: isDark
+            ? const Color.fromRGBO(255, 255, 255, 0.06)
+            : const Color.fromRGBO(255, 255, 255, 0.72),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: strongEdge,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: strongEdge,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: BorderSide(color: c.primary, width: 1.5),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: c.surfaceHighlight,
+        selectedColor: selectedWash,
+        side: strongEdge,
+        shape: pill,
+        labelStyle: TextStyle(fontSize: 12, color: c.textPrimary),
+      ),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+        iconColor: c.textSecondary,
       ),
       dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
       switchTheme: SwitchThemeData(
@@ -644,27 +576,71 @@ class AppTheme {
             (s) => s.contains(WidgetState.selected) ? ink : c.textSecondary),
         trackColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected) ? c.primary : c.surfaceHighlight),
-        trackOutlineColor: WidgetStatePropertyAll(c.border),
+        trackOutlineColor: WidgetStatePropertyAll(strongEdge.color),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected) ? c.primary : Colors.transparent),
         checkColor: WidgetStatePropertyAll(ink),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         side: BorderSide(color: c.textSecondary, width: 1.5),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? c.primary : c.textSecondary),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: c.primary,
+        linearTrackColor: c.surfaceHighlight,
+        circularTrackColor: c.surfaceHighlight,
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: c.primary,
+        inactiveTrackColor: c.surfaceHighlight,
+        thumbColor: c.primary,
+        trackHeight: 6,
       ),
       tabBarTheme: TabBarThemeData(
         labelColor: c.textPrimary,
         unselectedLabelColor: c.textSecondary,
         indicatorColor: c.primary,
-        dividerColor: c.border,
+        indicatorSize: TabBarIndicatorSize.label,
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: c.primary, width: 3),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        dividerColor: Colors.transparent,
         labelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: Colors.transparent,
+        indicatorColor: selectedWash,
+        selectedIconTheme: IconThemeData(color: c.primary),
+        unselectedIconTheme: IconThemeData(color: c.textSecondary),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 64,
+        indicatorColor: selectedWash,
+        indicatorShape: pill,
+        labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
+              fontSize: 11,
+              fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
+              color: s.contains(WidgetState.selected) ? c.primary : c.textSecondary,
+            )),
+        iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
+              color: s.contains(WidgetState.selected) ? c.primary : c.textSecondary,
+            )),
+      ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? c.surfaceHighlight : const Color(0xFF14171C),
-        contentTextStyle: TextStyle(color: isDark ? c.textPrimary : Colors.white),
+        backgroundColor: snackBg,
+        contentTextStyle: const TextStyle(color: Colors.white),
+        actionTextColor: _accentOnDark(c.primary, snackBg),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd + 4)),
       ),
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: SpringPageTransitionsBuilder(),
@@ -676,365 +652,14 @@ class AppTheme {
     );
   }
 
-  // ==== THEMES ====
-  static ThemeData get vibesDarkTheme => darkTheme;
-  static ThemeData get vibesLightTheme => lightTheme;
-
-  static ThemeData get darkTheme {
-    _active = _vibesDark;
-    return _buildTheme(
-        brightness: Brightness.dark,
-        colors: _vibesDark,
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00E5FF),
-          onPrimary: Color(0xFF00363F),
-          primaryContainer: Color(0xFF004E5B),
-          onPrimaryContainer: Color(0xFFBBE9FF),
-          secondary: Color(0xFFFFB300),
-          onSecondary: Color(0xFF432C00),
-          tertiary: Color(0xFF00E676),
-          onTertiary: Color(0xFF00391A),
-          error: Color(0xFFFF3D71),
-        ),
-        radius: radiusMd,
-      );
-  }
-
-  static ThemeData get lightTheme {
-    _active = _vibesLight;
-    return _buildTheme(
-        brightness: Brightness.light,
-        colors: _vibesLight,
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF0066FF),
-          onPrimary: Colors.white,
-          secondary: Color(0xFFFFB300),
-          tertiary: Color(0xFF008947),
-          error: Color(0xFFFF3D71),
-        ),
-        radius: radiusMd,
-      );
-  }
-
-  static ThemeData get materialLightTheme {
-    final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF3D5AFE));
-    final colors = AppColors(
-      primary: scheme.primary,
-      primaryBlue: scheme.secondary,
-      amber: scheme.tertiary,
-      emerald: scheme.tertiary,
-      coral: scheme.error,
-      background: scheme.surface,
-      surface: scheme.surface,
-      surfaceCard: scheme.surfaceContainerLow,
-      surfaceHighlight: scheme.surfaceContainerHigh,
-      surfaceVariant: scheme.surfaceContainerHighest,
-      border: scheme.outlineVariant,
-      textPrimary: scheme.onSurface,
-      textSecondary: scheme.onSurfaceVariant,
-    );
-    _active = colors;
-    return _buildTheme(
-      brightness: Brightness.light,
-      colors: colors,
-      colorScheme: scheme,
-      radius: radiusSm,
-    );
-  }
-
-  static ThemeData get materialDarkTheme {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF3D5AFE),
-      brightness: Brightness.dark,
-    );
-    final colors = AppColors(
-      primary: scheme.primary,
-      primaryBlue: scheme.secondary,
-      amber: scheme.tertiary,
-      emerald: scheme.tertiary,
-      coral: scheme.error,
-      background: scheme.surface,
-      surface: scheme.surface,
-      surfaceCard: scheme.surfaceContainerLow,
-      surfaceHighlight: scheme.surfaceContainerHigh,
-      surfaceVariant: scheme.surfaceContainerHighest,
-      border: scheme.outlineVariant,
-      textPrimary: scheme.onSurface,
-      textSecondary: scheme.onSurfaceVariant,
-    );
-    _active = colors;
-    return _buildTheme(
-      brightness: Brightness.dark,
-      colors: colors,
-      colorScheme: scheme,
-      radius: radiusSm,
-    );
-  }
-
-  /// Bridgestone Brutalist — Light variant: monochrome white/grey surfaces with
-  /// Bridgestone red as the pop, sharp corners, thick borders, no elevation.
-  static ThemeData get brutalistLightTheme =>
-      _buildBrutalist(_brutalistLight, Brightness.light);
-
-  /// Bridgestone Brutalist — Dark variant: near-black surfaces, light text,
-  /// Bridgestone red pop.
-  static ThemeData get brutalistDarkTheme =>
-      _buildBrutalist(_brutalistDark, Brightness.dark);
-
-  /// Builds a Bridgestone Brutalist theme. [c] selects the light/dark palette;
-  /// [brightness] drives inverted button fills and text so contrast holds in
-  /// both modes.
-  static ThemeData _buildBrutalist(AppColors c, Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    _active = c;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: bridgestoneRed,
-      brightness: brightness,
-      surface: c.background,
-    ).copyWith(
-      primary: bridgestoneRed,
-      onPrimary: Colors.white,
-      surface: c.background,
-      onSurface: c.textPrimary,
-      outline: c.border,
-      error: bridgestoneRed,
-    );
-
-    return ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      scaffoldBackgroundColor: c.background,
-      colorScheme: scheme,
-      extensions: [c],
-      // Sharp corners, thick borders, no elevation.
-      cardTheme: CardThemeData(
-        color: c.surfaceCard,
-        elevation: 0,
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-          side: BorderSide(color: c.border, width: 2),
-        ),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: c.surface,
-        foregroundColor: c.textPrimary,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: c.textPrimary,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.5,
-          fontSize: 20,
-        ),
-      ),
-      dividerTheme: DividerThemeData(
-        color: c.border,
-        thickness: 2,
-        space: 2,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: c.surface,
-        indicatorColor: bridgestoneRed.withValues(alpha: 0.18),
-        surfaceTintColor: Colors.transparent,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return TextStyle(
-                color: c.textPrimary, fontWeight: FontWeight.w900, fontSize: 12);
-          }
-          return TextStyle(color: c.textSecondary, fontSize: 12);
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: bridgestoneRed);
-          }
-          return IconThemeData(color: c.textSecondary);
-        }),
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: c.surface,
-        indicatorColor: bridgestoneRed.withValues(alpha: 0.18),
-        selectedIconTheme: const IconThemeData(color: bridgestoneRed),
-        unselectedIconTheme: IconThemeData(color: c.textSecondary),
-        selectedLabelTextStyle: TextStyle(
-            color: c.textPrimary, fontWeight: FontWeight.w900, fontSize: 12),
-        unselectedLabelTextStyle:
-            TextStyle(color: c.textSecondary, fontSize: 12),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: c.surfaceCard,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: c.border, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: c.border, width: 2),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: const BorderSide(color: bridgestoneRed, width: 2),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isDark ? Colors.white : Colors.black,
-          foregroundColor: isDark ? Colors.black : Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
-            side: BorderSide(color: c.border, width: 2),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          textStyle: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: c.textPrimary,
-          side: BorderSide(color: c.border, width: 2),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
-        ),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: c.surfaceCard,
-        selectedColor: bridgestoneRed.withValues(alpha: 0.2),
-        side: BorderSide(color: c.border, width: 1.5),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        labelStyle: TextStyle(
-            fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
-      ),
-      textTheme: TextTheme(
-        headlineSmall: TextStyle(fontWeight: FontWeight.w900, color: c.textPrimary),
-        titleLarge: TextStyle(fontWeight: FontWeight.w900, color: c.textPrimary),
-        titleMedium: TextStyle(fontWeight: FontWeight.w800, color: c.textPrimary),
-        bodyMedium: TextStyle(color: c.textPrimary),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: Colors.black,
-        contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      ),
-    );
-  }
-
-  static ThemeData _buildTheme({
-    required Brightness brightness,
-    required AppColors colors,
-    required ColorScheme colorScheme,
-    required double radius,
-  }) {
-    final isDark = brightness == Brightness.dark;
-    return ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      scaffoldBackgroundColor: colors.background,
-      colorScheme: colorScheme,
-      extensions: [colors],
-      cardTheme: CardThemeData(
-        color: colors.surfaceCard,
-        elevation: isDark ? 0 : 1,
-        shadowColor: isDark ? null : Colors.black12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(color: colors.border, width: 1.0),
-        ),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: colors.background,
-        foregroundColor: colors.textPrimary,
-        elevation: 0,
-        scrolledUnderElevation: isDark ? 2 : 1,
-        surfaceTintColor: Colors.transparent,
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: colors.surface,
-        indicatorColor: colors.primary.withValues(alpha: isDark ? 0.2 : 0.15),
-        selectedIconTheme: IconThemeData(color: colors.primary),
-        unselectedIconTheme: IconThemeData(color: colors.textSecondary),
-        selectedLabelTextStyle: TextStyle(
-          color: colors.primary,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        unselectedLabelTextStyle: TextStyle(
-          color: colors.textSecondary,
-          fontSize: 12,
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colors.surface,
-        indicatorColor: colors.primary.withValues(alpha: isDark ? 0.2 : 0.15),
-        surfaceTintColor: Colors.transparent,
-        elevation: 3,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return TextStyle(color: colors.primary, fontWeight: FontWeight.bold, fontSize: 12);
-          }
-          return TextStyle(color: colors.textSecondary, fontSize: 12);
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: colors.primary);
-          }
-          return IconThemeData(color: colors.textSecondary);
-        }),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: colors.surfaceCard,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radius),
-          borderSide: BorderSide(color: colors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radius),
-          borderSide: BorderSide(color: colors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radius),
-          borderSide: BorderSide(color: colors.primary, width: 2),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colors.primary,
-          foregroundColor: isDark ? const Color(0xFF002B33) : Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.primary,
-          side: BorderSide(color: colors.primary),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        ),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: colors.surfaceHighlight,
-        selectedColor: colors.primary.withValues(alpha: 0.2),
-        side: BorderSide(color: colors.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        labelStyle: TextStyle(fontSize: 12, color: colors.textPrimary),
-      ),
-    );
+  /// Snackbars and tooltips are dark in both modes; lift the accent there.
+  static Color _accentOnDark(Color accent, Color bg) {
+    var hsl = HSLColor.fromColor(accent);
+    var c = accent;
+    while (contrast(c, bg) < 4.6 && hsl.lightness < 0.95) {
+      hsl = hsl.withLightness((hsl.lightness + 0.03).clamp(0.0, 1.0));
+      c = hsl.toColor();
+    }
+    return c;
   }
 }

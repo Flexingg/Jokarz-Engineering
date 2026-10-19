@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
+import 'theme/fluid_background.dart';
 import 'providers/theme_provider.dart';
 import 'providers/ui_prefs_provider.dart';
 import 'ui/motion/motion.dart';
@@ -55,13 +56,19 @@ class JokarzEngineeringApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'AOR Engineering',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.themeFor(themeFamily, accent: prefs.accent),
+      theme: AppTheme.themeFor(
+        themeFamily,
+        accent: prefs.accent,
+        reduceTransparency: prefs.reduceTransparency,
+      ),
       routerConfig: appRouter,
       builder: (context, child) => MotionScope(
         motion: Motion.resolve(prefs.motion,
             disableAnimations: MediaQuery.disableAnimationsOf(context)),
         child: ParkScheduler(
-          child: AppShortcuts(child: child ?? const SizedBox.shrink()),
+          child: AppShortcuts(
+            child: FluidBackground(child: child ?? const SizedBox.shrink()),
+          ),
         ),
       ),
     );

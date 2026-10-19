@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/ui_prefs.dart';
+import '../../theme/fluid_background.dart';
 
 /// The one spring-like curve family the whole app animates on. A cubic with
 /// its second control point above 1 overshoots the target a little and settles,
@@ -70,6 +71,9 @@ class SpringPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     final motion = Motion.of(context);
+    // Each page carries the backdrop, so the page underneath never shows
+    // through while this one fades in over it.
+    child = FluidBackground(child: child);
     final curved = CurvedAnimation(
       parent: animation,
       curve: motion.spring,

@@ -54,7 +54,6 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     final notifier = ref.read(projectProvider.notifier);
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -121,7 +120,6 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     }
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

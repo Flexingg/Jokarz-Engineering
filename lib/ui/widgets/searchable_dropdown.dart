@@ -34,7 +34,6 @@ class SearchableDropdownFormField<T> extends StatelessWidget {
     final result = await showModalBottomSheet<Object?>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (_) => _SearchableSheet<T>(
         items: items,
         labelOf: labelOf,

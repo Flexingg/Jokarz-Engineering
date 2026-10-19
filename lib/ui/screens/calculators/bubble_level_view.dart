@@ -179,7 +179,6 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: false,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (_) => _CalibrationSheet(motion: _magMotion),
     );
   }

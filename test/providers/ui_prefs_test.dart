@@ -22,9 +22,10 @@ Future<void> _settle() =>
     Future<void>.delayed(const Duration(milliseconds: 20));
 
 void main() {
-  test('defaults: Graphite Dark, blue accent, bouncy motion', () {
+  test('defaults: dark, blue accent, bouncy motion, transparency on', () {
     const p = UiPrefs();
-    expect(p.themeName, 'graphiteDark');
+    expect(p.themeName, 'dark');
+    expect(p.reduceTransparency, isFalse);
     expect(p.accent, graphiteAccents.first.color);
     expect(p.motion, MotionLevel.bouncy);
   });
@@ -37,8 +38,12 @@ void main() {
       railCollapsed: true,
       dashboardOrder: ['orders', 'summary'],
       dashboardHidden: ['today'],
+      reduceTransparency: true,
+      panelWidths: {'orders': 512},
     );
     final back = UiPrefs.fromJson(p.toJson());
+    expect(back.reduceTransparency, isTrue);
+    expect(back.panelWidths, {'orders': 512.0});
     expect(back.themeName, 'vibesDark');
     expect(back.accentValue, 0xFFFFB020);
     expect(back.motion, MotionLevel.subtle);
@@ -48,7 +53,7 @@ void main() {
 
     final junk = UiPrefs.fromJson({'motion': 'warp', 'themeName': null});
     expect(junk.motion, MotionLevel.bouncy);
-    expect(junk.themeName, 'graphiteDark');
+    expect(junk.themeName, 'dark');
   });
 
   test('saved prefs are loaded, and changes are written back', () async {
@@ -59,11 +64,12 @@ void main() {
     c.read(uiPrefsProvider);
     await _settle();
     expect(c.read(uiPrefsProvider).railCollapsed, isTrue);
-    expect(c.read(themeProvider), AppThemeFamily.vibesLight);
+    // An old named theme maps onto light/dark.
+    expect(c.read(themeProvider), AppThemeFamily.light);
 
-    c.read(themeProvider.notifier).setTheme(AppThemeFamily.graphiteLight);
-    expect(c.read(themeProvider), AppThemeFamily.graphiteLight);
-    expect(storage.prefs.themeName, 'graphiteLight');
+    c.read(themeProvider.notifier).setTheme(AppThemeFamily.dark);
+    expect(c.read(themeProvider), AppThemeFamily.dark);
+    expect(storage.prefs.themeName, 'dark');
   });
 
   test(
@@ -79,36 +85,51 @@ void main() {
     },
   );
 
-  group('Graphite theme', () {
-    double contrast(Color a, Color b) {
-      final la = a.computeLuminance(), lb = b.computeLuminance();
-      final hi = la > lb ? la : lb, lo = la > lb ? lb : la;
-      return (hi + 0.05) / (lo + 0.05);
-    }
+  test('copyWith keeps panel widths (they used to be dropped)', () {
+    const p = UiPrefs(panelWidths: {'notes': 480});
+    expect(p.copyWith(motion: MotionLevel.off).panelWidths, {'notes': 480});
+  });
 
-    test('every accent is readable as text on the surface in both modes', () {
-      for (final family in [
-        AppThemeFamily.graphiteDark,
-        AppThemeFamily.graphiteLight,
-      ]) {
-        for (final a in graphiteAccents) {
-          final theme = AppTheme.themeFor(family, accent: a.color);
-          final colors = theme.extension<AppColors>()!;
-          expect(
-            contrast(colors.primary, colors.surface),
-            greaterThanOrEqualTo(4.5),
-            reason: '${family.name} / ${a.label}',
-          );
-          expect(
-            contrast(colors.textPrimary, colors.surface),
-            greaterThanOrEqualTo(7),
-          );
-          expect(
-            contrast(colors.textSecondary, colors.surface),
-            greaterThanOrEqualTo(4.5),
-          );
+  test('old theme names map onto light and dark', () {
+    for (final n in ['graphiteLight', 'vibesLight', 'bridgestoneLight', 'materialLight', 'brutalistLight', 'light']) {
+      expect(AppThemeFamily.fromStored(n), AppThemeFamily.light, reason: n);
+    }
+    for (final n in ['graphiteDark', 'vibesDark', 'brutalistDark', 'dark', 'nonsense', null]) {
+      expect(AppThemeFamily.fromStored(n), AppThemeFamily.dark, reason: '$n');
+    }
+  });
+
+  group('Fluid theme legibility', () {
+    double contrast(Color a, Color b) => AppTheme.contrast(a, b);
+
+    void eachTheme(void Function(String id, ThemeData t, AppColors c) body) {
+      for (final family in AppThemeFamily.values) {
+        for (final reduce in [false, true]) {
+          for (final a in graphiteAccents) {
+            final t = AppTheme.themeFor(family, accent: a.color, reduceTransparency: reduce);
+            body('${family.name}${reduce ? ' (opaque)' : ''} / ${a.label}', t, t.extension<AppColors>()!);
+          }
         }
       }
+    }
+
+    test('text reads on every backdrop: both gradient ends, the glow, and cards over them', () {
+      eachTheme((id, t, c) {
+        for (final bg in c.readableBackdrops) {
+          expect(contrast(c.textPrimary, bg), greaterThanOrEqualTo(7), reason: '$id primary');
+          expect(contrast(c.textSecondary, bg), greaterThanOrEqualTo(4.5), reason: '$id secondary');
+          expect(contrast(c.primary, bg), greaterThanOrEqualTo(4.5), reason: '$id accent as text');
+          expect(contrast(c.amber, bg), greaterThanOrEqualTo(4.5), reason: '$id amber');
+          expect(contrast(c.emerald, bg), greaterThanOrEqualTo(4.5), reason: '$id emerald');
+          expect(contrast(c.coral, bg), greaterThanOrEqualTo(4.5), reason: '$id alert');
+        }
+      });
+    });
+
+    test('the background gradient is gentle: its ends stay close in brightness', () {
+      eachTheme((id, t, c) {
+        expect(contrast(c.background, c.backgroundEnd), lessThan(1.15), reason: id);
+      });
     });
 
     test('red is offered, twice (a nice red and Bridgestone red)', () {
@@ -118,33 +139,36 @@ void main() {
           const Color(0xFFE4002B));
     });
 
-    test('alert color is never the accent, never red, and stays readable', () {
-      for (final family in [AppThemeFamily.graphiteDark, AppThemeFamily.graphiteLight]) {
-        for (final a in graphiteAccents) {
-          final colors = AppTheme.themeFor(family, accent: a.color).extension<AppColors>()!;
-          final hue = HSLColor.fromColor(colors.coral).hue;
-          expect(hue, inInclusiveRange(15, 40), reason: 'orange family, ${family.name}');
-          expect(contrast(colors.coral, colors.surface), greaterThanOrEqualTo(4.5),
-              reason: 'alert text on surface, ${family.name}');
-          expect(colors.coral, isNot(colors.primary), reason: '${family.name} / ${a.label}');
-        }
-      }
+    test('alert color is orange, never the accent', () {
+      eachTheme((id, t, c) {
+        expect(HSLColor.fromColor(c.coral).hue, inInclusiveRange(15, 40), reason: id);
+        expect(c.coral, isNot(c.primary), reason: id);
+      });
     });
 
     test('buttons have readable text on the accent fill', () {
-      for (final family in [
-        AppThemeFamily.graphiteDark,
-        AppThemeFamily.graphiteLight,
-      ]) {
-        for (final a in graphiteAccents) {
-          final theme = AppTheme.themeFor(family, accent: a.color);
-          expect(
-            contrast(theme.colorScheme.primary, theme.colorScheme.onPrimary),
-            greaterThanOrEqualTo(4.5),
-            reason: '${family.name} / ${a.label}',
-          );
-        }
-      }
+      eachTheme((id, t, c) {
+        expect(contrast(t.colorScheme.primary, t.colorScheme.onPrimary),
+            greaterThanOrEqualTo(4.5), reason: id);
+      });
+    });
+
+    test('snackbar actions read on the dark snackbar', () {
+      eachTheme((id, t, c) {
+        expect(contrast(t.snackBarTheme.actionTextColor!, t.snackBarTheme.backgroundColor!),
+            greaterThanOrEqualTo(4.5), reason: id);
+      });
+    });
+
+    test('reduce transparency makes surfaces opaque and turns blur off', () {
+      final c = AppTheme.themeFor(AppThemeFamily.light, reduceTransparency: true)
+          .extension<AppColors>()!;
+      expect(c.surface.a, 1.0);
+      expect(c.glass.a, 1.0);
+      expect(c.blurGlass, isFalse);
+      final g = AppTheme.themeFor(AppThemeFamily.light).extension<AppColors>()!;
+      expect(g.surface.a, lessThan(1.0));
+      expect(g.blurGlass, isTrue);
     });
   });
 

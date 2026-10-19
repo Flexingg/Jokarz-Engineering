@@ -176,41 +176,27 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.palette_outlined,
-                        color: AppTheme.of(context).primary),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'App Theme',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          themeFamily.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.of(context).textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                const Text(
+                  'Mode',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<AppThemeFamily>(
-                  initialValue: themeFamily,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Theme'),
-                  items: [
-                    for (final f in AppThemeFamily.values)
-                      DropdownMenuItem(value: f, child: Text(f.label)),
+                SegmentedButton<AppThemeFamily>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: AppThemeFamily.light,
+                      icon: Icon(Icons.light_mode_outlined, size: 18),
+                      label: Text('Light'),
+                    ),
+                    ButtonSegment(
+                      value: AppThemeFamily.dark,
+                      icon: Icon(Icons.dark_mode_outlined, size: 18),
+                      label: Text('Dark'),
+                    ),
                   ],
-                  onChanged: (v) {
-                    if (v != null) themeNotifier.setTheme(v);
-                  },
+                  selected: {themeFamily},
+                  onSelectionChanged: (v) => themeNotifier.setTheme(v.first),
                 ),
                 const AppearanceControls(),
               ],
