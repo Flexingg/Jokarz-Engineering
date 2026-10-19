@@ -429,7 +429,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Icon(Icons.precision_manufacturing_outlined,
-                      size: 13, color: AppTheme.of().textSecondary),
+                      size: 13, color: AppTheme.of(context).textSecondary),
                   ...splitMachines(_machineController.text).map((m) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(

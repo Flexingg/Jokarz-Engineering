@@ -104,7 +104,7 @@ class WorkbenchScreen extends ConsumerWidget {
                           key: ValueKey(k),
                           leading: Icon(workbenchTools[k]!.icon, color: AppTheme.of(context).primary),
                           title: Text(workbenchTools[k]!.label),
-                          trailing: Icon(Icons.drag_handle_rounded, color: AppTheme.of().textSecondary),
+                          trailing: Icon(Icons.drag_handle_rounded, color: AppTheme.of(context).textSecondary),
                         ),
                     ],
                   ),

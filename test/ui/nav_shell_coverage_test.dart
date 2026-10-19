@@ -108,7 +108,7 @@ class _Branch {
 }
 
 const _branches = [
-  _Branch(0, 'Dashboard', 'Dashboard', '/'),
+  _Branch(0, 'Dashboard', 'Home', '/'),
   _Branch(1, 'Projects', 'Projects', '/projects'),
   _Branch(2, 'Open Orders', 'Orders', '/orders'),
   _Branch(3, 'Workbench Tools', 'Tools', '/workbench'),

@@ -71,7 +71,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
               const SizedBox(height: 12),
               Flexible(
                 child: matches.isEmpty
-                    ? Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)))
+                    ? Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)))
                     : ListView(
                         shrinkWrap: true,
                         children: matches.map((p) => Card(

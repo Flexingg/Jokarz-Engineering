@@ -7,7 +7,7 @@ extension _TasksCalendarViews on _TasksCalendarScreenState {
     if (logs.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.history_rounded, size: 48, color: AppTheme.of().textSecondary),
+          Icon(Icons.history_rounded, size: 48, color: AppTheme.of(context).textSecondary),
           const SizedBox(height: 12),
           const Text('No activity recorded yet.', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
@@ -29,7 +29,7 @@ extension _TasksCalendarViews on _TasksCalendarScreenState {
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${DateFormat('MMM d, y • h:mm a').format(l.timestamp)}  ${activityTypeLabel(l.type)}',
-                  style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
               const SizedBox(height: 2),
               Text(l.text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3)),
               if (l.projectTitle != null)

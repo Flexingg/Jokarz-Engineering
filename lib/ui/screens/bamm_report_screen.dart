@@ -44,7 +44,7 @@ class _BammReportScreenState extends ConsumerState<BammReportScreen> {
           _TemplateBar(cfg: cfg, templates: settings.templates),
           const SizedBox(height: 16),
           const Text('Columns', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          Text('Reuses the same column catalogue as the table.', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)),
+          Text('Reuses the same column catalogue as the table.', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)),
           for (final col in allColumns)
             CheckboxListTile(
               key: Key('report_col_${col.id}'),

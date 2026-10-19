@@ -288,7 +288,7 @@ class _BatchChangeSheetState extends ConsumerState<_BatchChangeSheet> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary))),
+          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary))),
           Expanded(child: Text(value ?? 'No change', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
           TextButton(key: key, onPressed: onTap, child: const Text('Choose')),
         ],

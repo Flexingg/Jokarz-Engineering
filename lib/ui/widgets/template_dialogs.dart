@@ -34,7 +34,7 @@ class TemplateDialogs {
             children: [
               Text(
                 'Create a reusable blueprint from "${project.title}" including its ${project.tasks.length} task steps and ${project.orders.length} order items.',
-                style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
+                style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -147,7 +147,7 @@ class TemplateDialogs {
                             children: [
                               ExpressiveBadge(
                                 label: '${t.tasks.length} Tasks',
-                                color: AppTheme.of().textSecondary,
+                                color: AppTheme.of(context).textSecondary,
                                 fontSize: 10,
                               ),
                               ExpressiveBadge(
@@ -163,7 +163,7 @@ class TemplateDialogs {
                               if (t.tags.isNotEmpty)
                                 ...t.tags.take(2).map((tag) => ExpressiveBadge(
                                       label: tag,
-                                      color: Colors.blueGrey,
+                                      color: AppTheme.of(context).textSecondary,
                                       fontSize: 10,
                                     )),
                             ],

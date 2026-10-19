@@ -319,17 +319,17 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.orange.shade700, width: 1.5),
+                    border: Border.all(color: AppTheme.of(context).amber, width: 1.5),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 20),
+                      Icon(Icons.warning_amber_rounded, color: AppTheme.of(context).amber, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           widget.staleWarning!,
-                          style: TextStyle(color: Colors.orange.shade900, fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(color: AppTheme.of(context).amber, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                     ],
@@ -676,7 +676,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                  child: Text('No activity lines yet.', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)),
+                  child: Text('No activity lines yet.', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)),
                 )
               else
                 ..._activityLines.map((line) => Card(
@@ -731,7 +731,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
                   ),
                   child: Text(
                     'Not linked to any projects, tasks, or orders yet. Tap "Link Item" above to connect it.',
-                    style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
+                    style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
                   ),
                 )
               else
@@ -905,7 +905,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 140, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary))),
+          SizedBox(width: 140, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary))),
           Expanded(child: Text(display, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
           TextButton(onPressed: onTap, child: const Text('Change', style: TextStyle(fontSize: 11))),
         ],
@@ -920,7 +920,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         children: [
           SizedBox(
             width: 140,
-            child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)),
+            child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)),
           ),
           Expanded(
             child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),

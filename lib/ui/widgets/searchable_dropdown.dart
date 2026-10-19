@@ -76,7 +76,7 @@ class SearchableDropdownFormField<T> extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Icon(Icons.arrow_drop_down, color: AppTheme.of().textSecondary),
+            Icon(Icons.arrow_drop_down, color: AppTheme.of(context).textSecondary),
           ],
         ),
       ),

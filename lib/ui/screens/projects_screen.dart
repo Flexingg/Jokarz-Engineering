@@ -183,7 +183,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                         Icon(
                           Icons.engineering_outlined,
                           size: 56,
-                          color: AppTheme.of().textSecondary,
+                          color: AppTheme.of(context).textSecondary,
                         ),
                         const SizedBox(height: 12),
                         const Text(
@@ -290,13 +290,13 @@ class _EditablePhaseBadge extends ConsumerWidget {
     } else if (lower == 'cancelled' || lower == 'canceled') {
       return AppTheme.of(context).coral;
     } else if (lower == 'validation') {
-      return Colors.tealAccent.shade700;
+      return AppTheme.of(context).emerald;
     } else if (lower == 'installation') {
       return AppTheme.of(context).primary;
     } else if (lower == 'pending') {
       return AppTheme.of(context).amber;
     } else if (lower == 'idea') {
-      return Colors.orangeAccent;
+      return AppTheme.of(context).amber;
     }
     return AppTheme.of(context).amber;
   }
@@ -476,7 +476,7 @@ class _ProjectCard extends ConsumerWidget {
                     if (isTerminal)
                       ExpressiveBadge(
                         label: 'Prev #${project.priority}',
-                        color: AppTheme.of().textSecondary,
+                        color: AppTheme.of(context).textSecondary,
                         fontSize: 10,
                       )
                     else
@@ -544,7 +544,7 @@ class _ProjectCard extends ConsumerWidget {
                 spacing: 4,
                 runSpacing: 2,
                 children: [
-                  Icon(Icons.precision_manufacturing_outlined, size: 13, color: AppTheme.of().textSecondary),
+                  Icon(Icons.precision_manufacturing_outlined, size: 13, color: AppTheme.of(context).textSecondary),
                   ...project.machineList.map((m) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -555,7 +555,7 @@ class _ProjectCard extends ConsumerWidget {
                     child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
                   )),
                   if (project.subAssembly.isNotEmpty) ...[
-                    Icon(Icons.account_tree_outlined, size: 13, color: AppTheme.of().textSecondary),
+                    Icon(Icons.account_tree_outlined, size: 13, color: AppTheme.of(context).textSecondary),
                     Text(project.subAssembly, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                   ],
                 ],
@@ -585,10 +585,10 @@ class _ProjectCard extends ConsumerWidget {
                     Icons.history_rounded,
                     size: 12,
                     color: project.daysSinceLastAction >= 7
-                        ? Colors.red.shade400
+                        ? AppTheme.of(context).coral
                         : project.daysSinceLastAction >= 3
                             ? AppTheme.of(context).amber
-                            : AppTheme.of().textSecondary,
+                            : AppTheme.of(context).textSecondary,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -598,10 +598,10 @@ class _ProjectCard extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: project.daysSinceLastAction >= 7
-                          ? Colors.red.shade400
+                          ? AppTheme.of(context).coral
                           : project.daysSinceLastAction >= 3
                               ? AppTheme.of(context).amber
-                              : AppTheme.of().textSecondary,
+                              : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],

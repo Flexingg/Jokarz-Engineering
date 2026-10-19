@@ -190,15 +190,15 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   onPressed: _toggleListening,
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none_rounded,
-                    color: _isListening ? Colors.redAccent : AppTheme.of(context).primary,
+                    color: _isListening ? AppTheme.of(context).coral : AppTheme.of(context).primary,
                   ),
                   tooltip: _isListening ? 'Stop Recording' : 'Voice Dictate',
                 ),
                 const SizedBox(width: 8),
                 if (_isListening)
-                  const Text(
+                  Text(
                     'Listening...',
-                    style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.of(context).coral, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 const Spacer(),
                 TextButton(

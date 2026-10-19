@@ -447,7 +447,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               if (isTerminal)
                 ExpressiveBadge(
                   label: 'Lifetime #${project.priority} (Closed)',
-                  color: AppTheme.of().textSecondary,
+                  color: AppTheme.of(context).textSecondary,
                   fontSize: 11,
                 )
               else
@@ -528,7 +528,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                           Icon(
                             Icons.precision_manufacturing_outlined,
                             size: 14,
-                            color: AppTheme.of().textSecondary,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -556,7 +556,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                           Icon(
                             Icons.account_tree_outlined,
                             size: 14,
-                            color: AppTheme.of().textSecondary,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(

@@ -61,7 +61,7 @@ class BammColumnDef {
       text.isEmpty ? '-' : text,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12, color: text.isEmpty ? AppTheme.of().textSecondary : null),
+      style: TextStyle(fontSize: 12, color: text.isEmpty ? AppTheme.of(context).textSecondary : null),
     );
   }
 }

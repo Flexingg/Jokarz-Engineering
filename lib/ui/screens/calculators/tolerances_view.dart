@@ -115,7 +115,7 @@ class TolerancesView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Hole Tolerance', style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary)),
+                          Text('Hole Tolerance', style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary)),
                           Text(
                             fit['hole'] as String,
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -127,7 +127,7 @@ class TolerancesView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Shaft Tolerance', style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary)),
+                          Text('Shaft Tolerance', style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary)),
                           Text(
                             fit['shaft'] as String,
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),

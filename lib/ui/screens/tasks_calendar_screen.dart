@@ -301,7 +301,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                   Icon(
                     Icons.event_available_rounded,
                     size: 44,
-                    color: AppTheme.of().textSecondary,
+                    color: AppTheme.of(context).textSecondary,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -452,7 +452,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
             Padding(
               padding: EdgeInsets.fromLTRB(16, 2, 16, 4),
               child: Text('No planned downtime. Tap Add to schedule maintenance.',
-                  style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
             )
           else
             ...dayDowntimes.map((d) => Padding(
@@ -468,7 +468,7 @@ class _TasksCalendarScreenState extends ConsumerState<TasksCalendarScreen> {
                     const SizedBox(width: 8),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${d.title}  •  ${d.machine}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      if (d.timeRange.isNotEmpty) Text(d.timeRange, style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                      if (d.timeRange.isNotEmpty) Text(d.timeRange, style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                     ])),
                     IconButton(icon: const Icon(Icons.edit_outlined, size: 16), onPressed: () => _showDowntimeDialog(_selectedDate, existing: d), tooltip: 'Edit'),
                     IconButton(icon: Icon(Icons.delete_outline, size: 16, color: AppTheme.of(context).coral), onPressed: () => ref.read(projectProvider.notifier).deleteDowntime(d.id), tooltip: 'Delete'),
@@ -554,7 +554,7 @@ class _DayOfWeekLabel extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: AppTheme.of().textSecondary,
+            color: AppTheme.of(context).textSecondary,
           ),
         ),
       ),

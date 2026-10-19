@@ -16,7 +16,7 @@ extension _BammScreenFilters on _BammScreenState {
           children: [
             Text(
               'Presets:',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary),
             ),
             const SizedBox(width: 8),
             // "All Open" Preset (Default)
@@ -35,7 +35,7 @@ extension _BammScreenFilters on _BammScreenState {
                   selected: isSelected,
                   onSelected: (_) => ref.read(bammProvider.notifier).applySavedFilter(isSelected ? null : preset),
                   onDeleted: () => ref.read(bammProvider.notifier).deleteSavedFilter(preset.id),
-                  deleteIconColor: AppTheme.of().textSecondary,
+                  deleteIconColor: AppTheme.of(context).textSecondary,
                   deleteButtonTooltipMessage: 'Delete saved preset',
                 ),
               );
@@ -179,7 +179,7 @@ extension _BammScreenFilters on _BammScreenState {
                 // Results Count
                 Text(
                   '$displayedCount orders',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary),
                 ),
               ],
             )
@@ -260,7 +260,7 @@ extension _BammScreenFilters on _BammScreenState {
       child: FilterChip(
         key: const Key('bamm_local_search_toggle'),
         label: const Text('All fields', style: TextStyle(fontSize: 11)),
-        avatar: Icon(Icons.travel_explore_rounded, size: 16, color: _localSearchOn ? null : AppTheme.of().textSecondary),
+        avatar: Icon(Icons.travel_explore_rounded, size: 16, color: _localSearchOn ? null : AppTheme.of(context).textSecondary),
         selected: _localSearchOn,
         onSelected: (val) => _rebuild(() => _localSearchOn = val),
       ),
@@ -397,7 +397,7 @@ extension _BammScreenFilters on _BammScreenState {
       color: AppTheme.of(context).surfaceHighlight,
       child: Row(
         children: [
-          Text('Active Filters:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary)),
+          Text('Active Filters:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary)),
           const SizedBox(width: 8),
           Expanded(
             child: SingleChildScrollView(

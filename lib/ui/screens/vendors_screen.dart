@@ -119,7 +119,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                           Icon(
                             Icons.storefront_outlined,
                             size: 54,
-                            color: AppTheme.of().textSecondary,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(height: 14),
                           Text(
@@ -205,10 +205,10 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                             ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete_outline,
                                           size: 18,
-                                          color: Colors.redAccent,
+                                          color: AppTheme.of(context).coral,
                                         ),
                                         onPressed: () => ref
                                             .read(projectProvider.notifier)
@@ -225,7 +225,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                     Icon(
                                       Icons.person_rounded,
                                       size: 14,
-                                      color: AppTheme.of().textSecondary,
+                                      color: AppTheme.of(context).textSecondary,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -285,7 +285,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                   v.notes,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppTheme.of().textSecondary,
+                                    color: AppTheme.of(context).textSecondary,
                                   ),
                                 ),
                               ],

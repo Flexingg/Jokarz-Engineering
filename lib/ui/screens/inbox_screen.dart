@@ -243,8 +243,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.of(context).amber,
-                  foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
+                  backgroundColor: AppTheme.of(context).amberFill,
+                  foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
                 ),
                 child: const Text('Create Order'),
               ),
@@ -352,7 +352,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.of(context).amber,
+                  color: AppTheme.of(context).amberFill,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -370,7 +370,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           IconButton(
             icon: Icon(
               _showProcessed ? Icons.visibility_rounded : Icons.visibility_outlined,
-              color: _showProcessed ? AppTheme.of(context).primary : AppTheme.of().textSecondary,
+              color: _showProcessed ? AppTheme.of(context).primary : AppTheme.of(context).textSecondary,
             ),
             tooltip: _showProcessed ? 'Showing All (Including Processed)' : 'Showing Pending Only',
             onPressed: () => setState(() => _showProcessed = !_showProcessed),
@@ -442,8 +442,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         onPressed: () => InboxQuickCaptureModal.show(context),
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
-        backgroundColor: AppTheme.of(context).amber,
-        foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
+        backgroundColor: AppTheme.of(context).amberFill,
+        foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
       ),
     );
   }
@@ -495,12 +495,12 @@ class _InboxItemCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     dateFormat.format(item.createdAt),
-                    style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                    style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                   ),
                 ],
               ),
               IconButton(
-                icon: Icon(Icons.close_rounded, size: 18, color: AppTheme.of().textSecondary),
+                icon: Icon(Icons.close_rounded, size: 18, color: AppTheme.of(context).textSecondary),
                 tooltip: 'Delete',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -517,7 +517,7 @@ class _InboxItemCard extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w600,
               decoration: item.isProcessed ? TextDecoration.lineThrough : null,
-              color: item.isProcessed ? AppTheme.of().textSecondary : (AppTheme.of(context).textPrimary),
+              color: item.isProcessed ? AppTheme.of(context).textSecondary : (AppTheme.of(context).textPrimary),
             ),
           ),
           const SizedBox(height: 14),
@@ -551,12 +551,12 @@ class _InboxItemCard extends StatelessWidget {
                   onPressed: onTriageDowntime,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.edit_note_rounded, size: 14, color: Colors.purpleAccent),
+                  avatar: Icon(Icons.edit_note_rounded, size: 14, color: AppTheme.of(context).primary),
                   label: const Text('Note', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageNote,
                 ),
                 ActionChip(
-                  avatar: Icon(Icons.done_all_rounded, size: 14, color: AppTheme.of().textSecondary),
+                  avatar: Icon(Icons.done_all_rounded, size: 14, color: AppTheme.of(context).textSecondary),
                   label: const Text('Done', style: TextStyle(fontSize: 11)),
                   onPressed: onDismiss,
                 ),

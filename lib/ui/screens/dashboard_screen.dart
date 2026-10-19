@@ -123,8 +123,8 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => InboxQuickCaptureModal.show(context),
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
-        backgroundColor: AppTheme.of(context).amber,
-        foregroundColor: AppTheme.onColor(AppTheme.of(context).amber),
+        backgroundColor: AppTheme.of(context).amberFill,
+        foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
       ),
       body: RefreshIndicator(
         onRefresh: () async {},

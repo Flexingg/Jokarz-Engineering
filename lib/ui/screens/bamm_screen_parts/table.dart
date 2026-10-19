@@ -176,7 +176,7 @@ extension _BammScreenTable on _BammScreenState {
                       child: Text(column.header, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  child: Icon(Icons.drag_indicator, size: 14, color: AppTheme.of().textSecondary),
+                  child: Icon(Icons.drag_indicator, size: 14, color: AppTheme.of(context).textSecondary),
                 ),
                 const SizedBox(width: 2),
                 Expanded(
@@ -447,7 +447,7 @@ extension _BammScreenTable on _BammScreenState {
                         const SizedBox(width: 6),
                         Text(
                           DateFormat('MMM d').format(wo.issueDate!),
-                          style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                          style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                         ),
                       ],
                     ],
@@ -461,7 +461,7 @@ extension _BammScreenTable on _BammScreenState {
                     const SizedBox(height: 6),
                     Text(
                       'Work done',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary),
                     ),
                     const SizedBox(height: 2),
                     Text(wo.workDone, style: const TextStyle(fontSize: 12)),
@@ -476,7 +476,7 @@ extension _BammScreenTable on _BammScreenState {
                               if (wo.machine.isNotEmpty) wo.machine,
                               if (wo.area.isNotEmpty) 'Area: ${wo.area}',
                             ].join(' • '),
-                            style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -484,14 +484,14 @@ extension _BammScreenTable on _BammScreenState {
                       if (wo.responsible.isNotEmpty)
                         Text(
                           'Resp: ${wo.responsible}',
-                          style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                          style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                         ),
                       if (wo.requester.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 8),
                           child: Text(
                             'Req: ${wo.requester}',
-                            style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                           ),
                         ),
                     ],

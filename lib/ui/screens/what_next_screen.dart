@@ -183,7 +183,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   Color _actionColor(int days) {
     if (days == 0) return AppTheme.of(context).emerald;
     if (days <= 3) return AppTheme.of(context).amber;
-    return Colors.red.shade400;
+    return AppTheme.of(context).coral;
   }
 
   String _actionLabel(int days) {
@@ -228,7 +228,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
           const SizedBox(height: 8),
           Text(
             'Every active project has been actioned today.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of().textSecondary),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of(context).textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -254,11 +254,11 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             children: [
               Text(
                 '$remaining remaining',
-                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of().textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of(context).textSecondary),
               ),
               Text(
                 ' / ',
-                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of().textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of(context).textSecondary),
               ),
             ],
           ),
@@ -305,8 +305,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _snooze(project),
-                  icon: Icon(Icons.skip_next_rounded, color: AppTheme.of().textSecondary),
-                  label: Text('Skip Today', style: TextStyle(color: AppTheme.of().textSecondary)),
+                  icon: Icon(Icons.skip_next_rounded, color: AppTheme.of(context).textSecondary),
+                  label: Text('Skip Today', style: TextStyle(color: AppTheme.of(context).textSecondary)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: BorderSide(color: Colors.grey.withValues(alpha: 0.4)),
@@ -405,7 +405,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                       ),
                       child: Text(
                         project.phase,
-                        style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
                       ),
                     ),
                   ],
@@ -421,7 +421,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   const SizedBox(height: 8),
                   Text(
                     project.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of().textSecondary),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of(context).textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -434,7 +434,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 if (project.machine.isNotEmpty) ...[
                   Row(
                     children: [
-                      Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of().textSecondary),
+                      Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).textSecondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Wrap(
@@ -481,7 +481,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                         const SizedBox(width: 8),
                         Text(
                           dateFormat.format(nextTask.scheduledDate!),
-                          style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary),
+                          style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
                         ),
                       ],
                     ],

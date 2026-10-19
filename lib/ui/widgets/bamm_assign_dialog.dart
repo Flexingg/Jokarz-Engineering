@@ -150,16 +150,16 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.inbox_rounded, size: 36, color: AppTheme.of().textSecondary),
+                          Icon(Icons.inbox_rounded, size: 36, color: AppTheme.of(context).textSecondary),
                           const SizedBox(height: 6),
                           Text(
                             allOrders.isEmpty ? 'No cached BAMM work orders found.' : 'No matching work orders.',
-                            style: TextStyle(color: AppTheme.of().textSecondary, fontSize: 13),
+                            style: TextStyle(color: AppTheme.of(context).textSecondary, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'You can type any BAMM WO# below to link manually.',
-                            style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                           ),
                         ],
                       ),
@@ -197,7 +197,7 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
                                 const SizedBox(width: 6),
                                 Text(
                                   wo.area,
-                                  style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                                 ),
                               ],
                             ],

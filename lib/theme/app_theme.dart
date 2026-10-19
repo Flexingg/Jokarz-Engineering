@@ -71,6 +71,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color textPrimary;
   final Color textSecondary;
 
+  /// Amber for filled buttons: [amber] is a text color (dark in light
+  /// mode), which reads as brown when used as a fill.
+  Color get amberFill => const Color(0xFFF5B841);
+
   /// Blur behind floating chrome. Off when the user asks for reduced
   /// transparency (then [glass] is opaque as well).
   final bool blurGlass;
@@ -182,10 +186,17 @@ class AppColors extends ThemeExtension<AppColors> {
       backgroundEnd,
       Color.alphaBlend(backgroundGlow, background),
     ];
+    final panes = [
+      for (final e in ends) Color.alphaBlend(surface, e),
+      for (final e in ends) Color.alphaBlend(glass, e),
+      surfaceSolid,
+    ];
+    // Selected items (rail, segments, nav) put accent text on an accent wash.
+    final wash = primary.withValues(alpha: 0.16);
     return [
       ...ends,
-      for (final e in ends) Color.alphaBlend(surface, e),
-      surfaceSolid,
+      ...panes,
+      for (final p in panes) Color.alphaBlend(wash, p),
     ];
   }
 }
@@ -284,7 +295,7 @@ class AppTheme {
       primary: accent,
       primaryBlue: accent,
       amber: dark ? const Color(0xFFF5B841) : const Color(0xFF7F5000),
-      emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF0D6A3E),
+      emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF0B6338),
       coral: dark ? const Color(0xFFFF8C42) : const Color(0xFF9A3B08),
       background: start,
       backgroundEnd: end,
@@ -307,11 +318,16 @@ class AppTheme {
           : (dark ? const Color(0x0DFFFFFF) : const Color(0x33FFFFFF)),
       border: dark ? const Color(0x1FFFFFFF) : const Color(0x1A000000),
       textPrimary: dark ? const Color(0xFFECECEE) : const Color(0xFF15171B),
-      textSecondary: dark ? const Color(0xFFA3A6AE) : const Color(0xFF515864),
+      textSecondary: dark ? const Color(0xFFAEB1B9) : const Color(0xFF515864),
       blurGlass: !opaque,
     );
-    final a = _accentFor(b, accent, draft.readableBackdrops);
-    return draft.copyWith(primary: a, primaryBlue: a);
+    // The selection wash is made from the accent itself, so tune twice.
+    var tuned = draft;
+    for (var i = 0; i < 3; i++) {
+      final a = _accentFor(b, accent, tuned.readableBackdrops);
+      tuned = draft.copyWith(primary: a, primaryBlue: a);
+    }
+    return tuned;
   }
 
   /// The one theme builder. [reduceTransparency] swaps every glass surface

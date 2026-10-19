@@ -380,7 +380,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                             Icon(
                               Icons.note_alt_outlined,
                               size: 56,
-                              color: AppTheme.of().textSecondary,
+                              color: AppTheme.of(context).textSecondary,
                             ),
                             const SizedBox(height: 12),
                             const Text(
@@ -542,7 +542,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         icon: Icon(
                                           Icons.delete_outline,
                                           size: 16,
-                                          color: AppTheme.of().textSecondary,
+                                          color: AppTheme.of(context).textSecondary,
                                         ),
                                         tooltip: 'Delete Note',
                                         onPressed: () async {
@@ -649,7 +649,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         style: TextStyle(fontSize: 11),
                                       ),
                                       style: TextButton.styleFrom(
-                                        foregroundColor: AppTheme.of().textSecondary,
+                                        foregroundColor: AppTheme.of(context).textSecondary,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
                                           vertical: 2,

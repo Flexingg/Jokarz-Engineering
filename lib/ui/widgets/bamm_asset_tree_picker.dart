@@ -251,7 +251,7 @@ class _AssetTreePickerSheetState extends State<_AssetTreePickerSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Level ${level + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary)),
+              Text('Level ${level + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary)),
               const SizedBox(height: 4),
               if (_levelLoading[level])
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator())

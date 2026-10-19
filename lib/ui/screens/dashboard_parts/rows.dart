@@ -124,7 +124,7 @@ class _ProjectRow extends StatelessWidget {
                   else if (p.machine.isNotEmpty)
                     Text(
                       p.machine,
-                      style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                      style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
@@ -147,8 +147,8 @@ class _QueueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final days = p.daysSinceLastAction;
     final col = days >= 7
-        ? Colors.red.shade400
-        : (days >= 3 ? AppTheme.of(context).amber : AppTheme.of().textSecondary);
+        ? AppTheme.of(context).coral
+        : (days >= 3 ? AppTheme.of(context).amber : AppTheme.of(context).textSecondary);
 
     return InkWell(
       onTap: onTap,
@@ -177,7 +177,7 @@ class _QueueRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppTheme.of().textSecondary),
+            Icon(Icons.chevron_right_rounded, size: 16, color: AppTheme.of(context).textSecondary),
           ],
         ),
       ),
@@ -216,7 +216,7 @@ class _OrderRow extends StatelessWidget {
                   ),
                   Text(
                     '${entry.project.title} • PO: ${order.po.isNotEmpty ? order.po : "—"}',
-                    style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                    style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

@@ -74,7 +74,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       decoration: e.delivered ? TextDecoration.lineThrough : null,
-                      color: e.delivered ? AppTheme.of().textSecondary : null,
+                      color: e.delivered ? AppTheme.of(context).textSecondary : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -130,7 +130,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                   ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.of(context).amber, fontSize: 10),
                 ...e.bammWorkOrders.map((wo) => BammChip(worNo: wo, isDense: true)),
                 if (e.po.isEmpty && e.pr.isEmpty && e.bammWorkOrders.isEmpty)
-                  Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                  Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
               ],
             ),
           ),
@@ -142,11 +142,11 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
             child: e.vendorName.isNotEmpty
                 ? ExpressiveBadge(
                     label: e.vendorName,
-                    color: Colors.purpleAccent,
+                    color: AppTheme.of(context).primary,
                     icon: Icons.storefront_rounded,
                     fontSize: 10,
                   )
-                : Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                : Text('—', style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
           ),
           const SizedBox(width: 8),
 
@@ -177,17 +177,17 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                       ],
                     ),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.link_off_rounded, size: 13, color: Colors.orange),
+                      Icon(Icons.link_off_rounded, size: 13, color: AppTheme.of(context).amber),
                       SizedBox(width: 4),
                       Text(
                         'Unlinked',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                          color: AppTheme.of(context).amber,
                         ),
                       ),
                     ],
@@ -215,7 +215,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                       minimumSize: Size.zero,
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: AppTheme.of().textSecondary,
+                      foregroundColor: AppTheme.of(context).textSecondary,
                     ),
                   ),
           ),
@@ -285,9 +285,9 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
               ]),
             )
           else ...[
-            const Icon(Icons.link_off_rounded, size: 14, color: Colors.orange),
+            Icon(Icons.link_off_rounded, size: 14, color: AppTheme.of(context).amber),
             const SizedBox(width: 6),
-            const Text('Unlinked', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+            Text('Unlinked', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.of(context).amber)),
           ],
           if (e.machine.isNotEmpty) ...[
             const SizedBox(width: 8),
@@ -332,9 +332,9 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
               if (e.pr.isNotEmpty) ExpressiveBadge(label: 'PR: ${e.pr}', color: AppTheme.of(context).amber, fontSize: 10),
               ...e.bammWorkOrders.map((wo) => BammChip(worNo: wo, isDense: true)),
               if (e.vendorName.isNotEmpty)
-                ExpressiveBadge(label: e.vendorName, color: Colors.purpleAccent, icon: Icons.storefront_rounded, fontSize: 10),
+                ExpressiveBadge(label: e.vendorName, color: AppTheme.of(context).primary, icon: Icons.storefront_rounded, fontSize: 10),
               if (e.vendorQuoteNumber.isNotEmpty)
-                ExpressiveBadge(label: 'Quote #${e.vendorQuoteNumber}', color: Colors.blueGrey, fontSize: 10),
+                ExpressiveBadge(label: 'Quote #${e.vendorQuoteNumber}', color: AppTheme.of(context).textSecondary, fontSize: 10),
               if (e.addToStores)
                 e.storeRequestNumber.isNotEmpty
                     ? ExpressiveBadge(label: 'Stores #${e.storeRequestNumber} ✓', color: AppTheme.of(context).emerald, fontSize: 10)
@@ -342,7 +342,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
                         ? ExpressiveBadge(label: 'Stores: Requested', color: AppTheme.of(context).amber, fontSize: 10)
                         : e.po.isNotEmpty
                             ? ExpressiveBadge(label: 'Stores: Pending', color: AppTheme.of(context).amber, fontSize: 10)
-                            : ExpressiveBadge(label: 'Add to Stores', color: AppTheme.of().textSecondary, fontSize: 10),
+                            : ExpressiveBadge(label: 'Add to Stores', color: AppTheme.of(context).textSecondary, fontSize: 10),
             ]),
             if (e.trackingUrl.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -410,7 +410,7 @@ extension _OpenOrdersRows on _OpenOrdersScreenState {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Divider(height: 16),
       Row(children: [
-        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.of(context).emerald : AppTheme.of().textSecondary),
+        Icon(Icons.warehouse_outlined, size: 16, color: e.addToStores ? AppTheme.of(context).emerald : AppTheme.of(context).textSecondary),
         const SizedBox(width: 8),
         const Expanded(child: Text('Add to Stores', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
         Switch(

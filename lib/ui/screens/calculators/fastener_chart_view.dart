@@ -163,12 +163,12 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                                 if (isMetric)
                                   Text(
                                     '(${bolt.tapDrillDecimalInch.toStringAsFixed(4)}")',
-                                    style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
+                                    style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary),
                                   )
                                 else
                                   Text(
                                     '(${bolt.tapDrillMm.toStringAsFixed(2)} mm)',
-                                    style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary),
+                                    style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary),
                                   ),
                               ],
                             ),
@@ -189,7 +189,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                               children: [
                                 Text(
                                   'CLOSE CLEARANCE (TIGHT)',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -217,7 +217,7 @@ class _FastenerChartViewState extends State<FastenerChartView> {
                               children: [
                                 Text(
                                   'FREE CLEARANCE (STD)',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of().textSecondary),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.of(context).textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

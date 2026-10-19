@@ -458,8 +458,8 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       bg = AppTheme.of(context).emerald;
       fg = AppTheme.onColor(AppTheme.of(context).emerald);
     } else if (isAmber) {
-      bg = AppTheme.of(context).amber;
-      fg = AppTheme.onColor(AppTheme.of(context).amber);
+      bg = AppTheme.of(context).amberFill;
+      fg = AppTheme.onColor(AppTheme.of(context).amberFill);
     } else if (isCoral) {
       bg = AppTheme.of(context).coral.withValues(alpha: 0.2);
       fg = AppTheme.of(context).coral;

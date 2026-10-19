@@ -189,12 +189,12 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             decoration: BoxDecoration(
               color: bammState.isOnline
                   ? AppTheme.of(context).emerald.withValues(alpha: 0.12)
-                  : Colors.amber.withValues(alpha: 0.12),
+                  : AppTheme.of(context).amber.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: bammState.isOnline
                     ? AppTheme.of(context).emerald.withValues(alpha: 0.4)
-                    : Colors.amber.withValues(alpha: 0.4),
+                    : AppTheme.of(context).amber.withValues(alpha: 0.4),
               ),
             ),
             child: Row(
@@ -205,7 +205,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: bammState.isOnline ? AppTheme.of(context).emerald : Colors.amber,
+                    color: bammState.isOnline ? AppTheme.of(context).emerald : AppTheme.of(context).amber,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -217,7 +217,7 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: bammState.isOnline ? AppTheme.of(context).emerald : Colors.amber.shade800,
+                    color: bammState.isOnline ? AppTheme.of(context).emerald : AppTheme.of(context).amber,
                   ),
                 ),
               ],
@@ -280,15 +280,15 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.amber.withValues(alpha: 0.15),
+              color: AppTheme.of(context).amber.withValues(alpha: 0.15),
               child: Row(
                 children: [
-                  Icon(Icons.wifi_off_rounded, size: 16, color: Colors.amber.shade800),
+                  Icon(Icons.wifi_off_rounded, size: 16, color: AppTheme.of(context).amber),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Not connected to plant network (${bammState.config.origin}). Queries and updates require plant Wi-Fi / VPN.',
-                      style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                      style: TextStyle(fontSize: 12, color: AppTheme.of(context).amber),
                     ),
                   ),
                   TextButton(
@@ -316,10 +316,10 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.purple.withValues(alpha: 0.08),
+              color: AppTheme.of(context).primary.withValues(alpha: 0.08),
               child: Text(
                 'Showing ${workOrders.length} of ${loadedWorkOrders.length} loaded rows (local search).',
-                style: TextStyle(fontSize: 12, color: Colors.purple.shade900),
+                style: TextStyle(fontSize: 12, color: AppTheme.of(context).primary),
               ),
             ),
 
@@ -330,10 +330,10 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.blue.withValues(alpha: 0.08),
+              color: AppTheme.of(context).primary.withValues(alpha: 0.08),
               child: Text(
                 'Showing ${bammState.workOrders.length} of ${bammState.lastQueryTotal} work orders - refine your filters to see the rest.',
-                style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                style: TextStyle(fontSize: 12, color: AppTheme.of(context).primary),
               ),
             ),
 
@@ -348,13 +348,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.search_off_rounded, size: 48, color: AppTheme.of().textSecondary),
+                            Icon(Icons.search_off_rounded, size: 48, color: AppTheme.of(context).textSecondary),
                             const SizedBox(height: 12),
                             Text(
                               bammState.criteria.isEmpty
                                   ? (bammState.isOnline ? 'No BAMM work orders found on server.' : 'Not connected to plant network. Connect to load work orders.')
                                   : 'No BAMM work orders match your active filters.',
-                              style: TextStyle(color: AppTheme.of().textSecondary, fontSize: 14),
+                              style: TextStyle(color: AppTheme.of(context).textSecondary, fontSize: 14),
                             ),
                             const SizedBox(height: 8),
                             if (bammState.criteria.activeFilterCount > 0)

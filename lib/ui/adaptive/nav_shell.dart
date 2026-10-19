@@ -109,11 +109,10 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
           );
         }
 
-        // Mobile: a floating glass "island" over full-bleed content. With
-        // extendBody the Scaffold adds the island's height to the body's
-        // bottom padding, so inner screens' FABs and last rows clear it.
+        // Mobile: a floating glass "island" on the shared backdrop. The body
+        // ends above it (no extendBody), so every inner screen's FAB and last
+        // row stay clear of the island.
         return Scaffold(
-          extendBody: true,
           body: widget.navigationShell,
           bottomNavigationBar: SafeArea(
             minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -133,7 +132,7 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
                       Icons.dashboard_rounded,
                       color: AppTheme.of(context).primary,
                     ),
-                    label: 'Dashboard',
+                    label: 'Home',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.assignment_outlined),

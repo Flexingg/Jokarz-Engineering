@@ -57,8 +57,8 @@ class DayScheduleScreen extends ConsumerWidget {
                 return Container(
                   key: const Key('timeline_drop_zone'),
                   decoration: BoxDecoration(
-                    color: hovering ? Colors.green.withValues(alpha: 0.08) : null,
-                    border: hovering ? Border.all(color: Colors.green, width: 2) : null,
+                    color: hovering ? AppTheme.of(context).emerald.withValues(alpha: 0.08) : null,
+                    border: hovering ? Border.all(color: AppTheme.of(context).emerald, width: 2) : null,
                   ),
                   child: dayBlocks.isEmpty
                       ? Center(
@@ -66,13 +66,13 @@ class DayScheduleScreen extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.event_available_rounded,
-                                  size: 48, color: hovering ? Colors.green : AppTheme.of().textSecondary),
+                                  size: 48, color: hovering ? AppTheme.of(context).emerald : AppTheme.of(context).textSecondary),
                               const SizedBox(height: 8),
                               Text(
                                 hovering
                                     ? 'Drop to schedule'
                                     : 'No blocks scheduled today - drag a task in from below',
-                                style: TextStyle(color: AppTheme.of().textSecondary),
+                                style: TextStyle(color: AppTheme.of(context).textSecondary),
                               ),
                             ],
                           ),
@@ -177,11 +177,11 @@ class _GapStrip extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: candidateData.isNotEmpty ? Colors.green.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.08),
+              color: candidateData.isNotEmpty ? AppTheme.of(context).emerald.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppTheme.of().border, style: BorderStyle.solid, width: 1),
+              border: Border.all(color: AppTheme.of(context).border, style: BorderStyle.solid, width: 1),
             ),
-            child: Text(label ?? '$minutes min free - tap to schedule', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary)),
+            child: Text(label ?? '$minutes min free - tap to schedule', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)),
           ),
         );
       },
@@ -268,7 +268,7 @@ class _BlockTile extends ConsumerWidget {
                     Text(block.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 4),
                     Text('${timeFmt.format(block.start)} - ${timeFmt.format(block.end)} (${block.estimatedMinutes} min)',
-                        style: TextStyle(fontSize: 13, color: AppTheme.of().textSecondary)),
+                        style: TextStyle(fontSize: 13, color: AppTheme.of(context).textSecondary)),
                     if (block.status != TimeBlockStatus.scheduled)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
@@ -416,10 +416,10 @@ class _Tray extends StatelessWidget {
       key: const Key('unscheduled_tray'),
       height: 96,
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppTheme.of().border)),
+        border: Border(top: BorderSide(color: AppTheme.of(context).border)),
       ),
       child: entries.isEmpty
-          ? Center(child: Text('No unscheduled tasks', style: TextStyle(color: AppTheme.of().textSecondary)))
+          ? Center(child: Text('No unscheduled tasks', style: TextStyle(color: AppTheme.of(context).textSecondary)))
           : ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.all(8),
@@ -454,14 +454,14 @@ class _TrayCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.of().border),
+        border: Border.all(color: AppTheme.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(entry.task.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(entry.project.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+          Text(entry.project.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
         ],
       ),
     );

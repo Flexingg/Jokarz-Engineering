@@ -74,7 +74,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                       Icon(
                         Icons.checklist_rounded,
                         size: 48,
-                        color: AppTheme.of().textSecondary,
+                        color: AppTheme.of(context).textSecondary,
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -137,7 +137,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                   Icon(
                                     Icons.drag_handle_rounded,
                                     size: 20,
-                                    color: AppTheme.of().textSecondary,
+                                    color: AppTheme.of(context).textSecondary,
                                   )
                                 else
                                   const SizedBox(width: 20),
@@ -235,7 +235,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                                   .fabJobForTask(task.id) !=
                                               null
                                           ? AppTheme.of(context).primary
-                                          : AppTheme.of().textSecondary,
+                                          : AppTheme.of(context).textSecondary,
                                     ),
                                     tooltip:
                                         ref
@@ -256,7 +256,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                   icon: Icon(
                                     Icons.edit_outlined,
                                     size: 18,
-                                    color: AppTheme.of().textSecondary,
+                                    color: AppTheme.of(context).textSecondary,
                                   ),
                                   onPressed: () => _openTaskEditor(task),
                                 ),
@@ -270,7 +270,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                   icon: Icon(
                                     Icons.delete_outline,
                                     size: 18,
-                                    color: AppTheme.of().textSecondary,
+                                    color: AppTheme.of(context).textSecondary,
                                   ),
                                   onPressed: () => ref
                                       .read(projectProvider.notifier)
@@ -366,7 +366,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                       Icon(
                         Icons.local_shipping_outlined,
                         size: 48,
-                        color: AppTheme.of().textSecondary,
+                        color: AppTheme.of(context).textSecondary,
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -470,7 +470,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                       'ETA: $etaText',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: AppTheme.of().textSecondary,
+                                        color: AppTheme.of(context).textSecondary,
                                       ),
                                     ),
                                   ],
@@ -502,7 +502,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                 icon: Icon(
                                   Icons.edit_outlined,
                                   size: 18,
-                                  color: AppTheme.of().textSecondary,
+                                  color: AppTheme.of(context).textSecondary,
                                 ),
                                 onPressed: () => _showAddOrderDialog(
                                   context,
@@ -513,7 +513,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                 icon: Icon(
                                   Icons.delete_outline,
                                   size: 18,
-                                  color: AppTheme.of().textSecondary,
+                                  color: AppTheme.of(context).textSecondary,
                                 ),
                                 onPressed: () => ref
                                     .read(projectProvider.notifier)
@@ -593,7 +593,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                               'No matching unlinked orders',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.of().textSecondary,
+                                color: AppTheme.of(context).textSecondary,
                               ),
                             ),
                           )
@@ -610,10 +610,10 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                                         : null,
                                     child: ListTile(
                                       dense: true,
-                                      leading: const Icon(
+                                      leading: Icon(
                                         Icons.link_off_rounded,
                                         size: 20,
-                                        color: Colors.orange,
+                                        color: AppTheme.of(context).amber,
                                       ),
                                       title: Text(
                                         o.description.isEmpty
@@ -907,7 +907,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                       Icon(
                         Icons.camera_alt_outlined,
                         size: 24,
-                        color: AppTheme.of().textSecondary,
+                        color: AppTheme.of(context).textSecondary,
                       ),
                       const SizedBox(width: 8),
                       const Text(
@@ -942,7 +942,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                       File(path),
                       fit: BoxFit.cover,
                       errorBuilder: (ctx, _, __) => Center(
-                        child: Icon(Icons.broken_image, color: AppTheme.of().textSecondary),
+                        child: Icon(Icons.broken_image, color: AppTheme.of(context).textSecondary),
                       ),
                     ),
                   );
@@ -982,7 +982,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                       Icon(
                         Icons.history_edu_outlined,
                         size: 24,
-                        color: AppTheme.of().textSecondary,
+                        color: AppTheme.of(context).textSecondary,
                       ),
                       const SizedBox(width: 8),
                       const Text('No field logs recorded yet.'),
@@ -1023,7 +1023,7 @@ extension _ProjectDetailTabs on _ProjectDetailScreenState {
                           icon: Icon(
                             Icons.delete_outline,
                             size: 16,
-                            color: AppTheme.of().textSecondary,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           onPressed: () {
                             ref

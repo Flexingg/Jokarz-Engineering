@@ -212,11 +212,11 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                             Text(p.title,
                                                 style: const TextStyle(fontWeight: FontWeight.bold)),
                                             Text('${p.category.label} • ${p.phase}',
-                                                style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary)),
+                                                style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                                           ],
                                         ),
                                       ),
-                                      Icon(Icons.chevron_right_rounded, color: AppTheme.of().textSecondary),
+                                      Icon(Icons.chevron_right_rounded, color: AppTheme.of(context).textSecondary),
                                     ],
                                   ),
                                 )),
@@ -224,7 +224,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                           if (asset.completedProjects.isNotEmpty) ...[
                             const SizedBox(height: 16),
                             Text('Completed Projects',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.of().textSecondary)),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.of(context).textSecondary)),
                             const SizedBox(height: 8),
                             ...asset.completedProjects.map((p) => ExpressiveCard(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -238,7 +238,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                           p.title,
                                           style: TextStyle(
                                             decoration: TextDecoration.lineThrough,
-                                            color: AppTheme.of().textSecondary,
+                                            color: AppTheme.of(context).textSecondary,
                                           ),
                                         ),
                                       ),
@@ -284,7 +284,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                     if (o.po.isNotEmpty)
                                       ExpressiveBadge(label: 'PO: ${o.po}', color: AppTheme.of(context).primary, fontSize: 10),
                                     if (o.pr.isNotEmpty)
-                                      ExpressiveBadge(label: 'PR: ${o.pr}', color: AppTheme.of().textSecondary, fontSize: 10),
+                                      ExpressiveBadge(label: 'PR: ${o.pr}', color: AppTheme.of(context).textSecondary, fontSize: 10),
                                     if (o.vendorName.isNotEmpty)
                                       ExpressiveBadge(label: o.vendorName, color: AppTheme.of(context).amber, fontSize: 10),
                                     if (o.eta != null)
@@ -325,14 +325,14 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                       Text(d.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                                       Text(
                                         '${dateFormat.format(d.date)}${d.timeRange.isNotEmpty ? " • ${d.timeRange}" : ""}',
-                                        style: TextStyle(fontSize: 11, color: AppTheme.of().textSecondary),
+                                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                                       ),
                                     ],
                                   ),
                                 ),
 
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                  icon: Icon(Icons.delete_outline, size: 18, color: AppTheme.of(context).coral),
                                   onPressed: () =>
                                       ref.read(projectProvider.notifier).deleteDowntime(d.id),
                                 ),
@@ -360,7 +360,7 @@ class _MachineDetailScreenState extends ConsumerState<MachineDetailScreen>
                                 Text(n.transcript, style: const TextStyle(fontSize: 12)),
                                 const SizedBox(height: 6),
                                 Text(dateFormat.format(n.timestamp),
-                                    style: TextStyle(fontSize: 10, color: AppTheme.of().textSecondary)),
+                                    style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary)),
                               ],
                             ),
                           );
