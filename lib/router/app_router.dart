@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../theme/fluid_background.dart';
 import '../ui/adaptive/nav_shell.dart';
 import '../ui/screens/dashboard_screen.dart';
 import '../ui/screens/projects_screen.dart';
@@ -39,7 +40,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/',
-              pageBuilder: (context, state) => const NoTransitionPage(
+              pageBuilder: (context, state) => const FluidNoTransitionPage(
                 child: DashboardScreen(),
               ),
             ),
@@ -51,7 +52,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/projects',
-              pageBuilder: (context, state) => const NoTransitionPage(
+              pageBuilder: (context, state) => const FluidNoTransitionPage(
                 child: ProjectsScreen(),
               ),
               routes: [
@@ -105,7 +106,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/orders',
-              pageBuilder: (context, state) => NoTransitionPage(
+              pageBuilder: (context, state) => FluidNoTransitionPage(
                 child: OpenOrdersScreen(
                   targetOrderId: state.uri.queryParameters['orderId'],
                 ),
@@ -119,7 +120,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/workbench',
-              pageBuilder: (context, state) => const NoTransitionPage(
+              pageBuilder: (context, state) => const FluidNoTransitionPage(
                 child: WorkbenchScreen(),
               ),
             ),
@@ -131,7 +132,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/voice-notes',
-              pageBuilder: (context, state) => NoTransitionPage(
+              pageBuilder: (context, state) => FluidNoTransitionPage(
                 child: VoiceNotesScreen(
                   targetNoteId: state.uri.queryParameters['noteId'],
                 ),
@@ -145,7 +146,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/settings',
-              pageBuilder: (context, state) => const NoTransitionPage(
+              pageBuilder: (context, state) => const FluidNoTransitionPage(
                 child: SettingsScreen(),
               ),
             ),
@@ -159,7 +160,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/bamm',
-              pageBuilder: (context, state) => NoTransitionPage(
+              pageBuilder: (context, state) => FluidNoTransitionPage(
                 child: BammScreen(
                   targetWo: state.uri.queryParameters['wo'],
                   initialFilter: state.uri.queryParameters['filter'],
@@ -202,7 +203,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/photo-note',
       parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => NoTransitionPage(
+      pageBuilder: (context, state) => FluidNoTransitionPage(
         child: PhotoNoteEditorScreen(
           imagePath: state.uri.queryParameters['path'] ?? '',
         ),
@@ -211,28 +212,28 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/inbox',
       parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
+      pageBuilder: (context, state) => const FluidNoTransitionPage(
         child: InboxScreen(),
       ),
     ),
     GoRoute(
       path: '/fab',
       parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
+      pageBuilder: (context, state) => const FluidNoTransitionPage(
         child: FabListScreen(),
       ),
     ),
     GoRoute(
       path: '/vendors',
       parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
+      pageBuilder: (context, state) => const FluidNoTransitionPage(
         child: VendorsScreen(),
       ),
     ),
     GoRoute(
       path: '/machines',
       parentNavigatorKey: _rootNavigatorKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
+      pageBuilder: (context, state) => const FluidNoTransitionPage(
         child: MachinesScreen(),
       ),
       routes: [

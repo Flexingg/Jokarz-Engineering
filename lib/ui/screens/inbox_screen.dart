@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,7 +34,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     String selectedProjectId = projects.first.id;
     DateTime? scheduledDate = DateTime.now();
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -131,7 +132,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.of(context).emerald,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald),
                 ),
                 child: const Text('Convert to Task'),
               ),
@@ -149,7 +150,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final priceCtrl = TextEditingController();
     DateTime? eta;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -243,8 +244,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.of(context).amber,
-                  foregroundColor: Colors.black87,
+                  backgroundColor: AppTheme.of(context).amberFill,
+                  foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
                 ),
                 child: const Text('Create Order'),
               ),
@@ -259,7 +260,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final reasonCtrl = TextEditingController(text: item.text);
     String machine = machines.isNotEmpty ? machines.first : 'Line 1';
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -320,7 +321,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.of(context).coral,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppTheme.onColor(AppTheme.of(context).coral),
                 ),
                 child: const Text('Log Downtime'),
               ),
@@ -352,7 +353,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.of(context).amber,
+                  color: AppTheme.of(context).amberFill,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -370,7 +371,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           IconButton(
             icon: Icon(
               _showProcessed ? Icons.visibility_rounded : Icons.visibility_outlined,
-              color: _showProcessed ? AppTheme.of(context).primary : Colors.grey,
+              color: _showProcessed ? AppTheme.of(context).primary : AppTheme.of(context).textSecondary,
             ),
             tooltip: _showProcessed ? 'Showing All (Including Processed)' : 'Showing Pending Only',
             onPressed: () => setState(() => _showProcessed = !_showProcessed),
@@ -442,8 +443,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         onPressed: () => InboxQuickCaptureModal.show(context),
         icon: const Icon(Icons.flash_on_rounded),
         label: const Text('Quick Dump'),
-        backgroundColor: AppTheme.of(context).amber,
-        foregroundColor: Colors.black87,
+        backgroundColor: AppTheme.of(context).amberFill,
+        foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
       ),
     );
   }
@@ -495,12 +496,12 @@ class _InboxItemCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     dateFormat.format(item.createdAt),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                   ),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                icon: Icon(Icons.close_rounded, size: 18, color: AppTheme.of(context).textSecondary),
                 tooltip: 'Delete',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -517,7 +518,7 @@ class _InboxItemCard extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w600,
               decoration: item.isProcessed ? TextDecoration.lineThrough : null,
-              color: item.isProcessed ? Colors.grey : (isDark ? Colors.white : Colors.black87),
+              color: item.isProcessed ? AppTheme.of(context).textSecondary : (AppTheme.of(context).textPrimary),
             ),
           ),
           const SizedBox(height: 14),
@@ -551,12 +552,12 @@ class _InboxItemCard extends StatelessWidget {
                   onPressed: onTriageDowntime,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.edit_note_rounded, size: 14, color: Colors.purpleAccent),
+                  avatar: Icon(Icons.edit_note_rounded, size: 14, color: AppTheme.of(context).primary),
                   label: const Text('Note', style: TextStyle(fontSize: 11)),
                   onPressed: onTriageNote,
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.done_all_rounded, size: 14, color: Colors.grey),
+                  avatar: Icon(Icons.done_all_rounded, size: 14, color: AppTheme.of(context).textSecondary),
                   label: const Text('Done', style: TextStyle(fontSize: 11)),
                   onPressed: onDismiss,
                 ),

@@ -1,3 +1,4 @@
+import '../../fluid/fluid_dialog.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -179,7 +180,6 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: false,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (_) => _CalibrationSheet(motion: _magMotion),
     );
   }
@@ -201,7 +201,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
     final roll = _roll, pitch = _pitch, heading = _heading;
     final labelCtrl =
         TextEditingController(text: 'Point ${_points.length + 1}');
-    final saved = await showDialog<bool>(
+    final saved = await showFluidDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Label measurement'),
@@ -431,7 +431,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: _holding
-                  ? c.coral.withValues(alpha: 0.9)
+                  ? c.coral
                   : c.primary.withValues(alpha: 0.12),
               border: Border.all(color: c.primary, width: 2),
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -441,7 +441,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
               children: [
                 Icon(
                   _holding ? Icons.fiber_manual_record : Icons.radio_button_checked,
-                  color: _holding ? Colors.white : c.primary,
+                  color: _holding ? AppTheme.onColor(c.coral) : c.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -450,7 +450,7 @@ class _BubbleLevelViewState extends ConsumerState<BubbleLevelView> {
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: _holding ? Colors.white : c.primary),
+                      color: _holding ? AppTheme.onColor(c.coral) : c.primary),
                 ),
               ],
             ),
@@ -568,7 +568,7 @@ class _BubbleLevelPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2 - 10;
     final bubbleRadius = 24.0;
     final accent = isLevel ? AppTheme.of().emerald : AppTheme.of().coral;
-    final outline = isDark ? Colors.white38 : Colors.black38;
+    final outline = isDark ? Colors.white38 : AppTheme.of().textSecondary;
 
     // Vial face
     final vialPaint = Paint()

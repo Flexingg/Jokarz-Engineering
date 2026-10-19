@@ -528,9 +528,9 @@ class _TrianglePainter extends CustomPainter {
     drawLabel('B (${angleB.toStringAsFixed(1)}°)', Offset(pB.dx + 12, pB.dy + 12), AppTheme.of().amber);
     drawLabel('C (${angleC.toStringAsFixed(1)}°)', Offset(pC.dx, pC.dy - 12), AppTheme.of().amber);
 
-    drawLabel('c = ${c.toStringAsFixed(2)}', Offset((pA.dx + pB.dx) / 2, pA.dy + 12), isDark ? Colors.white70 : Colors.black87);
-    drawLabel('a = ${a.toStringAsFixed(2)}', Offset((pB.dx + pC.dx) / 2 + 12, (pB.dy + pC.dy) / 2), isDark ? Colors.white70 : Colors.black87);
-    drawLabel('b = ${b.toStringAsFixed(2)}', Offset((pA.dx + pC.dx) / 2 - 12, (pA.dy + pC.dy) / 2), isDark ? Colors.white70 : Colors.black87);
+    drawLabel('c = ${c.toStringAsFixed(2)}', Offset((pA.dx + pB.dx) / 2, pA.dy + 12), isDark ? Colors.white70 : AppTheme.of().textPrimary);
+    drawLabel('a = ${a.toStringAsFixed(2)}', Offset((pB.dx + pC.dx) / 2 + 12, (pB.dy + pC.dy) / 2), isDark ? Colors.white70 : AppTheme.of().textPrimary);
+    drawLabel('b = ${b.toStringAsFixed(2)}', Offset((pA.dx + pC.dx) / 2 - 12, (pA.dy + pC.dy) / 2), isDark ? Colors.white70 : AppTheme.of().textPrimary);
   }
 
   @override

@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/voice_note.dart';
@@ -20,7 +21,7 @@ Future<void> showNewFieldNoteDialog(
   final contentCtrl = TextEditingController(text: prefillContent);
   String? selectedProjId;
 
-  return showDialog(
+  return showFluidDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {

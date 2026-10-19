@@ -24,7 +24,7 @@ class ExpressiveCard extends StatefulWidget {
     this.margin,
     this.backgroundColor,
     this.borderColor,
-    this.borderRadius = AppTheme.radiusMd,
+    this.borderRadius = AppTheme.radiusLg,
     this.onTap,
     this.isGlowing = false,
     this.glowColor,
@@ -48,12 +48,15 @@ class _ExpressiveCardState extends State<ExpressiveCard> {
     final child = w.child;
     final colors = AppTheme.of(context);
     final motion = Motion.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final bg = w.backgroundColor ?? colors.surfaceCard;
     final hoverable = onTap != null;
+    // Calm glass: a soft lift instead of a hard outline; hover and "glowing"
+    // light the edge with the accent (light as a signal, not decoration).
     final border = w.borderColor ??
         (hoverable && _hover
             ? colors.primary.withValues(alpha: 0.55)
-            : colors.border.withValues(alpha: 0.7));
+            : (dark ? colors.glassEdgeTop.withValues(alpha: 0.14) : colors.border));
     final glow = w.glowColor ?? colors.primary;
 
     Widget content = AnimatedContainer(
@@ -63,18 +66,19 @@ class _ExpressiveCardState extends State<ExpressiveCard> {
         color: bg,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: isGlowing ? glow : border,
+          color: isGlowing ? glow.withValues(alpha: 0.7) : border,
           width: isGlowing ? 1.5 : 1.0,
         ),
-        boxShadow: isGlowing
-            ? [
-                BoxShadow(
-                  color: glow.withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                )
-              ]
-            : null,
+        boxShadow: [
+          if (isGlowing)
+            BoxShadow(color: glow.withValues(alpha: 0.25), blurRadius: 16, spreadRadius: 1)
+          else if (!dark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hover ? 0.07 : 0.04),
+              blurRadius: _hover ? 18 : 12,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       child: Padding(
         padding: w.padding ?? const EdgeInsets.all(16.0),
@@ -104,7 +108,7 @@ class _ExpressiveCardState extends State<ExpressiveCard> {
           splashColor: glow.withValues(alpha: 0.1),
           highlightColor: glow.withValues(alpha: 0.05),
           child: AnimatedScale(
-            scale: _down ? 0.992 : 1,
+            scale: _down ? 0.98 : 1,
             duration: _down ? motion.quick : motion.pop,
             curve: _down ? Curves.easeOut : motion.spring,
             child: content,

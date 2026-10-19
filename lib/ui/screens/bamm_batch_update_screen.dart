@@ -17,6 +17,7 @@
 /// a heterogeneous batch.
 library;
 
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../bamm/schema/lookups.dart';
@@ -117,7 +118,7 @@ class _BammBatchUpdateScreenState extends ConsumerState<BammBatchUpdateScreen> {
     if (change.isEmpty) return;
 
     if (change.statusId != null && _closingStatusIds.contains(change.statusId)) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showFluidDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Confirm status change'),
@@ -288,7 +289,7 @@ class _BatchChangeSheetState extends ConsumerState<_BatchChangeSheet> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary))),
           Expanded(child: Text(value ?? 'No change', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
           TextButton(key: key, onPressed: onTap, child: const Text('Choose')),
         ],

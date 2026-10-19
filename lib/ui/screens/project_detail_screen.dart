@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -223,7 +224,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 await parkWithDialog(context, ref, project);
                 return;
               }
-              final choice = await showDialog<String>(
+              final choice = await showFluidDialog<String>(
                 context: context,
                 builder: (ctx) => SimpleDialog(
                   title: Text(parkBadgeText(project)),
@@ -270,7 +271,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           icon: Icon(Icons.delete_outline, color: AppTheme.of(context).coral),
           tooltip: 'Delete Project',
           onPressed: () async {
-            final confirm = await showDialog<bool>(
+            final confirm = await showFluidDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('Delete Project?'),
@@ -409,19 +410,14 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               ? AppTheme.of(context).coral
               : AppTheme.of(context).amber);
 
+    // An inset glass card on the backdrop rather than a full-width band.
     return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.of(context).surface
-            : AppTheme.of(context).surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark
-                ? AppTheme.of(context).border
-                : AppTheme.of(context).border,
-          ),
-        ),
+        color: AppTheme.of(context).surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +448,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               if (isTerminal)
                 ExpressiveBadge(
                   label: 'Lifetime #${project.priority} (Closed)',
-                  color: Colors.grey,
+                  color: AppTheme.of(context).textSecondary,
                   fontSize: 11,
                 )
               else
@@ -530,10 +526,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.precision_manufacturing_outlined,
                             size: 14,
-                            color: Colors.grey,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -558,10 +554,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.account_tree_outlined,
                             size: 14,
-                            color: Colors.grey,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -807,8 +803,13 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppTheme.of(context).amber.withValues(alpha: 0.15),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.of(context).amber.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+        border: Border.all(color: AppTheme.of(context).amber.withValues(alpha: 0.35)),
+      ),
       child: Row(
         children: [
           Icon(
@@ -822,7 +823,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               text: TextSpan(
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: AppTheme.of(context).textPrimary,
                 ),
                 children: [
                   TextSpan(

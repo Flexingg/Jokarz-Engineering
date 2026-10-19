@@ -1,3 +1,4 @@
+import '../../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/bolt_spec.dart';
@@ -39,7 +40,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
               Row(
                 children: [
                   // Metric / Imperial Toggle
-                  SegmentedButton<FastenerStandard>(
+                  FluidSegmentedButton<FastenerStandard>(
                     segments: const [
                       ButtonSegment(
                         value: FastenerStandard.metric,
@@ -56,7 +57,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
                   const Spacer(),
 
                   // Unit Toggle (ft-lbs vs N-m)
-                  SegmentedButton<bool>(
+                  FluidSegmentedButton<bool>(
                     segments: const [
                       ButtonSegment(value: true, label: Text('ft-lbs', style: TextStyle(fontSize: 11))),
                       ButtonSegment(value: false, label: Text('N·m', style: TextStyle(fontSize: 11))),
@@ -238,7 +239,7 @@ class _TorqueChartViewState extends State<TorqueChartView> {
           ),
           Text(
             'Lubed: ${lubVal.toStringAsFixed(1)} $unit',
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            style: TextStyle(fontSize: 10, color: AppTheme.of(context).textSecondary),
           ),
         ],
       ),

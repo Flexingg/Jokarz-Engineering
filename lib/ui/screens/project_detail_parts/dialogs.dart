@@ -7,7 +7,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
     DateTime? scheduled = existingTask?.scheduledDate;
     List<String> taskBamms = List.from(existingTask?.bammWorkOrders ?? []);
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -181,7 +181,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
     final contentCtrl = TextEditingController();
     LogType selectedType = LogType.update;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
@@ -255,7 +255,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
 
   void _showEditNotesDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.notes);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -295,7 +295,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
   }
 
   void _showEditCategoryDialog(BuildContext context, Project project) {
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Category'),
@@ -323,7 +323,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
     if (project.isCompletedOrCancelled) return;
     final activeCount = ref.read(projectProvider).activeProjects.length;
     final maxPriority = activeCount > 0 ? activeCount : 1;
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Priority Ranking'),
@@ -358,7 +358,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
 
   void _showEditPhaseDialog(BuildContext context, Project project) {
     final availablePhases = ref.read(projectProvider).availablePhases;
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Phase / Status'),
@@ -386,7 +386,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
 
   void _showEditMachineDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.machine);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Machine / Line'),
@@ -420,7 +420,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
 
   void _showEditSubAssemblyDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.subAssembly);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Sub-Assembly'),
@@ -457,7 +457,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
     final ctrl = TextEditingController(
       text: project.cost > 0 ? project.cost.toStringAsFixed(2) : '',
     );
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Cost'),
@@ -492,7 +492,7 @@ extension _ProjectDetailDialogs on _ProjectDetailScreenState {
 
   void _showEditTagsDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.tags.join(', '));
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Tags'),

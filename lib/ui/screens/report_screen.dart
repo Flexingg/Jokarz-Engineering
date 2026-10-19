@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -290,7 +291,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
   Future<void> _saveAsTemplate(ReportConfig cfg) async {
     final ctrl = TextEditingController();
-    final name = await showDialog<String>(
+    final name = await showFluidDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Save Report Template'),

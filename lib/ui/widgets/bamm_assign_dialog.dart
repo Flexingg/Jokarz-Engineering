@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bamm_provider.dart';
@@ -19,7 +20,7 @@ class BammAssignDialog extends ConsumerStatefulWidget {
     required List<String> currentSelections,
     String title = 'Assign BAMM Work Orders',
   }) {
-    return showDialog<List<String>>(
+    return showFluidDialog<List<String>>(
       context: context,
       builder: (ctx) => BammAssignDialog(
         initialSelected: currentSelections,
@@ -150,16 +151,16 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.inbox_rounded, size: 36, color: Colors.grey.shade400),
+                          Icon(Icons.inbox_rounded, size: 36, color: AppTheme.of(context).textSecondary),
                           const SizedBox(height: 6),
                           Text(
                             allOrders.isEmpty ? 'No cached BAMM work orders found.' : 'No matching work orders.',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                            style: TextStyle(color: AppTheme.of(context).textSecondary, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'You can type any BAMM WO# below to link manually.',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                           ),
                         ],
                       ),
@@ -197,7 +198,7 @@ class _BammAssignDialogState extends ConsumerState<BammAssignDialog> {
                                 const SizedBox(width: 6),
                                 Text(
                                   wo.area,
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
                                 ),
                               ],
                             ],

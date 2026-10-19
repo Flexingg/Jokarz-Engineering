@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/ui_prefs.dart';
+import '../../theme/fluid_background.dart';
 
 /// The one spring-like curve family the whole app animates on. A cubic with
 /// its second control point above 1 overshoots the target a little and settles,
@@ -27,8 +28,9 @@ class Motion {
   /// The overshooting curve for movement the user just triggered.
   Curve get spring => switch (level) {
     MotionLevel.off => Curves.linear,
-    MotionLevel.subtle => const Cubic(0.3, 1.25, 0.6, 1),
-    MotionLevel.bouncy => const Cubic(0.34, 1.62, 0.5, 1),
+    // One visible overshoot of a few percent, settled well under 500 ms.
+    MotionLevel.subtle => const Cubic(0.25, 1.12, 0.5, 1),
+    MotionLevel.bouncy => const Cubic(0.34, 1.36, 0.64, 1),
   };
 
   /// A non-overshooting curve for things leaving the screen.
@@ -38,11 +40,14 @@ class Motion {
   Duration d(int milliseconds) =>
       enabled ? Duration(milliseconds: milliseconds) : Duration.zero;
 
-  Duration get nav => d(550);
-  Duration get page => d(600);
-  Duration get pop => d(320);
-  Duration get sheet => d(480);
+  Duration get nav => d(460);
+  Duration get page => d(440);
+  Duration get pop => d(380);
+  Duration get sheet => d(450);
   Duration get quick => d(150);
+
+  /// Press-down: fast and firm (springs back on release with [pop]).
+  Duration get press => d(90);
 }
 
 /// Provides the resolved [Motion] to the widget tree (installed in the app's
@@ -70,6 +75,9 @@ class SpringPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     final motion = Motion.of(context);
+    // Each page carries the backdrop, so the page underneath never shows
+    // through while this one fades in over it.
+    child = FluidBackground(child: child);
     final curved = CurvedAnimation(
       parent: animation,
       curve: motion.spring,
@@ -99,7 +107,7 @@ class SpringPageTransitionsBuilder extends PageTransitionsBuilder {
 }
 
 /// Plays a one-time rise-and-fade the first time it is built, delayed by
-/// [index] * 50 ms so a group of cards arrives one after another. Does nothing
+/// [index] * 20 ms (up to six) so a group of cards arrives one after another. Does nothing
 /// when motion is off.
 class StaggerIn extends StatelessWidget {
   final int index;
@@ -110,7 +118,8 @@ class StaggerIn extends StatelessWidget {
   Widget build(BuildContext context) {
     final motion = Motion.of(context);
     if (!motion.enabled) return child;
-    final delay = index.clamp(0, 8) * 50;
+    // Short, tight stagger: 20 ms apart, at most six steps.
+    final delay = index.clamp(0, 6) * 20;
     final total = motion.page.inMilliseconds + delay;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),

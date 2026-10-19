@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -428,8 +429,8 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Icon(Icons.precision_manufacturing_outlined,
-                      size: 13, color: Colors.grey),
+                  Icon(Icons.precision_manufacturing_outlined,
+                      size: 13, color: AppTheme.of(context).textSecondary),
                   ...splitMachines(_machineController.text).map((m) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -541,7 +542,7 @@ class _ProjectEditScreenState extends ConsumerState<ProjectEditScreen> {
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () async {
-                          final selected = await showDialog<List<String>>(
+                          final selected = await showFluidDialog<List<String>>(
                             context: context,
                             builder: (ctx) => BammAssignDialog(
                               initialSelected: _bammWorkOrders,

@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/order_item.dart';
@@ -50,7 +51,7 @@ Future<void> showOrderDialog(
     title = fixedProjectId != null ? 'Add Order / Requisition' : 'Add Order';
   }
 
-  return showDialog(
+  return showFluidDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {

@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -99,7 +100,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     final contentCtrl = TextEditingController(text: note.transcript);
     String? selectedProjId = note.projectId;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -180,7 +181,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
 
   void _showEditProjectNotesDialog(BuildContext context, Project project) {
     final ctrl = TextEditingController(text: project.notes);
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -377,10 +378,10 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.note_alt_outlined,
                               size: 56,
-                              color: Colors.grey,
+                              color: AppTheme.of(context).textSecondary,
                             ),
                             const SizedBox(height: 12),
                             const Text(
@@ -539,15 +540,15 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                               ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete_outline,
                                           size: 16,
-                                          color: Colors.grey,
+                                          color: AppTheme.of(context).textSecondary,
                                         ),
                                         tooltip: 'Delete Note',
                                         onPressed: () async {
                                           final note = entry.voiceNote!;
-                                          final confirm = await showDialog<bool>(
+                                          final confirm = await showFluidDialog<bool>(
                                             context: context,
                                             builder: (ctx) => AlertDialog(
                                               title: const Text('Delete Note?'),
@@ -649,7 +650,7 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                         style: TextStyle(fontSize: 11),
                                       ),
                                       style: TextButton.styleFrom(
-                                        foregroundColor: Colors.grey,
+                                        foregroundColor: AppTheme.of(context).textSecondary,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
                                           vertical: 2,

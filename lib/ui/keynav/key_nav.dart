@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
@@ -190,7 +191,7 @@ class KeyNavItem extends StatelessWidget {
     required this.controller,
     required this.index,
     required this.child,
-    this.radius = 14,
+    this.radius = AppTheme.radiusLg,
   });
 
   @override
@@ -236,7 +237,7 @@ const Map<String, String> _commonKeys = {
 
 Future<void> showKeyboardHelp(BuildContext context, Map<String, String> extra) {
   final rows = {..._commonKeys, ...extra};
-  return showDialog(
+  return showFluidDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Keyboard shortcuts'),

@@ -1,3 +1,4 @@
+import '../../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../widgets/expressive_card.dart';
@@ -261,7 +262,7 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
           const SizedBox(height: 12),
 
           // Unit Toggle
-          SegmentedButton<bool>(
+          FluidSegmentedButton<bool>(
             segments: const [
               ButtonSegment(
                   value: true, label: Text('Metric (mm / °C)')),
@@ -424,8 +425,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                             color: AppTheme.of(context).amber,
                           ),
                         ),
-                        const Text('Cold Interference Fit',
-                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('Cold Interference Fit',
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                       ],
                     ),
                     Column(
@@ -438,8 +439,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                             color: AppTheme.of(context).primary,
                           ),
                         ),
-                        const Text('Thermal Expansion ΔD',
-                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('Thermal Expansion ΔD',
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                       ],
                     ),
                     Column(
@@ -454,8 +455,8 @@ class _HeatShrinkCalculatorViewState extends State<HeatShrinkCalculatorView> {
                                 : AppTheme.of(context).coral,
                           ),
                         ),
-                        const Text('Hot Install Slip Clearance',
-                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('Hot Install Slip Clearance',
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                       ],
                     ),
                   ],

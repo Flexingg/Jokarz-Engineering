@@ -230,7 +230,7 @@ class _UnitConverterViewState extends State<UnitConverterView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(e.key, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(e.key, style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary)),
                         const SizedBox(height: 2),
                         Text(
                           e.value,

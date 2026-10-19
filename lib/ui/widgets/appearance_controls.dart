@@ -1,15 +1,15 @@
+import '../fluid/liquid.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/ui_prefs.dart';
-import '../../providers/theme_provider.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../services/window_service.dart';
 import '../../theme/app_theme.dart';
 
-/// Accent picker (Graphite themes) and animation level, shown in Settings >
-/// Appearance under the theme dropdown.
+/// Accent picker, animation level and reduce transparency, shown in Settings >
+/// Appearance under the Light / Dark switch.
 class AppearanceControls extends ConsumerWidget {
   const AppearanceControls({super.key});
 
@@ -17,10 +17,6 @@ class AppearanceControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppTheme.of(context);
     final prefs = ref.watch(uiPrefsProvider);
-    final family = ref.watch(themeProvider);
-    final isGraphite =
-        family == AppThemeFamily.graphiteDark ||
-        family == AppThemeFamily.graphiteLight;
     final notifier = ref.read(uiPrefsProvider.notifier);
 
     return Column(
@@ -33,9 +29,7 @@ class AppearanceControls extends ConsumerWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          isGraphite
-              ? 'Used for selection and primary buttons.'
-              : 'Available on the Graphite themes.',
+          'Used for selection, primary buttons and the soft light in the background.',
           style: TextStyle(fontSize: 11, color: colors.textSecondary),
         ),
         const SizedBox(height: 10),
@@ -52,18 +46,16 @@ class AppearanceControls extends ConsumerWidget {
                   label: '${a.label} accent',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(22),
-                    onTap: isGraphite
-                        ? () => notifier.update(
-                            (p) => p.copyWith(accentValue: a.color.toARGB32()),
-                          )
-                        : null,
+                    onTap: () => notifier.update(
+                      (p) => p.copyWith(accentValue: a.color.toARGB32()),
+                    ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: a.color.withValues(alpha: isGraphite ? 1 : 0.35),
+                        color: a.color,
                         border: Border.all(
                           color: prefs.accentValue == a.color.toARGB32()
                               ? colors.textPrimary
@@ -92,7 +84,7 @@ class AppearanceControls extends ConsumerWidget {
           style: TextStyle(fontSize: 11, color: colors.textSecondary),
         ),
         const SizedBox(height: 10),
-        SegmentedButton<MotionLevel>(
+        FluidSegmentedButton<MotionLevel>(
           showSelectedIcon: false,
           segments: [
             for (final m in MotionLevel.values)
@@ -101,6 +93,19 @@ class AppearanceControls extends ConsumerWidget {
           selected: {prefs.motion},
           onSelectionChanged: (s) =>
               notifier.update((p) => p.copyWith(motion: s.first)),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Reduce transparency',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(
+            'Solid surfaces and no blur. Easier to read, and lighter on older machines.',
+            style: TextStyle(fontSize: 11, color: colors.textSecondary),
+          ),
+          value: prefs.reduceTransparency,
+          onChanged: (v) =>
+              notifier.update((p) => p.copyWith(reduceTransparency: v)),
         ),
         if (!kIsWeb &&
             (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) ...[

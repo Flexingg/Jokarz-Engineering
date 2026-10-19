@@ -116,10 +116,10 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.storefront_outlined,
                             size: 54,
-                            color: Colors.grey,
+                            color: AppTheme.of(context).textSecondary,
                           ),
                           const SizedBox(height: 14),
                           Text(
@@ -205,10 +205,10 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                             ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete_outline,
                                           size: 18,
-                                          color: Colors.redAccent,
+                                          color: AppTheme.of(context).coral,
                                         ),
                                         onPressed: () => ref
                                             .read(projectProvider.notifier)
@@ -222,10 +222,10 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.person_rounded,
                                       size: 14,
-                                      color: Colors.grey,
+                                      color: AppTheme.of(context).textSecondary,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -283,9 +283,9 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                                 const SizedBox(height: 8),
                                 Text(
                                   v.notes,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey,
+                                    color: AppTheme.of(context).textSecondary,
                                   ),
                                 ),
                               ],
@@ -303,7 +303,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
         icon: const Icon(Icons.add_business_rounded),
         label: const Text('Add Vendor'),
         backgroundColor: AppTheme.of(context).primary,
-        foregroundColor: Colors.black87,
+        foregroundColor: AppTheme.onColor(AppTheme.of(context).primary),
       ),
     );
   }

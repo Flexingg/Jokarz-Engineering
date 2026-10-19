@@ -1,3 +1,4 @@
+import '../fluid/liquid.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,7 +45,7 @@ class _BammReportScreenState extends ConsumerState<BammReportScreen> {
           _TemplateBar(cfg: cfg, templates: settings.templates),
           const SizedBox(height: 16),
           const Text('Columns', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const Text('Reuses the same column catalogue as the table.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Reuses the same column catalogue as the table.', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)),
           for (final col in allColumns)
             CheckboxListTile(
               key: Key('report_col_${col.id}'),
@@ -89,7 +90,7 @@ class _BammReportScreenState extends ConsumerState<BammReportScreen> {
           ),
           const Divider(),
           const Text('Print layout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SegmentedButton<BammReportOrientation>(
+          FluidSegmentedButton<BammReportOrientation>(
             key: const Key('report_orientation'),
             segments: const [
               ButtonSegment(value: BammReportOrientation.landscape, label: Text('Landscape')),
@@ -102,7 +103,7 @@ class _BammReportScreenState extends ConsumerState<BammReportScreen> {
           Row(
             children: [
               const Text('Columns per row: '),
-              SegmentedButton<int>(
+              FluidSegmentedButton<int>(
                 key: const Key('report_columns_per_row'),
                 segments: const [
                   ButtonSegment(value: 2, label: Text('2')),

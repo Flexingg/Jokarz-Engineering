@@ -1,7 +1,10 @@
+import '../fluid/fluid_dialog.dart';
+import '../fluid/liquid.dart';
 import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../keynav/key_nav.dart';
+import '../fluid/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -202,7 +205,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           if (isDesktop)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: SegmentedButton<int>(
+              child: FluidSegmentedButton<int>(
                 showSelectedIcon: false,
                 style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
@@ -229,7 +232,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           IconButton(
             icon: Icon(Icons.help_outline_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Order Workflow Guide',
-            onPressed: () => showDialog(
+            onPressed: () => showFluidDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: Row(children: [
@@ -266,7 +269,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                   Flexible(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: SegmentedButton<int>(
+                      child: FluidSegmentedButton<int>(
                         segments: [
                           ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
                           ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
@@ -328,8 +331,8 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                     icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
                     label: const Text('Add Order'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.of(context).amber,
-                      foregroundColor: Colors.black87,
+                      backgroundColor: AppTheme.of(context).amberFill,
+                      foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                     ),
                   ),
@@ -342,7 +345,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               child: Column(children: [
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<int>(
+                  child: FluidSegmentedButton<int>(
                     segments: [
                       ButtonSegment(value: 0, label: Text('Open ($openCount)', style: const TextStyle(fontSize: 12))),
                       ButtonSegment(value: 1, label: Text('Delivered ($deliveredCount)', style: const TextStyle(fontSize: 12))),
@@ -390,7 +393,7 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
           Expanded(
             child: filtered.isEmpty
                 ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+                    Icon(Icons.inbox_outlined, size: 48, color: AppTheme.of(context).textSecondary),
                     const SizedBox(height: 12),
                     const Text('No Orders Found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
@@ -418,8 +421,8 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
               onPressed: () => _showAddStandaloneOrderDialog(context),
               icon: const Icon(Icons.add_shopping_cart_rounded),
               label: const Text('Add Order'),
-              backgroundColor: AppTheme.of(context).amber,
-              foregroundColor: Colors.black87,
+              backgroundColor: AppTheme.of(context).amberFill,
+              foregroundColor: AppTheme.onColor(AppTheme.of(context).amberFill),
             ),
     );
   }

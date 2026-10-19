@@ -12,6 +12,7 @@
 /// (`ListOrderBy.name`) for every column here.
 library;
 
+import '../../theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +61,7 @@ class BammColumnDef {
       text.isEmpty ? '-' : text,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12, color: text.isEmpty ? Colors.grey.shade500 : null),
+      style: TextStyle(fontSize: 12, color: text.isEmpty ? AppTheme.of(context).textSecondary : null),
     );
   }
 }
@@ -68,7 +69,7 @@ class BammColumnDef {
 final DateFormat _dateFmt = DateFormat('MMM d, y');
 
 Widget _badge(String text, Color color) {
-  if (text.isEmpty) return const Text('-', style: TextStyle(fontSize: 12, color: Colors.grey));
+  if (text.isEmpty) return Text('-', style: TextStyle(fontSize: 12, color: AppTheme.of().textSecondary));
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
     decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),

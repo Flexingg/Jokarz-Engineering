@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vendor.dart';
@@ -21,7 +22,7 @@ Future<Vendor?> showVendorDialog(BuildContext context, {Vendor? existing, String
   String type = existing?.type ?? '';
   bool editingNewType = false;
 
-  return showDialog<Vendor>(
+  return showFluidDialog<Vendor>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {

@@ -11,7 +11,8 @@ enum MotionLevel {
   const MotionLevel(this.label);
 }
 
-/// Accent colors offered for the Graphite themes.
+/// Accent colors the user can pick (used for selection, primary buttons and
+/// the soft light in the background gradient).
 const List<({String label, Color color})> graphiteAccents = [
   (label: 'Blue', color: Color(0xFF4DA3FF)),
   (label: 'Amber', color: Color(0xFFFFB020)),
@@ -31,6 +32,9 @@ class UiPrefs {
   final MotionLevel motion;
   final bool railCollapsed;
 
+  /// Opaque surfaces and no blur, for readability or slower machines.
+  final bool reduceTransparency;
+
   /// Dashboard section ids in display order, and the ones the user hid.
   final List<String> dashboardOrder;
   final List<String> dashboardHidden;
@@ -39,10 +43,11 @@ class UiPrefs {
   final Map<String, double> panelWidths;
 
   const UiPrefs({
-    this.themeName = 'graphiteDark',
+    this.themeName = 'dark',
     this.accentValue = 0xFF4DA3FF,
     this.motion = MotionLevel.bouncy,
     this.railCollapsed = false,
+    this.reduceTransparency = false,
     this.dashboardOrder = const [],
     this.dashboardHidden = const [],
     this.panelWidths = const {},
@@ -55,6 +60,7 @@ class UiPrefs {
     int? accentValue,
     MotionLevel? motion,
     bool? railCollapsed,
+    bool? reduceTransparency,
     List<String>? dashboardOrder,
     List<String>? dashboardHidden,
     Map<String, double>? panelWidths,
@@ -63,8 +69,10 @@ class UiPrefs {
     accentValue: accentValue ?? this.accentValue,
     motion: motion ?? this.motion,
     railCollapsed: railCollapsed ?? this.railCollapsed,
+    reduceTransparency: reduceTransparency ?? this.reduceTransparency,
     dashboardOrder: dashboardOrder ?? this.dashboardOrder,
     dashboardHidden: dashboardHidden ?? this.dashboardHidden,
+    panelWidths: panelWidths ?? this.panelWidths,
   );
 
   Map<String, dynamic> toJson() => {
@@ -72,21 +80,24 @@ class UiPrefs {
     'accent': accentValue,
     'motion': motion.name,
     'railCollapsed': railCollapsed,
+    'reduceTransparency': reduceTransparency,
     'dashboardOrder': dashboardOrder,
     'dashboardHidden': dashboardHidden,
+    'panelWidths': panelWidths,
   };
 
   factory UiPrefs.fromJson(Map<String, dynamic> json) {
     List<String> strings(Object? v) =>
         (v as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [];
     return UiPrefs(
-      themeName: json['themeName'] as String? ?? 'graphiteDark',
+      themeName: json['themeName'] as String? ?? 'dark',
       accentValue: (json['accent'] as num?)?.toInt() ?? 0xFF4DA3FF,
       motion: MotionLevel.values.firstWhere(
         (m) => m.name == json['motion'],
         orElse: () => MotionLevel.bouncy,
       ),
       railCollapsed: json['railCollapsed'] as bool? ?? false,
+      reduceTransparency: json['reduceTransparency'] as bool? ?? false,
       dashboardOrder: strings(json['dashboardOrder']),
       dashboardHidden: strings(json['dashboardHidden']),
       panelWidths: {

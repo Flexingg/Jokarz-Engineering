@@ -1,3 +1,5 @@
+import '../fluid/fluid_dialog.dart';
+import '../fluid/liquid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -163,7 +165,7 @@ class _FabJobPanelState extends ConsumerState<FabJobPanel> with AutosaveMixin {
             decoration: const InputDecoration(labelText: 'Job / part *'),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<FabStatus>(
+          FluidSegmentedButton<FabStatus>(
             showSelectedIcon: false,
             segments: [
               for (final s in FabStatus.values)
@@ -282,7 +284,7 @@ class _FabJobPanelState extends ConsumerState<FabJobPanel> with AutosaveMixin {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () async {
-                final ok = await showDialog<bool>(
+                final ok = await showFluidDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Remove from fab list?'),

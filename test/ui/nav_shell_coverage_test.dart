@@ -29,6 +29,7 @@ import 'package:jokarz_engineering/services/bamm_service.dart';
 
 import 'package:jokarz_engineering/router/app_router.dart';
 import 'package:jokarz_engineering/ui/adaptive/nav_shell.dart';
+import 'package:jokarz_engineering/ui/fluid/liquid.dart';
 
 /// Same shape as `_FakeStorageService` elsewhere in `test/ui/` (duplicated -
 /// these are file-private and can't be imported across test files).
@@ -108,7 +109,7 @@ class _Branch {
 }
 
 const _branches = [
-  _Branch(0, 'Dashboard', 'Dashboard', '/'),
+  _Branch(0, 'Dashboard', 'Home', '/'),
   _Branch(1, 'Projects', 'Projects', '/projects'),
   _Branch(2, 'Open Orders', 'Orders', '/orders'),
   _Branch(3, 'Workbench Tools', 'Tools', '/workbench'),
@@ -176,11 +177,11 @@ void main() {
       await tester.pumpAndSettle();
 
       for (final branch in _branches) {
-        await tester.tap(find.widgetWithText(NavigationDestination, branch.mobileLabel).first.hitTestable());
+        await tester.tap(find.byTooltip(branch.mobileLabel).first.hitTestable());
         await tester.pumpAndSettle();
 
         expect(
-          find.byType(NavigationBar),
+          find.byType(FluidNavIsland),
           findsOneWidget,
           reason: 'bottom nav bar disappeared after tapping "${branch.mobileLabel}" - the sidebar-vanishing bug\'s '
               'mobile equivalent (a route pushed outside the StatefulShellRoute)',

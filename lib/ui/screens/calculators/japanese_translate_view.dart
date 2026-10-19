@@ -121,7 +121,7 @@ class JapaneseTranslateView extends StatelessWidget {
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.of(context).coral,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppTheme.onColor(AppTheme.of(context).coral),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 4,
                         ),

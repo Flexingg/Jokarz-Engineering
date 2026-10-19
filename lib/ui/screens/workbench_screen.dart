@@ -76,7 +76,6 @@ class WorkbenchScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setSheetState) {
           return SizedBox(
@@ -105,7 +104,7 @@ class WorkbenchScreen extends ConsumerWidget {
                           key: ValueKey(k),
                           leading: Icon(workbenchTools[k]!.icon, color: AppTheme.of(context).primary),
                           title: Text(workbenchTools[k]!.label),
-                          trailing: const Icon(Icons.drag_handle_rounded, color: Colors.grey),
+                          trailing: Icon(Icons.drag_handle_rounded, color: AppTheme.of(context).textSecondary),
                         ),
                     ],
                   ),
@@ -117,7 +116,7 @@ class WorkbenchScreen extends ConsumerWidget {
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                           backgroundColor: AppTheme.of(context).emerald,
-                          foregroundColor: Colors.black87),
+                          foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald)),
                       onPressed: () {
                         ref.read(toolOrderProvider.notifier).state = working;
                         Navigator.pop(ctx);

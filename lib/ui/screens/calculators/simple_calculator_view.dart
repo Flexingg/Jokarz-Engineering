@@ -456,10 +456,10 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
 
     if (isEmerald) {
       bg = AppTheme.of(context).emerald;
-      fg = Colors.black87;
+      fg = AppTheme.onColor(AppTheme.of(context).emerald);
     } else if (isAmber) {
-      bg = AppTheme.of(context).amber;
-      fg = Colors.black87;
+      bg = AppTheme.of(context).amberFill;
+      fg = AppTheme.onColor(AppTheme.of(context).amberFill);
     } else if (isCoral) {
       bg = AppTheme.of(context).coral.withValues(alpha: 0.2);
       fg = AppTheme.of(context).coral;
@@ -468,10 +468,10 @@ class _SimpleCalculatorViewState extends State<SimpleCalculatorView> {
       fg = isDark ? AppTheme.of(context).primary : AppTheme.of(context).primaryBlue;
     } else if (isOperator) {
       bg = isDark ? AppTheme.of(context).surfaceVariant : AppTheme.of(context).surfaceVariant;
-      fg = isDark ? Colors.white : Colors.black87;
+      fg = AppTheme.of(context).textPrimary;
     } else {
       bg = isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface;
-      fg = isDark ? Colors.white : Colors.black87;
+      fg = AppTheme.of(context).textPrimary;
     }
 
     final button = SizedBox(

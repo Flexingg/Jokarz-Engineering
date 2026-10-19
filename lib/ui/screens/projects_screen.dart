@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -180,10 +181,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.engineering_outlined,
                           size: 56,
-                          color: Colors.grey,
+                          color: AppTheme.of(context).textSecondary,
                         ),
                         const SizedBox(height: 12),
                         const Text(
@@ -214,7 +215,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                             label: Text('Create "${state.searchQuery}"'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.of(context).primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppTheme.onColor(AppTheme.of(context).primary),
                             ),
                           )
                         else
@@ -290,13 +291,13 @@ class _EditablePhaseBadge extends ConsumerWidget {
     } else if (lower == 'cancelled' || lower == 'canceled') {
       return AppTheme.of(context).coral;
     } else if (lower == 'validation') {
-      return Colors.tealAccent.shade700;
+      return AppTheme.of(context).emerald;
     } else if (lower == 'installation') {
       return AppTheme.of(context).primary;
     } else if (lower == 'pending') {
       return AppTheme.of(context).amber;
     } else if (lower == 'idea') {
-      return Colors.orangeAccent;
+      return AppTheme.of(context).amber;
     }
     return AppTheme.of(context).amber;
   }
@@ -443,7 +444,7 @@ class _ProjectCard extends ConsumerWidget {
           MenuAction('Reopen', Icons.replay_rounded,
               () => notifier.updateProject(project.copyWith(phase: ProjectPhases.pending))),
         MenuAction('Delete...', Icons.delete_outline_rounded, () async {
-          final ok = await showDialog<bool>(
+          final ok = await showFluidDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               title: const Text('Delete this project?'),
@@ -476,7 +477,7 @@ class _ProjectCard extends ConsumerWidget {
                     if (isTerminal)
                       ExpressiveBadge(
                         label: 'Prev #${project.priority}',
-                        color: Colors.grey,
+                        color: AppTheme.of(context).textSecondary,
                         fontSize: 10,
                       )
                     else
@@ -529,7 +530,7 @@ class _ProjectCard extends ConsumerWidget {
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: isTerminal
-                  ? (isDark ? Colors.grey : Colors.black54)
+                  ? (AppTheme.of(context).textSecondary)
                   : null,
             ),
           ),
@@ -544,7 +545,7 @@ class _ProjectCard extends ConsumerWidget {
                 spacing: 4,
                 runSpacing: 2,
                 children: [
-                  const Icon(Icons.precision_manufacturing_outlined, size: 13, color: Colors.grey),
+                  Icon(Icons.precision_manufacturing_outlined, size: 13, color: AppTheme.of(context).textSecondary),
                   ...project.machineList.map((m) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -555,7 +556,7 @@ class _ProjectCard extends ConsumerWidget {
                     child: Text(m, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
                   )),
                   if (project.subAssembly.isNotEmpty) ...[
-                    const Icon(Icons.account_tree_outlined, size: 13, color: Colors.grey),
+                    Icon(Icons.account_tree_outlined, size: 13, color: AppTheme.of(context).textSecondary),
                     Text(project.subAssembly, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                   ],
                 ],
@@ -585,10 +586,10 @@ class _ProjectCard extends ConsumerWidget {
                     Icons.history_rounded,
                     size: 12,
                     color: project.daysSinceLastAction >= 7
-                        ? Colors.red.shade400
+                        ? AppTheme.of(context).coral
                         : project.daysSinceLastAction >= 3
                             ? AppTheme.of(context).amber
-                            : Colors.grey,
+                            : AppTheme.of(context).textSecondary,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -598,10 +599,10 @@ class _ProjectCard extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: project.daysSinceLastAction >= 7
-                          ? Colors.red.shade400
+                          ? AppTheme.of(context).coral
                           : project.daysSinceLastAction >= 3
                               ? AppTheme.of(context).amber
-                              : Colors.grey,
+                              : AppTheme.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -649,7 +650,7 @@ class _ProjectCard extends ConsumerWidget {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(Icons.checklist_rounded, size: 14, color: isDark ? Colors.grey : Colors.black45),
+                    Icon(Icons.checklist_rounded, size: 14, color: AppTheme.of(context).textSecondary),
                     Text(
                       '${project.completedTasksCount}/${project.tasks.length} Tasks',
                       style: TextStyle(
@@ -659,7 +660,7 @@ class _ProjectCard extends ConsumerWidget {
                     ),
                     if (project.orders.isNotEmpty) ...[
                       const SizedBox(width: 10),
-                      Icon(Icons.local_shipping_outlined, size: 14, color: isDark ? Colors.grey : Colors.black45),
+                      Icon(Icons.local_shipping_outlined, size: 14, color: AppTheme.of(context).textSecondary),
                       Text(
                         '${project.orders.length} Orders (${project.undeliveredOrdersCount} open)',
                         style: TextStyle(

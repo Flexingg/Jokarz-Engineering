@@ -9,7 +9,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
 
   Future<void> _showStoreNumberDialog(_OrderEntry e) async {
     final ctrl = TextEditingController(text: e.storeRequestNumber);
-    final num = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+    final num = await showFluidDialog<String>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('Store Request Number'),
       content: TextField(controller: ctrl, autofocus: true, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Store request #')),
       actions: [
@@ -45,7 +45,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
     final searchCtrl = TextEditingController();
     String? selectedId;
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
         final q = searchCtrl.text.trim().toLowerCase();
@@ -71,7 +71,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
               const SizedBox(height: 12),
               Flexible(
                 child: matches.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: Colors.grey)))
+                    ? Padding(padding: EdgeInsets.all(12), child: Text('No matching projects', style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary)))
                     : ListView(
                         shrinkWrap: true,
                         children: matches.map((p) => Card(
@@ -103,7 +103,7 @@ extension _OpenOrdersDialogs on _OpenOrdersScreenState {
                         _rebuild(() => _filterTab = 0);
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(context).emerald, foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald)),
               child: const Text('Attach'),
             ),
           ],

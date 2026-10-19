@@ -94,7 +94,6 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
   }
 
   Widget _cell(String text, {bool bold = false, bool header = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       child: Text(
@@ -102,7 +101,7 @@ class _SheetMetalGaugeViewState extends State<SheetMetalGaugeView> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-          color: header ? AppTheme.of(context).primary : (isDark ? Colors.white : Colors.black87),
+          color: header ? AppTheme.of(context).primary : (AppTheme.of(context).textPrimary),
         ),
       ),
     );

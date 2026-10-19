@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,7 @@ import '../../services/sync_service.dart';
 import '../../theme/app_theme.dart';
 
 void showAuthAccountModal(BuildContext context) {
-  showDialog(
+  showFluidDialog(
     context: context,
     builder: (ctx) => const AuthAccountModal(),
   );
@@ -36,8 +37,6 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
     final isDark = theme.brightness == Brightness.dark;
 
     return AlertDialog(
-      backgroundColor: isDark ? AppTheme.of(context).surface : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(
@@ -97,7 +96,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? AppTheme.of(context).surfaceCard : Colors.grey.shade100,
+                    color: AppTheme.of(context).surfaceHighlight,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: AppTheme.of(context).emerald.withValues(alpha: 0.3),
@@ -114,7 +113,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                         CircleAvatar(
                           radius: 26,
                           backgroundColor: AppTheme.of(context).primary,
-                          child: Icon(Icons.person, color: Colors.white, size: 28),
+                          child: Icon(Icons.person, color: AppTheme.onColor(AppTheme.of(context).primary), size: 28),
                         ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -133,7 +132,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                               user.email ?? '',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isDark ? AppTheme.of(context).textSecondary : Colors.grey.shade700,
+                                color: AppTheme.of(context).textSecondary,
                               ),
                             ),
                           ],
@@ -249,9 +248,6 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                         label: const Text('Force Sync'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                         ),
                         onPressed: _isLoading
                             ? null
@@ -277,9 +273,6 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                         label: const Text('Switch Account'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                         ),
                         onPressed: _isLoading
                             ? null
@@ -337,7 +330,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                             : () async {
                                 final report = await syncNotifier.diagnose();
                                 if (!context.mounted) return;
-                                showDialog(
+                                showFluidDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
                                     title: const Text('Sync check'),
@@ -360,14 +353,12 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                  label: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.of(context).coral,
+                    foregroundColor: AppTheme.onColor(AppTheme.of(context).coral),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   onPressed: _isLoading
                       ? null
@@ -385,20 +376,20 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
-                    color: isDark ? AppTheme.of(context).textSecondary : Colors.grey.shade700,
+                    color: AppTheme.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 20),
 
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
+                    // Google's own sign-in button style: white with dark text.
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
+                    foregroundColor: const Color(0xFF15171B),
                     elevation: 2,
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.grey.shade300),
+                    shape: const StadiumBorder(
+                      side: BorderSide(color: Color(0x29000000)),
                     ),
                   ),
                   onPressed: _isLoading
@@ -485,7 +476,7 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.of(context).primary,
-                                  foregroundColor: Colors.black87,
+                                  foregroundColor: AppTheme.onColor(AppTheme.of(context).primary),
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 ),
                                 icon: const Icon(Icons.open_in_browser_rounded, size: 16),

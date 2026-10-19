@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/ui_prefs_provider.dart';
@@ -42,7 +43,7 @@ _sectionInfo = {
 };
 
 /// Dialog for choosing which dashboard sections show and in what order.
-Future<void> showDashboardCustomizer(BuildContext context) => showDialog<void>(
+Future<void> showDashboardCustomizer(BuildContext context) => showFluidDialog<void>(
   context: context,
   builder: (_) => const _DashboardCustomizer(),
 );

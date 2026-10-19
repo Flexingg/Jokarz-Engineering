@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -79,7 +80,7 @@ Future<ParkChoice?> showParkDialog(
   DateTime? now,
 }) {
   final clock = now ?? DateTime.now();
-  return showDialog<ParkChoice>(
+  return showFluidDialog<ParkChoice>(
     context: context,
     builder: (_) => _ParkDialog(project: project, now: clock),
   );

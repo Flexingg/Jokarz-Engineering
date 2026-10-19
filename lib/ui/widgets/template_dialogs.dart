@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
@@ -17,7 +18,7 @@ class TemplateDialogs {
     final nameCtrl = TextEditingController(text: '${project.title} Template');
     final descCtrl = TextEditingController(text: project.description);
 
-    return showDialog(
+    return showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -34,7 +35,7 @@ class TemplateDialogs {
             children: [
               Text(
                 'Create a reusable blueprint from "${project.title}" including its ${project.tasks.length} task steps and ${project.orders.length} order items.',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -78,7 +79,7 @@ class TemplateDialogs {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.of(context).primary,
-              foregroundColor: Colors.black87,
+              foregroundColor: AppTheme.onColor(AppTheme.of(context).primary),
             ),
             child: const Text('Save Template'),
           ),
@@ -92,7 +93,7 @@ class TemplateDialogs {
     final state = ref.read(projectProvider);
     final templates = state.allTemplates;
 
-    return showDialog<ProjectTemplate>(
+    return showFluidDialog<ProjectTemplate>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
@@ -147,7 +148,7 @@ class TemplateDialogs {
                             children: [
                               ExpressiveBadge(
                                 label: '${t.tasks.length} Tasks',
-                                color: Colors.grey,
+                                color: AppTheme.of(context).textSecondary,
                                 fontSize: 10,
                               ),
                               ExpressiveBadge(
@@ -163,7 +164,7 @@ class TemplateDialogs {
                               if (t.tags.isNotEmpty)
                                 ...t.tags.take(2).map((tag) => ExpressiveBadge(
                                       label: tag,
-                                      color: Colors.blueGrey,
+                                      color: AppTheme.of(context).textSecondary,
                                       fontSize: 10,
                                     )),
                             ],

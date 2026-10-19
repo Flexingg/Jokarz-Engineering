@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../theme/app_theme.dart';
+import '../motion/motion.dart';
 
 /// A right-hand side panel whose width the user can drag, remembered per
 /// screen ([prefKey]) so dense screens (BAMM) can run wider than light ones.
@@ -91,11 +92,38 @@ class _ResizablePanelState extends ConsumerState<ResizablePanel> {
                   ),
                 ),
               ),
-              Expanded(child: widget.child),
+              // Each record's editor glides in from the right on the spring.
+              Expanded(
+                child: _PanelEnter(
+                  key: ValueKey(widget.child.key),
+                  child: widget.child,
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _PanelEnter extends StatelessWidget {
+  final Widget child;
+  const _PanelEnter({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = Motion.of(context);
+    if (!motion.enabled) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: motion.sheet,
+      curve: motion.spring,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: (t * 2).clamp(0.0, 1.0),
+        child: Transform.translate(offset: Offset((1 - t) * 32, 0), child: child),
+      ),
     );
   }
 }

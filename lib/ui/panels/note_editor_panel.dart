@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,7 +100,7 @@ class _NoteEditorPanelState extends ConsumerState<NoteEditorPanel>
   Future<void> _delete() async {
     final n = _note();
     if (n == null) return;
-    final confirm = await showDialog<bool>(
+    final confirm = await showFluidDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Note?'),

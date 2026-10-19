@@ -100,7 +100,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
+          color: AppTheme.of(context).surfaceSolid,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border.all(
             color: AppTheme.of(context).primary.withValues(alpha: 0.3),
@@ -190,15 +190,15 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   onPressed: _toggleListening,
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none_rounded,
-                    color: _isListening ? Colors.redAccent : AppTheme.of(context).primary,
+                    color: _isListening ? AppTheme.of(context).coral : AppTheme.of(context).primary,
                   ),
                   tooltip: _isListening ? 'Stop Recording' : 'Voice Dictate',
                 ),
                 const SizedBox(width: 8),
                 if (_isListening)
-                  const Text(
+                  Text(
                     'Listening...',
-                    style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.of(context).coral, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 const Spacer(),
                 TextButton(
@@ -212,7 +212,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
                   label: const Text('Save to Inbox'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.of(context).emerald,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),

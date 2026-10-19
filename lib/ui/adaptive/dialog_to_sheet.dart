@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'breakpoints.dart';
 
@@ -13,7 +14,7 @@ Future<T?> showAdaptiveDialogOrSheet<T>({
 }) {
   final width = MediaQuery.sizeOf(context).width;
   if (Breakpoints.isExpanded(width)) {
-    return showDialog<T>(
+    return showFluidDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
       builder: builder,

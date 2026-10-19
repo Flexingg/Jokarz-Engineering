@@ -13,7 +13,7 @@ extension _BammScreenDialogs on _BammScreenState {
     int stepId = 1; // 1 = Normal, 3 = Emergency
     int maintId = 107; // 107 = Corrective, 111 = Kaizen, 108 = PM
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -37,18 +37,18 @@ extension _BammScreenDialogs on _BammScreenState {
                         padding: const EdgeInsets.all(10),
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
+                          color: AppTheme.of(context).amber.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.shade300),
+                          border: Border.all(color: AppTheme.of(context).amber),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 18),
+                            Icon(Icons.warning_amber_rounded, color: AppTheme.of(context).amber, size: 18),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'BAMM server is offline. Creating a work order requires connecting to the plant network (${bammState.config.origin}).',
-                                style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                                style: TextStyle(fontSize: 12, color: AppTheme.of(context).amber),
                               ),
                             ),
                           ],
@@ -225,7 +225,7 @@ extension _BammScreenDialogs on _BammScreenState {
 
   void _showSaveFilterDialog() {
     final nameCtrl = TextEditingController();
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Save Current Filter Preset', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -259,7 +259,7 @@ extension _BammScreenDialogs on _BammScreenState {
     final userCtrl = TextEditingController(text: bammState.config.usercode);
     final passCtrl = TextEditingController(text: bammState.config.password);
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('BAMM Connection Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -293,9 +293,9 @@ extension _BammScreenDialogs on _BammScreenState {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Default plant origin: http://app02-ao-plt:82 on port 82. Requires device to be on the plant network or VPN.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSecondary),
               ),
             ],
           ),
@@ -328,7 +328,7 @@ extension _BammScreenDialogs on _BammScreenState {
     String selectedMaint = criteria.maintenanceType ?? 'All';
     String selectedExec = criteria.executionMode ?? 'All';
 
-    showDialog(
+    showFluidDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {

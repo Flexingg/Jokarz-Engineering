@@ -231,7 +231,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         if (uri != null)
           await launchUrl(uri, mode: LaunchMode.externalApplication);
       case 'delete':
-        final ok = await showDialog<bool>(
+        final ok = await showFluidDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Delete this order?'),
@@ -579,7 +579,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(color: colors.border),
         ),
         clipBehavior: Clip.antiAlias,
@@ -664,10 +664,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
                 defaultWidth: 440,
                 // Each order gets its own editor; selecting another disposes
                 // the old one, which saves its edits first.
-                child: _SlideIn(
-                  key: ValueKey('slide-${active.key}'),
-                  child: _orderPanel(active, notifier),
-                ),
+                child: _orderPanel(active, notifier),
               ),
           ],
         ),
@@ -701,14 +698,10 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   Widget _bulkBar(List<_OrderEntry> sel, dynamic notifier) {
     final colors = AppTheme.of(context);
     final allDelivered = sel.isNotEmpty && sel.every((e) => e.delivered);
-    return Material(
-      color: colors.surface,
-      elevation: 10,
-      shadowColor: Colors.black54,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.border),
-      ),
+    // Floats over the table rows, so the glass is nearly opaque there.
+    return Glass(
+      radius: AppTheme.radiusFull,
+      fill: colors.surfaceSolid.withValues(alpha: colors.blurGlass ? 0.9 : 1),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
         child: Row(
@@ -788,27 +781,3 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   }
 }
 
-/// Eases its child in from the right when first built.
-class _SlideIn extends StatelessWidget {
-  final Widget child;
-  const _SlideIn({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final motion = Motion.of(context);
-    if (!motion.enabled) return child;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: motion.sheet,
-      curve: motion.spring,
-      child: child,
-      builder: (context, t, child) => Opacity(
-        opacity: (t * 2).clamp(0.0, 1.0),
-        child: Transform.translate(
-          offset: Offset((1 - t) * 36, 0),
-          child: child,
-        ),
-      ),
-    );
-  }
-}

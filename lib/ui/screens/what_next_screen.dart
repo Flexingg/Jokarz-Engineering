@@ -1,3 +1,4 @@
+import '../fluid/fluid_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -54,7 +55,6 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     final notifier = ref.read(projectProvider.notifier);
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -121,7 +121,6 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
     }
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -161,7 +160,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   }
 
   Future<String?> _prompt(String title, String label, String hint, TextEditingController ctrl) {
-    return showDialog<String>(
+    return showFluidDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
@@ -185,7 +184,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
   Color _actionColor(int days) {
     if (days == 0) return AppTheme.of(context).emerald;
     if (days <= 3) return AppTheme.of(context).amber;
-    return Colors.red.shade400;
+    return AppTheme.of(context).coral;
   }
 
   String _actionLabel(int days) {
@@ -230,7 +229,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
           const SizedBox(height: 8),
           Text(
             'Every active project has been actioned today.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of(context).textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -256,11 +255,11 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
             children: [
               Text(
                 '$remaining remaining',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of(context).textSecondary),
               ),
               Text(
                 ' / ',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.of(context).textSecondary),
               ),
             ],
           ),
@@ -307,8 +306,8 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _snooze(project),
-                  icon: const Icon(Icons.skip_next_rounded, color: Colors.grey),
-                  label: const Text('Skip Today', style: TextStyle(color: Colors.grey)),
+                  icon: Icon(Icons.skip_next_rounded, color: AppTheme.of(context).textSecondary),
+                  label: Text('Skip Today', style: TextStyle(color: AppTheme.of(context).textSecondary)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: BorderSide(color: Colors.grey.withValues(alpha: 0.4)),
@@ -332,7 +331,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   label: const Text('Take Action'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.of(context).emerald,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(AppTheme.of(context).emerald),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -407,7 +406,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                       ),
                       child: Text(
                         project.phase,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
                       ),
                     ),
                   ],
@@ -423,7 +422,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                   const SizedBox(height: 8),
                   Text(
                     project.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.of(context).textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -436,7 +435,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                 if (project.machine.isNotEmpty) ...[
                   Row(
                     children: [
-                      const Icon(Icons.precision_manufacturing_rounded, size: 16, color: Colors.grey),
+                      Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppTheme.of(context).textSecondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Wrap(
@@ -483,7 +482,7 @@ class _WhatNextScreenState extends ConsumerState<WhatNextScreen>
                         const SizedBox(width: 8),
                         Text(
                           dateFormat.format(nextTask.scheduledDate!),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSecondary),
                         ),
                       ],
                     ],

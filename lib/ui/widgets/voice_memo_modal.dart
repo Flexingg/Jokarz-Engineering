@@ -145,7 +145,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
       child: Container(
         padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
+          color: AppTheme.of(context).surfaceSolid,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
           border: Border.all(
             color: isDark ? AppTheme.of(context).border : AppTheme.of(context).border,
@@ -303,7 +303,7 @@ class _VoiceMemoModalState extends ConsumerState<VoiceMemoModal>
                         ),
                         child: Icon(
                           _isRecording ? Icons.stop : Icons.mic,
-                          color: _isRecording ? Colors.white : AppTheme.of(context).primary,
+                          color: _isRecording ? AppTheme.onColor(AppTheme.of(context).coral) : AppTheme.of(context).primary,
                           size: 26,
                         ),
                       );
