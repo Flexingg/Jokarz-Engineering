@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/ui_prefs_provider.dart';
 import '../../theme/app_theme.dart';
+import '../fluid/glass.dart';
 import '../motion/motion.dart';
 import '../shell/app_menu_bar.dart';
 import '../widgets/voice_memo_modal.dart';
@@ -65,8 +66,9 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
         final isDesktop = Breakpoints.isExpanded(constraints.maxWidth);
 
         if (isDesktop) {
-          final selectedVisual = _railDests
-              .indexWhere((d) => d.branch == widget.navigationShell.currentIndex);
+          final selectedVisual = _railDests.indexWhere(
+            (d) => d.branch == widget.navigationShell.currentIndex,
+          );
           return Scaffold(
             body: Column(
               children: [
@@ -86,7 +88,10 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
                           onSelect: _onTapNav,
                           onToggle: () => ref
                               .read(uiPrefsProvider.notifier)
-                              .update((p) => p.copyWith(railCollapsed: !p.railCollapsed)),
+                              .update(
+                                (p) =>
+                                    p.copyWith(railCollapsed: !p.railCollapsed),
+                              ),
                         ),
                       ),
                       Expanded(
@@ -104,51 +109,83 @@ class _AdaptiveNavShellState extends ConsumerState<AdaptiveNavShell> {
           );
         }
 
-        // Mobile Layout with Expressive NavigationBar (always present)
+        // Mobile: a floating glass "island" over full-bleed content. With
+        // extendBody the Scaffold adds the island's height to the body's
+        // bottom padding, so inner screens' FABs and last rows clear it.
         return Scaffold(
+          extendBody: true,
           body: widget.navigationShell,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: widget.navigationShell.currentIndex,
-            onDestinationSelected: _onTapNav,
-            destinations: [
-              NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded, color: AppTheme.of(context).primary),
-                label: 'Dashboard',
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Glass(
+              radius: AppTheme.radiusFull,
+              blur: AppTheme.blurThin,
+              child: NavigationBar(
+                height: 64,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: widget.navigationShell.currentIndex,
+                onDestinationSelected: _onTapNav,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(
+                      Icons.dashboard_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Dashboard',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.assignment_outlined),
+                    selectedIcon: Icon(
+                      Icons.assignment_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Projects',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.local_shipping_outlined),
+                    selectedIcon: Icon(
+                      Icons.local_shipping_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Orders',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.handyman_outlined),
+                    selectedIcon: Icon(
+                      Icons.handyman_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Tools',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.note_alt_outlined),
+                    selectedIcon: Icon(
+                      Icons.edit_note_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Notes',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(
+                      Icons.settings_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'Settings',
+                  ),
+                  // Keep this list in branch order: selectedIndex IS the branch index.
+                  NavigationDestination(
+                    icon: Icon(Icons.precision_manufacturing_outlined),
+                    selectedIcon: Icon(
+                      Icons.precision_manufacturing_rounded,
+                      color: AppTheme.of(context).primary,
+                    ),
+                    label: 'BAMM',
+                  ),
+                ],
               ),
-              NavigationDestination(
-                icon: Icon(Icons.assignment_outlined),
-                selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.of(context).primary),
-                label: 'Projects',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.local_shipping_outlined),
-                selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.of(context).primary),
-                label: 'Orders',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.handyman_outlined),
-                selectedIcon: Icon(Icons.handyman_rounded, color: AppTheme.of(context).primary),
-                label: 'Tools',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.note_alt_outlined),
-                selectedIcon: Icon(Icons.edit_note_rounded, color: AppTheme.of(context).primary),
-                label: 'Notes',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.of(context).primary),
-                label: 'Settings',
-              ),
-              // Keep this list in branch order: selectedIndex IS the branch index.
-              NavigationDestination(
-                icon: Icon(Icons.precision_manufacturing_outlined),
-                selectedIcon:
-                    Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary),
-                label: 'BAMM',
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -162,14 +199,22 @@ class _PageEnter extends StatefulWidget {
   final int index;
   final Motion motion;
   final Widget child;
-  const _PageEnter({required this.index, required this.motion, required this.child});
+  const _PageEnter({
+    required this.index,
+    required this.motion,
+    required this.child,
+  });
 
   @override
   State<_PageEnter> createState() => _PageEnterState();
 }
 
-class _PageEnterState extends State<_PageEnter> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, value: 1);
+class _PageEnterState extends State<_PageEnter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    value: 1,
+  );
 
   @override
   void didUpdateWidget(_PageEnter old) {
@@ -226,92 +271,110 @@ class _Rail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.of(context);
-    return Container(
+    return SizedBox(
       width: width,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(right: BorderSide(color: colors.border)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                height: _railDests.length * (_itemHeight + _itemGap),
-                child: Stack(
-                  children: [
-                    // The selection highlight slides (and overshoots a little)
-                    // between destinations.
-                    if (selectedVisual >= 0)
-                      AnimatedPositioned(
-                        duration: motion.nav,
-                        curve: motion.spring,
-                        top: selectedVisual * (_itemHeight + _itemGap),
-                        left: 0,
-                        right: 0,
-                        height: _itemHeight,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: colors.primary.withValues(alpha: 0.14),
-                            border: Border.all(color: colors.primary.withValues(alpha: 0.35)),
-                          ),
-                        ),
-                      ),
-                    Column(
-                      children: [
-                        for (var i = 0; i < _railDests.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: _itemGap),
-                            child: _RailItem(
-                              dest: _railDests[i],
-                              selected: i == selectedVisual,
-                              showLabel: showLabels,
-                              motion: motion,
-                              onTap: () => onSelect(_railDests[i].branch),
+      child: Glass(
+        margin: const EdgeInsets.fromLTRB(12, 4, 0, 12),
+        padding: const EdgeInsets.fromLTRB(8, 14, 8, 10),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: SizedBox(
+                  height: _railDests.length * (_itemHeight + _itemGap),
+                  child: Stack(
+                    children: [
+                      // The selection highlight slides (and overshoots a little)
+                      // between destinations.
+                      if (selectedVisual >= 0)
+                        AnimatedPositioned(
+                          duration: motion.nav,
+                          curve: motion.spring,
+                          top: selectedVisual * (_itemHeight + _itemGap),
+                          left: 0,
+                          right: 0,
+                          height: _itemHeight,
+                          // A lit pill: accent wash, accent edge, soft glow.
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusFull,
+                              ),
+                              color: colors.primary.withValues(alpha: 0.14),
+                              border: Border.all(
+                                color: colors.primary.withValues(alpha: 0.6),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.primary.withValues(alpha: 0.22),
+                                  blurRadius: 12,
+                                ),
+                              ],
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _DictateButton(showLabel: showLabels),
-          const SizedBox(height: 8),
-          Divider(height: 1, color: colors.border),
-          const SizedBox(height: 8),
-          Tooltip(
-            message: showLabels ? 'Collapse sidebar' : 'Expand sidebar',
-            child: _Bounce(
-              motion: motion,
-              onTap: onToggle,
-              child: SizedBox(
-                height: _itemHeight,
-                child: Row(
-                  mainAxisAlignment:
-                      showLabels ? MainAxisAlignment.start : MainAxisAlignment.center,
-                  children: [
-                    if (showLabels) const SizedBox(width: 14),
-                    Icon(
-                      showLabels ? Icons.menu_open_rounded : Icons.menu_rounded,
-                      size: 20,
-                      color: colors.textSecondary,
-                    ),
-                    if (showLabels) ...[
-                      const SizedBox(width: 12),
-                      Text('Collapse',
-                          style: TextStyle(fontSize: 13, color: colors.textSecondary)),
+                        ),
+                      Column(
+                        children: [
+                          for (var i = 0; i < _railDests.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: _itemGap),
+                              child: _RailItem(
+                                dest: _railDests[i],
+                                selected: i == selectedVisual,
+                                showLabel: showLabels,
+                                motion: motion,
+                                onTap: () => onSelect(_railDests[i].branch),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            _DictateButton(showLabel: showLabels),
+            const SizedBox(height: 8),
+            Divider(height: 1, color: colors.border),
+            const SizedBox(height: 8),
+            Tooltip(
+              message: showLabels ? 'Collapse sidebar' : 'Expand sidebar',
+              child: _Bounce(
+                motion: motion,
+                onTap: onToggle,
+                child: SizedBox(
+                  height: _itemHeight,
+                  child: Row(
+                    mainAxisAlignment: showLabels
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.center,
+                    children: [
+                      if (showLabels) const SizedBox(width: 14),
+                      Icon(
+                        showLabels
+                            ? Icons.menu_open_rounded
+                            : Icons.menu_rounded,
+                        size: 20,
+                        color: colors.textSecondary,
+                      ),
+                      if (showLabels) ...[
+                        const SizedBox(width: 12),
+                        Text(
+                          'Collapse',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -348,8 +411,9 @@ class _RailItem extends StatelessWidget {
           child: SizedBox(
             height: _itemHeight,
             child: Row(
-              mainAxisAlignment:
-                  showLabel ? MainAxisAlignment.start : MainAxisAlignment.center,
+              mainAxisAlignment: showLabel
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
               children: [
                 if (showLabel) const SizedBox(width: 14),
                 // The icon hops up slightly when its destination is selected.
@@ -368,7 +432,9 @@ class _RailItem extends StatelessWidget {
                       softWrap: false,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         color: selected ? colors.primary : colors.textPrimary,
                       ),
                     ),
@@ -414,7 +480,11 @@ class _Bounce extends StatefulWidget {
   final Motion motion;
   final VoidCallback onTap;
   final Widget child;
-  const _Bounce({required this.motion, required this.onTap, required this.child});
+  const _Bounce({
+    required this.motion,
+    required this.onTap,
+    required this.child,
+  });
 
   @override
   State<_Bounce> createState() => _BounceState();
@@ -439,14 +509,16 @@ class _BounceState extends State<_Bounce> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: AnimatedScale(
-            scale: _down ? 0.95 : 1,
+            scale: _down ? 0.94 : 1,
             duration: _down ? widget.motion.quick : widget.motion.pop,
             curve: _down ? Curves.easeOut : widget.motion.spring,
             child: AnimatedContainer(
               duration: widget.motion.quick,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: _hover ? colors.textPrimary.withValues(alpha: 0.05) : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                color: _hover
+                    ? colors.textPrimary.withValues(alpha: 0.05)
+                    : Colors.transparent,
               ),
               child: widget.child,
             ),

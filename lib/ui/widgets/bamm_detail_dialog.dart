@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../fluid/glass.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -776,14 +777,8 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
           );
 
     if (widget.embedded) {
-      final colors = AppTheme.of(context);
-      return Container(
+      return Glass(
         margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.border),
-        ),
         child: Material(
           type: MaterialType.transparency,
           child: Column(

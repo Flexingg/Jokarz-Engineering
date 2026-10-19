@@ -36,8 +36,6 @@ class _AuthAccountModalState extends ConsumerState<AuthAccountModal> {
     final isDark = theme.brightness == Brightness.dark;
 
     return AlertDialog(
-      backgroundColor: isDark ? AppTheme.of(context).surface : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(

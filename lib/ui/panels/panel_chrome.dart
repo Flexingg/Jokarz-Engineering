@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import '../fluid/glass.dart';
 import '../../theme/app_theme.dart';
 import 'autosave.dart';
 
@@ -28,13 +29,8 @@ class PanelChrome extends StatelessWidget {
     final colors = AppTheme.of(context);
     return AutosaveScope(
       onBlur: () => onBlur(),
-      child: Container(
+      child: Glass(
         margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.border),
-        ),
         child: Material(
           type: MaterialType.transparency,
           child: Column(

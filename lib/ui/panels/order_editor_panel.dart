@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../fluid/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/order_item.dart';
 import '../../models/standalone_order.dart';
@@ -107,13 +108,8 @@ class _OrderEditorPanelState extends ConsumerState<OrderEditorPanel>
     final colors = AppTheme.of(context);
     return AutosaveScope(
       onBlur: flush,
-      child: Container(
+      child: Glass(
         margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.border),
-        ),
         // ListTiles in the form need a Material between them and the
         // decorated container above.
         child: Material(

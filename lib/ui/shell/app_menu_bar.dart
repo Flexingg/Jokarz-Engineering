@@ -42,13 +42,10 @@ class AppMenuBar extends ConsumerWidget {
       );
     }
 
+    // Sits on the backdrop like the rest of the chrome: no bar, no rule.
     return Container(
       height: 40,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.border)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
           MenuBar(

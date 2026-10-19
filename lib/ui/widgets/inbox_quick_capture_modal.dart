@@ -100,7 +100,7 @@ class _InboxQuickCaptureModalState extends ConsumerState<InboxQuickCaptureModal>
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.of(context).surface : AppTheme.of(context).surface,
+          color: AppTheme.of(context).surfaceSolid,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border.all(
             color: AppTheme.of(context).primary.withValues(alpha: 0.3),

@@ -336,12 +336,12 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: Material(
-              color: colors.surface,
+              color: colors.surfaceSolid,
               elevation: 12,
               shadowColor: Colors.black54,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(color: colors.border),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                side: BorderSide(color: colors.glassEdgeTop),
               ),
               clipBehavior: Clip.antiAlias,
               child: CallbackShortcuts(

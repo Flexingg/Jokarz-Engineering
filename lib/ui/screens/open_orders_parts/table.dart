@@ -701,14 +701,10 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   Widget _bulkBar(List<_OrderEntry> sel, dynamic notifier) {
     final colors = AppTheme.of(context);
     final allDelivered = sel.isNotEmpty && sel.every((e) => e.delivered);
-    return Material(
-      color: colors.surface,
-      elevation: 10,
-      shadowColor: Colors.black54,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.border),
-      ),
+    // Floats over the table rows, so the glass is nearly opaque there.
+    return Glass(
+      radius: AppTheme.radiusFull,
+      fill: colors.surfaceSolid.withValues(alpha: colors.blurGlass ? 0.9 : 1),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
         child: Row(
