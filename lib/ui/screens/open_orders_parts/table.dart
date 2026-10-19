@@ -664,10 +664,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
                 defaultWidth: 440,
                 // Each order gets its own editor; selecting another disposes
                 // the old one, which saves its edits first.
-                child: _SlideIn(
-                  key: ValueKey('slide-${active.key}'),
-                  child: _orderPanel(active, notifier),
-                ),
+                child: _orderPanel(active, notifier),
               ),
           ],
         ),
@@ -784,27 +781,3 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
   }
 }
 
-/// Eases its child in from the right when first built.
-class _SlideIn extends StatelessWidget {
-  final Widget child;
-  const _SlideIn({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final motion = Motion.of(context);
-    if (!motion.enabled) return child;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: motion.sheet,
-      curve: motion.spring,
-      child: child,
-      builder: (context, t, child) => Opacity(
-        opacity: (t * 2).clamp(0.0, 1.0),
-        child: Transform.translate(
-          offset: Offset((1 - t) * 36, 0),
-          child: child,
-        ),
-      ),
-    );
-  }
-}

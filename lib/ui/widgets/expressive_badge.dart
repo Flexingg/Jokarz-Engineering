@@ -22,13 +22,20 @@ class ExpressiveBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color ?? AppTheme.of(context).primary;
+    // A tinted glass bubble: lighter at the top like light catching it.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isOutlined ? c.withValues(alpha: 0.08) : c.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isOutlined
+              ? [c.withValues(alpha: 0.10), c.withValues(alpha: 0.04)]
+              : [c.withValues(alpha: 0.16), c.withValues(alpha: 0.08)],
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
         border: Border.all(
-          color: c.withValues(alpha: isOutlined ? 0.8 : 0.4),
+          color: c.withValues(alpha: isOutlined ? 0.7 : 0.32),
           width: 1,
         ),
       ),

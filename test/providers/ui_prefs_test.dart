@@ -126,6 +126,18 @@ void main() {
       });
     });
 
+    test('status badges: each color reads on its own tinted bubble', () {
+      eachTheme((id, t, c) {
+        final panes = c.baseBackdrops;
+        for (final s in [c.primary, c.amber, c.emerald, c.coral]) {
+          for (final p in panes) {
+            final bubble = Color.alphaBlend(s.withValues(alpha: 0.16), p);
+            expect(contrast(s, bubble), greaterThanOrEqualTo(4.5), reason: '$id $s');
+          }
+        }
+      });
+    });
+
     test('the background gradient is gentle: its ends stay close in brightness', () {
       eachTheme((id, t, c) {
         expect(contrast(c.background, c.backgroundEnd), lessThan(1.15), reason: id);

@@ -191,29 +191,33 @@ class AppColors extends ThemeExtension<AppColors> {
   /// corner, and a content card over each of those. Used by the contrast
   /// tests and by [AppTheme] to tune the accent.
   List<Color> get readableBackdrops {
+    // Selected items (rail, segments, nav) put accent text on an accent wash.
+    final wash = primary.withValues(alpha: 0.16);
+    final base = baseBackdrops;
+    return [
+      ...base,
+      for (final p in base) Color.alphaBlend(wash, p),
+    ];
+  }
+
+  /// Every surface text sits on, without selection washes: the gradient
+  /// ends and glow corner, then cards, glass panes, solid surfaces and
+  /// dialogs over them.
+  List<Color> get baseBackdrops {
     final ends = [
       background,
       backgroundEnd,
       Color.alphaBlend(backgroundGlow, background),
     ];
-    final panes = [
+    // Dialogs are translucent over a blurred, tinted copy of whatever is
+    // behind them, which can be anything: test pure white and pure black.
+    return [
+      ...ends,
       for (final e in ends) Color.alphaBlend(surface, e),
       for (final e in ends) Color.alphaBlend(glass, e),
       surfaceSolid,
-    ];
-    // Selected items (rail, segments, nav) put accent text on an accent wash.
-    final wash = primary.withValues(alpha: 0.16);
-    // Dialogs are translucent over a blurred, tinted copy of whatever is
-    // behind them, which can be anything: test pure white and pure black.
-    final dialogs = [
       for (final behind in const [Color(0xFFFFFFFF), Color(0xFF000000)])
         Color.alphaBlend(glassThick, Color.alphaBlend(scrim, behind)),
-    ];
-    return [
-      ...ends,
-      ...panes,
-      ...dialogs,
-      for (final p in [...panes, ...dialogs]) Color.alphaBlend(wash, p),
     ];
   }
 }
@@ -320,9 +324,9 @@ class AppTheme {
     final draft = AppColors(
       primary: accent,
       primaryBlue: accent,
-      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF784B00),
-      emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF0B6338),
-      coral: dark ? const Color(0xFFFF8C42) : const Color(0xFF943807),
+      amber: dark ? const Color(0xFFF5B841) : const Color(0xFF6E4500),
+      emerald: dark ? const Color(0xFF3DD68C) : const Color(0xFF07552D),
+      coral: dark ? const Color(0xFFFFA066) : const Color(0xFF822F08),
       background: start,
       backgroundEnd: end,
       backgroundGlow: glow,
@@ -346,7 +350,7 @@ class AppTheme {
           : (dark ? const Color(0x0DFFFFFF) : const Color(0x33FFFFFF)),
       border: dark ? const Color(0x1FFFFFFF) : const Color(0x1A000000),
       textPrimary: dark ? const Color(0xFFECECEE) : const Color(0xFF15171B),
-      textSecondary: dark ? const Color(0xFFAEB1B9) : const Color(0xFF515864),
+      textSecondary: dark ? const Color(0xFFB5B8C0) : const Color(0xFF4A505C),
       blurGlass: !opaque,
     );
     // The selection wash is made from the accent itself, so tune twice.
@@ -488,8 +492,12 @@ class AppTheme {
           textStyle: btnText,
         ),
       ),
+      // Icon buttons are small round glass bubbles.
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(shape: const CircleBorder()),
+        style: IconButton.styleFrom(
+          shape: const CircleBorder(),
+          backgroundColor: c.surfaceHighlight,
+        ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(

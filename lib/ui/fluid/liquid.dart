@@ -11,7 +11,11 @@ import '../motion/motion.dart';
 class LiquidIndicator extends StatefulWidget {
   final Rect? rect;
   final Decoration decoration;
-  const LiquidIndicator({super.key, required this.rect, required this.decoration});
+  const LiquidIndicator({
+    super.key,
+    required this.rect,
+    required this.decoration,
+  });
 
   @override
   State<LiquidIndicator> createState() => _LiquidIndicatorState();
@@ -19,7 +23,10 @@ class LiquidIndicator extends StatefulWidget {
 
 class _LiquidIndicatorState extends State<LiquidIndicator>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, value: 1);
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    value: 1,
+  );
   Rect? _from;
   Rect? _to;
 
@@ -85,7 +92,9 @@ class _LiquidIndicatorState extends State<LiquidIndicator>
         if (r == null) return const SizedBox.shrink();
         return Positioned.fromRect(
           rect: r,
-          child: IgnorePointer(child: DecoratedBox(decoration: widget.decoration)),
+          child: IgnorePointer(
+            child: DecoratedBox(decoration: widget.decoration),
+          ),
         );
       },
     );
@@ -93,15 +102,18 @@ class _LiquidIndicatorState extends State<LiquidIndicator>
 }
 
 /// Decoration for a lit selection pill: accent wash, accent edge, soft glow.
-BoxDecoration litPill(AppColors c, {double radius = AppTheme.radiusFull, bool glow = true}) =>
-    BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      color: c.primary.withValues(alpha: 0.16),
-      border: Border.all(color: c.primary.withValues(alpha: 0.55)),
-      boxShadow: glow
-          ? [BoxShadow(color: c.primary.withValues(alpha: 0.20), blurRadius: 12)]
-          : null,
-    );
+BoxDecoration litPill(
+  AppColors c, {
+  double radius = AppTheme.radiusFull,
+  bool glow = true,
+}) => BoxDecoration(
+  borderRadius: BorderRadius.circular(radius),
+  color: c.primary.withValues(alpha: 0.16),
+  border: Border.all(color: c.primary.withValues(alpha: 0.55)),
+  boxShadow: glow
+      ? [BoxShadow(color: c.primary.withValues(alpha: 0.20), blurRadius: 12)]
+      : null,
+);
 
 /// Measures where each of [count] children ended up inside the enclosing
 /// Stack, after layout, so a [LiquidIndicator] can move between them.
@@ -150,7 +162,8 @@ class FluidSegmentedButton<T> extends StatefulWidget {
   });
 
   @override
-  State<FluidSegmentedButton<T>> createState() => _FluidSegmentedButtonState<T>();
+  State<FluidSegmentedButton<T>> createState() =>
+      _FluidSegmentedButtonState<T>();
 }
 
 class _FluidSegmentedButtonState<T> extends State<FluidSegmentedButton<T>> {
@@ -158,7 +171,8 @@ class _FluidSegmentedButtonState<T> extends State<FluidSegmentedButton<T>> {
   late final _RectTracker _tracker = _RectTracker(widget.segments.length);
   Rect? _rect;
 
-  int get _index => widget.segments.indexWhere((s) => widget.selected.contains(s.value));
+  int get _index =>
+      widget.segments.indexWhere((s) => widget.selected.contains(s.value));
 
   void _measure() {
     if (!mounted) return;
@@ -175,49 +189,55 @@ class _FluidSegmentedButtonState<T> extends State<FluidSegmentedButton<T>> {
     final compact = widget.style?.visualDensity == VisualDensity.compact;
     final height = compact ? 36.0 : 42.0;
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final fill = constraints.hasTightWidth;
-      final children = <Widget>[];
-      for (var i = 0; i < widget.segments.length; i++) {
-        final seg = widget.segments[i];
-        final on = widget.selected.contains(seg.value);
-        Widget cell = _Segment(
-          key: _tracker.keys[i],
-          segment: seg,
-          selected: on,
-          height: height,
-          compact: compact,
-          onTap: seg.enabled && widget.onSelectionChanged != null && !on
-              ? () {
-                  HapticFeedback.selectionClick();
-                  widget.onSelectionChanged!({seg.value});
-                }
-              : null,
-        );
-        if (fill) {
-          cell = Expanded(child: cell);
-        } else if (constraints.hasBoundedWidth) {
-          // Natural width when it fits; shrinks (labels ellipsize) when not.
-          cell = Flexible(child: cell);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fill = constraints.hasTightWidth;
+        final children = <Widget>[];
+        for (var i = 0; i < widget.segments.length; i++) {
+          final seg = widget.segments[i];
+          final on = widget.selected.contains(seg.value);
+          Widget cell = _Segment(
+            key: _tracker.keys[i],
+            segment: seg,
+            selected: on,
+            height: height,
+            compact: compact,
+            onTap: seg.enabled && widget.onSelectionChanged != null && !on
+                ? () {
+                    HapticFeedback.selectionClick();
+                    widget.onSelectionChanged!({seg.value});
+                  }
+                : null,
+          );
+          if (fill) {
+            cell = Expanded(child: cell);
+          } else if (constraints.hasBoundedWidth) {
+            // Natural width when it fits; shrinks (labels ellipsize) when not.
+            cell = Flexible(child: cell);
+          }
+          children.add(cell);
         }
-        children.add(cell);
-      }
-      return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: c.surfaceHighlight,
-          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-          border: Border.all(color: c.border),
-        ),
-        child: Stack(
-          key: _stackKey,
-          children: [
-            LiquidIndicator(rect: _rect, decoration: litPill(c, glow: false)),
-            Row(mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min, children: children),
-          ],
-        ),
-      );
-    });
+        return Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: c.surfaceHighlight,
+            borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+            border: Border.all(color: c.border),
+          ),
+          child: Stack(
+            key: _stackKey,
+            children: [
+              LiquidIndicator(rect: _rect, decoration: litPill(c, glow: false)),
+              Row(
+                mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -251,8 +271,8 @@ class _SegmentState<T> extends State<_Segment<T>> {
     final color = !seg.enabled
         ? c.textSecondary.withValues(alpha: 0.5)
         : widget.selected
-            ? c.primary
-            : c.textPrimary;
+        ? c.primary
+        : c.textPrimary;
     final style = TextStyle(
       fontSize: 13,
       fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
@@ -265,7 +285,10 @@ class _SegmentState<T> extends State<_Segment<T>> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (seg.icon != null)
-            IconTheme.merge(data: IconThemeData(color: color, size: 18), child: seg.icon!),
+            IconTheme.merge(
+              data: IconThemeData(color: color, size: 18),
+              child: seg.icon!,
+            ),
           if (seg.icon != null && seg.label != null) const SizedBox(width: 6),
           if (seg.label != null)
             Flexible(
@@ -284,7 +307,9 @@ class _SegmentState<T> extends State<_Segment<T>> {
       selected: widget.selected,
       enabled: seg.enabled,
       child: MouseRegion(
-        cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+        cursor: widget.onTap != null
+            ? SystemMouseCursors.click
+            : MouseCursor.defer,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (_) => setState(() => _down = true),
@@ -303,7 +328,8 @@ class _SegmentState<T> extends State<_Segment<T>> {
         ),
       ),
     );
-    if (seg.tooltip != null) content = Tooltip(message: seg.tooltip!, child: content);
+    if (seg.tooltip != null)
+      content = Tooltip(message: seg.tooltip!, child: content);
     return content;
   }
 }
@@ -389,24 +415,27 @@ class _FluidNavIslandState extends State<FluidNavIsland> {
           key: _stackKey,
           children: [
             LiquidIndicator(rect: _rect, decoration: litPill(c)),
-            Row(
-              children: [
-                for (var i = 0; i < widget.destinations.length; i++)
-                  // The selected section gets room for its label; the lit
-                  // pill flows from the old slot to the new one.
-                  Expanded(
-                    key: _tracker.keys[i],
-                    flex: i == _shown ? 26 : 10,
-                    child: _IslandItem(
-                      dest: widget.destinations[i],
-                      selected: i == _shown,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        widget.onSelected(i);
-                      },
+            Positioned.fill(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < widget.destinations.length; i++)
+                    // The selected section gets room for its label; the lit
+                    // pill flows from the old slot to the new one.
+                    Expanded(
+                      key: _tracker.keys[i],
+                      flex: i == _shown ? 26 : 10,
+                      child: _IslandItem(
+                        dest: widget.destinations[i],
+                        selected: i == _shown,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onSelected(i);
+                        },
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -419,7 +448,11 @@ class _IslandItem extends StatefulWidget {
   final IslandDestination dest;
   final bool selected;
   final VoidCallback onTap;
-  const _IslandItem({required this.dest, required this.selected, required this.onTap});
+  const _IslandItem({
+    required this.dest,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   State<_IslandItem> createState() => _IslandItemState();
@@ -453,8 +486,11 @@ class _IslandItemState extends State<_IslandItem> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(widget.selected ? widget.dest.selectedIcon : widget.dest.icon,
-                    size: 22, color: color),
+                Icon(
+                  widget.selected ? widget.dest.selectedIcon : widget.dest.icon,
+                  size: 22,
+                  color: color,
+                ),
                 // The label slides out of the icon when selected.
                 Flexible(
                   child: AnimatedSize(
