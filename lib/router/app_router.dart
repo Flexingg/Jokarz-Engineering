@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/fluid_background.dart';
+import '../theme/sections.dart';
 import '../ui/adaptive/nav_shell.dart';
 import '../ui/screens/dashboard_screen.dart';
 import '../ui/screens/projects_screen.dart';
@@ -40,9 +41,8 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/',
-              pageBuilder: (context, state) => const FluidNoTransitionPage(
-                child: DashboardScreen(),
-              ),
+              pageBuilder: (context, state) =>
+                  const FluidNoTransitionPage(child: DashboardScreen()),
             ),
           ],
         ),
@@ -53,7 +53,10 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/projects',
               pageBuilder: (context, state) => const FluidNoTransitionPage(
-                child: ProjectsScreen(),
+                child: SectionTheme(
+                  section: AppSection.projects,
+                  child: ProjectsScreen(),
+                ),
               ),
               routes: [
                 GoRoute(
@@ -62,13 +65,19 @@ final appRouter = GoRouter(
                   builder: (context, state) {
                     final extra = state.extra as Map<String, dynamic>?;
                     final initialTitle = extra?['initialTitle'] as String?;
-                    return ProjectEditScreen(initialTitle: initialTitle);
+                    return SectionTheme(
+                      section: AppSection.projects,
+                      child: ProjectEditScreen(initialTitle: initialTitle),
+                    );
                   },
                 ),
                 GoRoute(
                   path: 'queue',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const WhatNextScreen(),
+                  builder: (context, state) => const SectionTheme(
+                    section: AppSection.projects,
+                    child: WhatNextScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: ':id',
@@ -78,11 +87,14 @@ final appRouter = GoRouter(
                     final tab = state.uri.queryParameters['tab'];
                     final orderId = state.uri.queryParameters['orderId'];
                     final taskId = state.uri.queryParameters['taskId'];
-                    return ProjectDetailScreen(
-                      projectId: id,
-                      initialTab: tab,
-                      targetOrderId: orderId,
-                      targetTaskId: taskId,
+                    return SectionTheme(
+                      section: AppSection.projects,
+                      child: ProjectDetailScreen(
+                        projectId: id,
+                        initialTab: tab,
+                        targetOrderId: orderId,
+                        targetTaskId: taskId,
+                      ),
                     );
                   },
                   routes: [
@@ -91,7 +103,10 @@ final appRouter = GoRouter(
                       parentNavigatorKey: _rootNavigatorKey,
                       builder: (context, state) {
                         final id = state.pathParameters['id']!;
-                        return ProjectEditScreen(projectId: id);
+                        return SectionTheme(
+                          section: AppSection.projects,
+                          child: ProjectEditScreen(projectId: id),
+                        );
                       },
                     ),
                   ],
@@ -107,8 +122,11 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/orders',
               pageBuilder: (context, state) => FluidNoTransitionPage(
-                child: OpenOrdersScreen(
-                  targetOrderId: state.uri.queryParameters['orderId'],
+                child: SectionTheme(
+                  section: AppSection.orders,
+                  child: OpenOrdersScreen(
+                    targetOrderId: state.uri.queryParameters['orderId'],
+                  ),
                 ),
               ),
             ),
@@ -121,7 +139,10 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/workbench',
               pageBuilder: (context, state) => const FluidNoTransitionPage(
-                child: WorkbenchScreen(),
+                child: SectionTheme(
+                  section: AppSection.tools,
+                  child: WorkbenchScreen(),
+                ),
               ),
             ),
           ],
@@ -133,8 +154,11 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/voice-notes',
               pageBuilder: (context, state) => FluidNoTransitionPage(
-                child: VoiceNotesScreen(
-                  targetNoteId: state.uri.queryParameters['noteId'],
+                child: SectionTheme(
+                  section: AppSection.notes,
+                  child: VoiceNotesScreen(
+                    targetNoteId: state.uri.queryParameters['noteId'],
+                  ),
                 ),
               ),
             ),
@@ -147,7 +171,10 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/settings',
               pageBuilder: (context, state) => const FluidNoTransitionPage(
-                child: SettingsScreen(),
+                child: SectionTheme(
+                  section: AppSection.settings,
+                  child: SettingsScreen(),
+                ),
               ),
             ),
           ],
@@ -161,18 +188,24 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/bamm',
               pageBuilder: (context, state) => FluidNoTransitionPage(
-                child: BammScreen(
-                  targetWo: state.uri.queryParameters['wo'],
-                  initialFilter: state.uri.queryParameters['filter'],
-                  snapshotHash: state.uri.queryParameters['h'],
-                  printedAtEpochMs: state.uri.queryParameters['t'],
+                child: SectionTheme(
+                  section: AppSection.bamm,
+                  child: BammScreen(
+                    targetWo: state.uri.queryParameters['wo'],
+                    initialFilter: state.uri.queryParameters['filter'],
+                    snapshotHash: state.uri.queryParameters['h'],
+                    printedAtEpochMs: state.uri.queryParameters['t'],
+                  ),
                 ),
               ),
               routes: [
                 GoRoute(
                   path: 'batch',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const BammBatchUpdateScreen(),
+                  builder: (context, state) => const SectionTheme(
+                    section: AppSection.bamm,
+                    child: BammBatchUpdateScreen(),
+                  ),
                 ),
               ],
             ),
@@ -183,17 +216,26 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/calendar',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const TasksCalendarScreen(),
+      builder: (context, state) => const SectionTheme(
+        section: AppSection.calendar,
+        child: TasksCalendarScreen(),
+      ),
     ),
     GoRoute(
       path: '/schedule',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const DayScheduleScreen(),
+      builder: (context, state) => const SectionTheme(
+        section: AppSection.calendar,
+        child: DayScheduleScreen(),
+      ),
     ),
     GoRoute(
       path: '/overdue',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const OverdueTasksScreen(),
+      builder: (context, state) => const SectionTheme(
+        section: AppSection.calendar,
+        child: OverdueTasksScreen(),
+      ),
     ),
     GoRoute(
       path: '/report',
@@ -204,8 +246,11 @@ final appRouter = GoRouter(
       path: '/photo-note',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => FluidNoTransitionPage(
-        child: PhotoNoteEditorScreen(
-          imagePath: state.uri.queryParameters['path'] ?? '',
+        child: SectionTheme(
+          section: AppSection.notes,
+          child: PhotoNoteEditorScreen(
+            imagePath: state.uri.queryParameters['path'] ?? '',
+          ),
         ),
       ),
     ),
@@ -213,28 +258,28 @@ final appRouter = GoRouter(
       path: '/inbox',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const FluidNoTransitionPage(
-        child: InboxScreen(),
+        child: SectionTheme(section: AppSection.notes, child: InboxScreen()),
       ),
     ),
     GoRoute(
       path: '/fab',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const FluidNoTransitionPage(
-        child: FabListScreen(),
+        child: SectionTheme(section: AppSection.fab, child: FabListScreen()),
       ),
     ),
     GoRoute(
       path: '/vendors',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const FluidNoTransitionPage(
-        child: VendorsScreen(),
+        child: SectionTheme(section: AppSection.orders, child: VendorsScreen()),
       ),
     ),
     GoRoute(
       path: '/machines',
       parentNavigatorKey: _rootNavigatorKey,
       pageBuilder: (context, state) => const FluidNoTransitionPage(
-        child: MachinesScreen(),
+        child: SectionTheme(section: AppSection.tools, child: MachinesScreen()),
       ),
       routes: [
         GoRoute(
@@ -242,14 +287,16 @@ final appRouter = GoRouter(
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             final name = Uri.decodeComponent(state.pathParameters['name']!);
-            return MachineDetailScreen(machineName: name);
+            return SectionTheme(
+              section: AppSection.tools,
+              child: MachineDetailScreen(machineName: name),
+            );
           },
         ),
       ],
     ),
   ],
 );
-
 
 /// The root navigator's BuildContext, used by global shortcuts to show dialogs.
 BuildContext? get appRootContext => _rootNavigatorKey.currentContext;

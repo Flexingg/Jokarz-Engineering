@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/sections.dart';
 import '../../models/project.dart';
 import '../../models/activity_log.dart';
 import '../../providers/project_provider.dart';
@@ -212,9 +213,9 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Row(children: [
-                    _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
+                    _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, section: AppSection.projects),
                     const SizedBox(width: 12),
-                    _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
+                    _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, section: AppSection.calendar),
                   ]),
                   const SizedBox(height: 20),
 
@@ -350,9 +351,9 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, color: AppTheme.of(context).primary),
+                          _KpiCard(label: 'Tasks Added (7d)', value: tasksAddedWeek, icon: Icons.add_task_rounded, section: AppSection.projects),
                           const SizedBox(width: 10),
-                          _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, color: AppTheme.of(context).emerald),
+                          _KpiCard(label: 'Tasks Closed (7d)', value: tasksClosedWeek, icon: Icons.task_alt_rounded, section: AppSection.calendar),
                         ],
                       ),
                     ],

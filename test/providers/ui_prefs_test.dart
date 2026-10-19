@@ -6,6 +6,7 @@ import 'package:jokarz_engineering/providers/project_provider.dart';
 import 'package:jokarz_engineering/providers/theme_provider.dart';
 import 'package:jokarz_engineering/providers/ui_prefs_provider.dart';
 import 'package:jokarz_engineering/theme/app_theme.dart';
+import 'package:jokarz_engineering/theme/sections.dart';
 import 'package:jokarz_engineering/ui/motion/motion.dart';
 
 import '../helpers/memory_storage.dart';
@@ -105,9 +106,15 @@ void main() {
     void eachTheme(void Function(String id, ThemeData t, AppColors c) body) {
       for (final family in AppThemeFamily.values) {
         for (final reduce in [false, true]) {
-          for (final a in graphiteAccents) {
-            final t = AppTheme.themeFor(family, accent: a.color, reduceTransparency: reduce);
-            body('${family.name}${reduce ? ' (opaque)' : ''} / ${a.label}', t, t.extension<AppColors>()!);
+          // Every pickable accent and every section's own colour.
+          final hues = [
+            for (final a in graphiteAccents) (a.label, a.color),
+            for (final sec in AppSection.values)
+              if (sec.fixedHue != null) ('section ${sec.name}', sec.fixedHue!),
+          ];
+          for (final h in hues) {
+            final t = AppTheme.themeFor(family, accent: h.$2, reduceTransparency: reduce);
+            body('${family.name}${reduce ? ' (opaque)' : ''} / ${h.$1}', t, t.extension<AppColors>()!);
           }
         }
       }
@@ -160,8 +167,22 @@ void main() {
 
     test('buttons have readable text on the accent fill', () {
       eachTheme((id, t, c) {
+        expect(contrast(c.primaryFill, AppTheme.onColor(c.primaryFill)),
+            greaterThanOrEqualTo(4.5), reason: '$id fill');
+        expect(t.elevatedButtonTheme.style!.backgroundColor!.resolve({}), c.primaryFill);
         expect(contrast(t.colorScheme.primary, t.colorScheme.onPrimary),
-            greaterThanOrEqualTo(4.5), reason: id);
+            greaterThanOrEqualTo(4.5), reason: '$id scheme');
+      });
+    });
+
+    test('section cards: text reads on a card washed with the section colour', () {
+      eachTheme((id, t, c) {
+        for (final bg in c.baseBackdrops.take(8)) {
+          final card = Color.alphaBlend(c.surface, bg);
+          final washed = Color.alphaBlend(c.primaryFill.withValues(alpha: 0.20), card);
+          expect(contrast(c.textSecondary, washed), greaterThanOrEqualTo(4.5), reason: '$id secondary');
+          expect(contrast(c.primary, washed), greaterThanOrEqualTo(4.5), reason: '$id number');
+        }
       });
     });
 
