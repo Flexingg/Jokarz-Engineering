@@ -10,7 +10,7 @@
 [![Dart](https://img.shields.io/badge/Dart-3.8+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-00E676)](#)
 [![Google Cloud Sync](https://img.shields.io/badge/Sync-Firebase%20Firestore-FFA000?logo=firebase&logoColor=white)](#)
-[![Theme](https://img.shields.io/badge/Design-Material%20Expressive%20%2F%20Compose-FFB300)](#)
+[![Design](https://img.shields.io/badge/Design-Fluid%20glass%2C%20light%20%2F%20dark-4DA3FF)](#)
 [![License](https://img.shields.io/badge/License-MIT-FFB300.svg)](LICENSE)
 [![Release](https://img.shields.io/badge/Release-v1.0.8-00E5FF.svg)](https://github.com/Flexingg/Jokarz-Engineering/releases/tag/v1.0.8)
 
@@ -135,7 +135,7 @@ Engineered specifically for plant floor mechanical engineers managing production
 - **Sync**: `lib/services/sync_service.dart` is one generic implementation over six Firestore collections. Merging is last-write-wins on `updatedAt` via the pure `mergeByUpdatedAt` (`sync_merge.dart`); edits made since the last sync that lose to a different cloud edit are logged and counted in the sync status.
 - **Safety nets**: every save keeps a `.bak`; an unreadable data file is quarantined (`*.corrupt-<ts>`) and the last good copy restored instead of starting blank. A daily auto-backup (last 7 kept) is written to `backups/`, and Settings has full **Export / Restore (.zip)** with checksums and a pre-restore snapshot. The BAMM login is never included in a backup.
 - **Diagnostics**: `AppLogger` (ring buffer + rotating `jokarz_diagnostics.log`) captures framework/platform errors; view or share it from Settings -> Diagnostics Log.
-- **Look and motion**: Graphite themes (dark/light, pickable accent) are the default. All animation goes through one spring curve in `lib/ui/motion/motion.dart` (Off / Subtle / Bouncy in Settings; the OS reduce-motion setting forces Off). Preferences (theme, accent, motion, sidebar, dashboard layout) persist in `jokarz_ui_prefs.json`.
+- **Look and motion**: one fluid design in light or dark: a gentle gradient backdrop (`lib/theme/fluid_background.dart`), frosted glass for floating chrome (`lib/ui/fluid/glass.dart`: the nav island and rail, side panels), calm translucent cards, pill controls and a touch glow. Pick an accent; "Reduce transparency" swaps glass for solid surfaces. Contrast for every text color over every backdrop is checked in `test/providers/ui_prefs_test.dart`. All animation goes through one spring curve in `lib/ui/motion/motion.dart` (Off / Subtle / Bouncy in Settings; the OS reduce-motion setting forces Off). Preferences (light/dark, accent, transparency, motion, sidebar, dashboard layout, panel widths) persist in `jokarz_ui_prefs.json`.
 - **Desktop shell**: menu bar, spring navigation rail, Ctrl+K command palette (one action dispatcher in `lib/ui/shell/app_actions.dart` shared with shortcuts and menus), window size/position restore, Open Orders data table with bulk actions and a details drawer, right-click menus, vendor master-detail, customizable dashboard, and drag-and-drop photo attach on project pages.
 - **UI structure**: large screens are split into `part` files next to the screen (`*_parts/`).
 - **CI**: `.github/workflows/ci.yml` runs analyze + tests with coverage on every PR; `release.yml` re-runs the gate before building.
