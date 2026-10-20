@@ -179,8 +179,10 @@ class KeyNav extends StatelessWidget {
   }
 }
 
-/// Wraps one row: outlines it while highlighted and scrolls it into view.
-class KeyNavItem extends StatelessWidget {
+/// Wraps one row: outlines it while highlighted, and scrolls it into view
+/// when the highlight arrives (only then, and only as far as needed, so a
+/// rebuild while typing elsewhere never moves the list).
+class KeyNavItem extends StatefulWidget {
   final KeyNavController controller;
   final int index;
   final Widget child;
@@ -195,33 +197,60 @@ class KeyNavItem extends StatelessWidget {
   });
 
   @override
+  State<KeyNavItem> createState() => _KeyNavItemState();
+}
+
+class _KeyNavItemState extends State<KeyNavItem> {
+  late bool _on = widget.controller.selected == widget.index;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(KeyNavItem old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_changed);
+      widget.controller.addListener(_changed);
+    }
+    _on = widget.controller.selected == widget.index;
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    final on = widget.controller.selected == widget.index;
+    if (on == _on) return;
+    setState(() => _on = on);
+    if (!on) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      const d = Duration(milliseconds: 120);
+      Scrollable.ensureVisible(context,
+          duration: d, alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+      Scrollable.ensureVisible(context,
+          duration: d, alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) {
-        final on = controller.selected == index;
-        if (on) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              Scrollable.ensureVisible(
-                context,
-                alignment: 0.5,
-                duration: const Duration(milliseconds: 120),
-              );
-            }
-          });
-        }
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: on ? AppTheme.of(context).primary : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: child,
-        );
-      },
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.radius),
+        border: Border.all(
+          color: _on ? AppTheme.of(context).primary : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
+      child: widget.child,
     );
   }
 }

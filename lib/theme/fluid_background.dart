@@ -18,12 +18,22 @@ class FluidBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppTheme.of(context);
-    return _ScreenGradient(
-      screen: MediaQuery.sizeOf(context),
-      start: c.background,
-      end: c.backgroundEnd,
-      pools: c.pools,
-      child: child,
+    // The gradient paints into its own layer, so the page repainting (a
+    // caret blinking, a list scrolling) reuses it instead of redrawing five
+    // full-window gradients every frame.
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: _ScreenGradient(
+            screen: MediaQuery.sizeOf(context),
+            start: c.background,
+            end: c.backgroundEnd,
+            pools: c.pools,
+          ),
+        ),
+        RepaintBoundary(child: child),
+      ],
     );
   }
 }
@@ -37,7 +47,6 @@ class _ScreenGradient extends SingleChildRenderObjectWidget {
     required this.start,
     required this.end,
     required this.pools,
-    super.child,
   });
 
   @override

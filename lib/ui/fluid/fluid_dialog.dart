@@ -1,4 +1,5 @@
 import 'dart:ui' show ImageFilter;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../motion/motion.dart';
@@ -46,7 +47,10 @@ class ModalBackdropBlur extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppTheme.of(context).blurGlass) return child;
+    // A full-screen blur re-renders on every frame the dialog draws (even a
+    // blinking caret), which desktop GPUs feel; the dialog glass is nearly
+    // opaque anyway, so desktop skips it.
+    if (!AppTheme.of(context).blurGlass || _isDesktop) return child;
     return Stack(
       children: [
         Positioned.fill(
@@ -144,3 +148,9 @@ Future<T?> showFluidDialog<T>({
     ),
   );
 }
+
+bool get _isDesktop =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS);
