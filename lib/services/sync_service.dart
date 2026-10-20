@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../models/voice_note.dart';
@@ -67,7 +68,8 @@ const int _kBatchLimit = 400;
 /// (`users/{uid}/<name>`): how to (de)serialize it, read it from local state,
 /// merge a cloud snapshot into it, and remove an item that was deleted
 /// elsewhere. One generic implementation then serves all six collections.
-class _SyncCollection<T> {
+@visibleForTesting
+class SyncCollection<T> {
   final String name;
   final String label;
   final T Function(Map<String, dynamic>) fromJson;
@@ -83,7 +85,7 @@ class _SyncCollection<T> {
   /// that arms local-change pushing and the Synced status.
   final bool marksInitialSync;
 
-  const _SyncCollection({
+  const SyncCollection({
     required this.name,
     required this.label,
     required this.fromJson,
@@ -95,6 +97,22 @@ class _SyncCollection<T> {
     required this.removeLocal,
     this.marksInitialSync = false,
   });
+
+  // The sync loop holds every collection in one list, so it sees each one as
+  // a SyncCollection<dynamic>. Calling the function fields above through that
+  // view fails at runtime (a `(Project) => ...` is not a `(dynamic) => ...`),
+  // which silently stopped every cloud merge. These methods take untyped
+  // values and cast inside, where T is the collection's real type: the sync
+  // loop must only ever use these.
+  Object? parse(Map<String, dynamic> json) => fromJson(json);
+  Map<String, dynamic> encode(Object? item) => toJson(item as T);
+  String id(Object? item) => idOf(item as T);
+  DateTime stamp(Object? item) => updatedAtOf(item as T);
+  List<Object?> listFrom(EngineeringState s) => items(s);
+  Future<List<SyncConflict>> mergeRemote(
+          ProjectNotifier n, List<Object?> remote, DateTime? lastSyncedAt) =>
+      merge(n, remote.cast<T>().toList(), lastSyncedAt);
+  Future<void> remove(ProjectNotifier n, String id) => removeLocal(n, id);
 }
 
 class SyncNotifier extends Notifier<SyncState> {
@@ -115,7 +133,7 @@ class SyncNotifier extends Notifier<SyncState> {
   bool _isProcessingRemoteUpdate = false;
   bool _initialRemoteReceived = false;
 
-  late final _SyncCollection<Project> _projects = _SyncCollection<Project>(
+  late final SyncCollection<Project> _projects = SyncCollection<Project>(
     name: 'projects',
     label: 'projects',
     fromJson: Project.fromJson,
@@ -127,7 +145,7 @@ class SyncNotifier extends Notifier<SyncState> {
     removeLocal: (n, id) => n.removeProjectLocal(id),
     marksInitialSync: true,
   );
-  late final _SyncCollection<VoiceNote> _notes = _SyncCollection<VoiceNote>(
+  late final SyncCollection<VoiceNote> _notes = SyncCollection<VoiceNote>(
     name: 'voiceNotes',
     label: 'notes',
     fromJson: VoiceNote.fromJson,
@@ -139,8 +157,8 @@ class SyncNotifier extends Notifier<SyncState> {
     removeLocal: (n, id) => n.removeVoiceNoteLocal(id),
     marksInitialSync: true,
   );
-  late final _SyncCollection<StandaloneOrder> _orders =
-      _SyncCollection<StandaloneOrder>(
+  late final SyncCollection<StandaloneOrder> _orders =
+      SyncCollection<StandaloneOrder>(
     name: 'standaloneOrders',
     label: 'standalone orders',
     fromJson: StandaloneOrder.fromJson,
@@ -151,7 +169,7 @@ class SyncNotifier extends Notifier<SyncState> {
     merge: (n, r, t) => n.mergeCloudStandaloneOrders(r, lastSyncedAt: t),
     removeLocal: (n, id) => n.deleteStandaloneOrder(id),
   );
-  late final _SyncCollection<InboxItem> _inbox = _SyncCollection<InboxItem>(
+  late final SyncCollection<InboxItem> _inbox = SyncCollection<InboxItem>(
     name: 'inbox',
     label: 'inbox items',
     fromJson: InboxItem.fromJson,
@@ -162,7 +180,7 @@ class SyncNotifier extends Notifier<SyncState> {
     merge: (n, r, t) => n.mergeCloudInbox(r, lastSyncedAt: t),
     removeLocal: (n, id) => n.deleteInboxItem(id),
   );
-  late final _SyncCollection<Vendor> _vendors = _SyncCollection<Vendor>(
+  late final SyncCollection<Vendor> _vendors = SyncCollection<Vendor>(
     name: 'vendors',
     label: 'vendors',
     fromJson: Vendor.fromJson,
@@ -173,8 +191,8 @@ class SyncNotifier extends Notifier<SyncState> {
     merge: (n, r, t) => n.mergeCloudVendors(r, lastSyncedAt: t),
     removeLocal: (n, id) => n.deleteVendor(id),
   );
-  late final _SyncCollection<ProjectTemplate> _templates =
-      _SyncCollection<ProjectTemplate>(
+  late final SyncCollection<ProjectTemplate> _templates =
+      SyncCollection<ProjectTemplate>(
     name: 'templates',
     label: 'templates',
     fromJson: ProjectTemplate.fromJson,
@@ -186,7 +204,7 @@ class SyncNotifier extends Notifier<SyncState> {
     removeLocal: (n, id) => n.deleteCustomTemplate(id),
   );
 
-  late final _SyncCollection<FabJob> _fab = _SyncCollection<FabJob>(
+  late final SyncCollection<FabJob> _fab = SyncCollection<FabJob>(
     name: 'fabJobs',
     label: 'fab jobs',
     fromJson: FabJob.fromJson,
@@ -198,7 +216,11 @@ class SyncNotifier extends Notifier<SyncState> {
     removeLocal: (n, id) => n.removeFabJobLocal(id),
   );
 
-  List<_SyncCollection<dynamic>> get _all =>
+  /// The synced collections, as the sync loop sees them (for tests).
+  @visibleForTesting
+  List<SyncCollection<dynamic>> get collections => _all;
+
+  List<SyncCollection<dynamic>> get _all =>
       [_projects, _notes, _orders, _inbox, _vendors, _templates, _fab];
 
   @override
@@ -263,8 +285,8 @@ class SyncNotifier extends Notifier<SyncState> {
     );
   }
 
-  void _handleSnapshot<T>(
-      _SyncCollection<T> c, QuerySnapshot<Map<String, dynamic>> snapshot) {
+  void _handleSnapshot(
+      SyncCollection<dynamic> c, QuerySnapshot<Map<String, dynamic>> snapshot) {
     try {
       if (_isProcessingRemoteUpdate) return;
       _isProcessingRemoteUpdate = true;
@@ -276,16 +298,16 @@ class SyncNotifier extends Notifier<SyncState> {
       //    "push local-only" loop below cannot re-upload it (sync resurrection).
       for (final change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.removed) {
-          unawaited(c.removeLocal(notifier, change.doc.id));
+          unawaited(c.remove(notifier, change.doc.id));
         }
       }
 
       // One unreadable document must not hide the rest of the collection.
-      final remote = <T>[];
+      final remote = <Object?>[];
       var unreadable = 0;
       for (final d in snapshot.docs) {
         try {
-          remote.add(c.fromJson(d.data()));
+          remote.add(c.parse(d.data()));
         } catch (e, stack) {
           unreadable++;
           log.error('sync', 'Skipped unreadable ${c.label} doc ${d.id}', e, stack);
@@ -297,11 +319,11 @@ class SyncNotifier extends Notifier<SyncState> {
             errorMessage: '$unreadable ${c.label} from the cloud could not be '
                 'read (see Diagnostics Log).');
       }
-      final hadLocal = c.items(_ref.read(projectProvider)).isNotEmpty;
+      final hadLocal = c.listFrom(_ref.read(projectProvider)).isNotEmpty;
 
       if (remote.isNotEmpty) {
         unawaited(c
-            .merge(notifier, remote, state.lastSyncedAt)
+            .mergeRemote(notifier, remote, state.lastSyncedAt)
             .then(_noteConflicts)
             .catchError((Object e, StackTrace s) =>
                 log.error('sync', 'Merge of ${c.label} failed', e, s)));
@@ -313,9 +335,9 @@ class SyncNotifier extends Notifier<SyncState> {
       // Push any local-only items (e.g. created while offline) not on cloud.
       // Items removed above are already gone from local state, so they are
       // correctly excluded here.
-      final remoteIds = {for (final r in remote) c.idOf(r)};
-      for (final item in c.items(_ref.read(projectProvider))) {
-        if (!remoteIds.contains(c.idOf(item))) {
+      final remoteIds = {for (final r in remote) c.id(r)};
+      for (final item in c.listFrom(_ref.read(projectProvider))) {
+        if (!remoteIds.contains(c.id(item))) {
           unawaited(_pushDoc(c, item));
         }
       }
@@ -334,14 +356,14 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  Future<void> _pushDoc<T>(_SyncCollection<T> c, T item) async {
+  Future<void> _pushDoc(SyncCollection<dynamic> c, Object? item) async {
     final user = _authService.currentUser;
     if (user == null || _firestore == null) return;
     try {
       state = state.copyWith(status: SyncStatus.syncing);
       await _col(user.uid, c.name)!
-          .doc(c.idOf(item))
-          .set(c.toJson(item), SetOptions(merge: true));
+          .doc(c.id(item))
+          .set(c.encode(item), SetOptions(merge: true));
       state = state.copyWith(
         status: SyncStatus.synced,
         lastSyncedAt: DateTime.now(),
@@ -355,7 +377,7 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  Future<void> _deleteDoc(_SyncCollection<dynamic> c, String id) async {
+  Future<void> _deleteDoc(SyncCollection<dynamic> c, String id) async {
     final user = _authService.currentUser;
     if (user == null || _firestore == null) return;
     try {
@@ -411,7 +433,7 @@ class SyncNotifier extends Notifier<SyncState> {
       } catch (e) {
         cloud = 'ERROR $e';
       }
-      b.writeln('${c.label}: this device ${c.items(local).length}, cloud $cloud');
+      b.writeln('${c.label}: this device ${c.listFrom(local).length}, cloud $cloud');
     }
     return b.toString();
   }
@@ -449,9 +471,9 @@ class SyncNotifier extends Notifier<SyncState> {
         ops = 0;
       }
 
-      Future<void> addAll<T>(_SyncCollection<T> c) async {
-        for (final item in c.items(localState)) {
-          batch.set(_col(user.uid, c.name)!.doc(c.idOf(item)), c.toJson(item),
+      Future<void> addAll(SyncCollection<dynamic> c) async {
+        for (final item in c.listFrom(localState)) {
+          batch.set(_col(user.uid, c.name)!.doc(c.id(item)), c.encode(item),
               SetOptions(merge: true));
           if (++ops >= _kBatchLimit) await flush();
         }
@@ -490,17 +512,17 @@ class SyncNotifier extends Notifier<SyncState> {
 
     final futures = <Future<void>>[];
 
-    void diff<T>(_SyncCollection<T> c) {
-      final before = <String, T>{
+    void diff(SyncCollection<dynamic> c) {
+      final before = <String, Object?>{
         if (prev != null)
-          for (final x in c.items(prev)) c.idOf(x): x,
+          for (final x in c.listFrom(prev)) c.id(x): x,
       };
       final afterIds = <String>{};
-      for (final x in c.items(next)) {
-        final id = c.idOf(x);
+      for (final x in c.listFrom(next)) {
+        final id = c.id(x);
         afterIds.add(id);
         final old = before[id];
-        if (old == null || c.updatedAtOf(old) != c.updatedAtOf(x)) {
+        if (old == null || c.stamp(old) != c.stamp(x)) {
           futures.add(_pushDoc(c, x));
         }
       }

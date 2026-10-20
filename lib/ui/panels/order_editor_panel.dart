@@ -109,6 +109,9 @@ class _OrderEditorPanelState extends ConsumerState<OrderEditorPanel>
     return AutosaveScope(
       onBlur: flush,
       child: Glass(
+        // Beside the content, over the static backdrop: blur buys nothing
+        // there and costs a lot on desktop GPUs.
+        blur: 0,
         margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
         // ListTiles in the form need a Material between them and the
         // decorated container above.

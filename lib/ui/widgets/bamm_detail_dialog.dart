@@ -779,6 +779,7 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
 
     if (widget.embedded) {
       return Glass(
+        blur: 0, // only the static backdrop is behind it
         margin: const EdgeInsets.fromLTRB(0, 8, 16, 16),
         child: Material(
           type: MaterialType.transparency,

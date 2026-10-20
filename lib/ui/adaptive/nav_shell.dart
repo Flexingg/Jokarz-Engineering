@@ -273,6 +273,7 @@ class _Rail extends StatelessWidget {
     return SizedBox(
       width: width,
       child: Glass(
+        blur: 0, // the rail only ever has the static backdrop behind it
         margin: const EdgeInsets.fromLTRB(12, 4, 0, 12),
         padding: const EdgeInsets.fromLTRB(8, 14, 8, 10),
         child: Column(
