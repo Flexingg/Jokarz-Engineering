@@ -102,4 +102,6 @@ class SearchResults {
   int get totalCount =>
       projects.length + orders.length + notes.length + tasks.length;
   bool get isEmpty => totalCount == 0;
+  bool get isNotEmpty => totalCount > 0;
+  bool get hasMatches => totalCount > 0;
 }

@@ -783,7 +783,7 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
                 title: e.description,
                 subtitle: 'Vendor: ${e.vendorName.isNotEmpty ? e.vendorName : "Direct"} • Machine: ${e.machine.isNotEmpty ? e.machine : "General"}',
                 meta1: 'PO: ${e.po.isNotEmpty ? e.po : "Pending"} | PR: ${e.pr.isNotEmpty ? e.pr : "None"}',
-                meta2: e.eta != null ? 'ETA: ${dateFormat.format(e.eta!)}' : null,
+                meta2: e.eta != null ? 'ETA: ${DateFormat('yyyy-MM-dd').format(e.eta!)}' : null,
                 scanPayload: e.po.isNotEmpty ? 'PO:${e.po}' : 'PO:${e.key}',
               ),
             );

@@ -37,7 +37,6 @@ class _MotorDrivetrainViewState extends State<MotorDrivetrainView> {
   double _outputRpm = 0;
   double _outputTorqueFtLbs = 0;
   double _outputTorqueNm = 0;
-  double _operatingHzTorqueFactor = 1.0;
 
   @override
   void initState() {
@@ -88,7 +87,6 @@ class _MotorDrivetrainViewState extends State<MotorDrivetrainView> {
       _outputRpm = outRpm;
       _outputTorqueFtLbs = outTorqueFtLbs;
       _outputTorqueNm = outTorqueNm;
-      _operatingHzTorqueFactor = torqueFactor;
     });
   }
 
@@ -376,7 +374,7 @@ class _MotorDrivetrainViewState extends State<MotorDrivetrainView> {
                               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.primary),
                             ),
                             Text(
-                              'Motor: ${_motorBaseTorqueFtLbs.toStringAsFixed(1)} ft·lbs raw',
+                              'Motor: ${_isHp ? "${_motorBaseTorqueFtLbs.toStringAsFixed(1)} ft·lbs" : "${_motorBaseTorqueNm.toStringAsFixed(1)} N·m"} raw',
                               style: TextStyle(fontSize: 11, color: colors.textSecondary),
                             ),
                           ],

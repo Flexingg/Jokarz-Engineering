@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -77,7 +76,6 @@ class _BarcodeScannerDialogState extends ConsumerState<BarcodeScannerDialog> {
     }
 
     // 2. Detect Project ID (e.g. "PROJ:id" or "PROJ-1042" or matching project id / priority)
-    final projMatch = RegExp(r'^(?:PROJ[:\-]?)?([a-zA-Z0-9\-_]+)$', caseSensitive: false).firstMatch(code);
     if (code.toUpperCase().startsWith('PROJ:') || code.toUpperCase().startsWith('PROJ-')) {
       final idCandidate = code.substring(5).trim();
       final project = state.projects.where((p) => p.id == idCandidate || p.title.toLowerCase() == idCandidate.toLowerCase()).firstOrNull;
@@ -178,7 +176,7 @@ class _BarcodeScannerDialogState extends ConsumerState<BarcodeScannerDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: colors.cardBackground,
+                color: colors.surfaceCard,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: colors.border),
               ),

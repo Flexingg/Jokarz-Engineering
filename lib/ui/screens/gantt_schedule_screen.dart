@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,6 @@ import '../../models/project.dart';
 import '../../models/task_item.dart';
 import '../../providers/project_provider.dart';
 import '../../theme/app_theme.dart';
-import '../fluid/glass.dart';
 import '../widgets/expressive_badge.dart';
 
 enum GanttZoom {
@@ -68,7 +66,6 @@ class _GanttScheduleScreenState extends ConsumerState<GanttScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = ref.watch(projectProvider);
     final projects = state.projects;
 

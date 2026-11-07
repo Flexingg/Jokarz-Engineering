@@ -13,7 +13,6 @@ import '../panels/resizable_panel.dart';
 import '../widgets/bamm_detail_dialog.dart';
 import '../widgets/bamm_table_columns.dart';
 import '../widgets/barcode_scanner_dialog.dart';
-import '../../utils/barcode_label_pdf.dart';
 
 part 'bamm_screen_parts/dialogs.dart';
 part 'bamm_screen_parts/filters.dart';

@@ -83,6 +83,9 @@ class AppColors extends ThemeExtension<AppColors> {
   /// mode), which reads as brown when used as a fill.
   Color get amberFill => const Color(0xFFF5B841);
 
+  /// Card / panel background alias
+  Color get cardBackground => surfaceCard;
+
   /// Blur behind floating chrome. Off when the user asks for reduced
   /// transparency (then [glass] is opaque as well).
   final bool blurGlass;
