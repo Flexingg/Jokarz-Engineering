@@ -165,15 +165,17 @@ class _BammScreenState extends ConsumerState<BammScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.of(context).primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            if (isDesktop) ...[
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.of(context).primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                child: Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary, size: 20),
               ),
-              child: Icon(Icons.precision_manufacturing_rounded, color: AppTheme.of(context).primary, size: 20),
-            ),
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
+            ],
             const Flexible(
               child: Text(
                 'BAMM Work Orders',
@@ -248,12 +250,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
             },
           ),
 
-          // Scan Barcode / QR
-          IconButton(
-            tooltip: 'Scan Barcode / QR Code',
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-            onPressed: () => showBarcodeScannerDialog(context),
-          ),
+          // Scan Barcode / QR (Desktop)
+          if (isDesktop)
+            IconButton(
+              tooltip: 'Scan Barcode / QR Code',
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: () => showBarcodeScannerDialog(context),
+            ),
 
           // Batch Update - tick several work orders, apply the same
           // status/step/note change in one go.
