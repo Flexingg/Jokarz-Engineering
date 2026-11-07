@@ -362,15 +362,15 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
     // Match BAMM Work Orders
     final bammState = ref.read(bammProvider);
     for (final wo in bammState.workOrders.take(100)) {
-      if (wo.workOrderNumber.toLowerCase().contains(q) ||
+      if (wo.worNoSeq.toLowerCase().contains(q) ||
           wo.description.toLowerCase().contains(q) ||
           wo.machine.toLowerCase().contains(q)) {
         out.add(
           _Entry(
             'BAMM WO',
-            'WO #${wo.workOrderNumber}',
+            'WO #${wo.worNoSeq}',
             Icons.build_circle_outlined,
-            (_) => appRouter.go('/bamm?wo=${wo.workOrderNumber}'),
+            (_) => appRouter.go('/bamm?wo=${wo.worNoSeq}'),
             sub: '${wo.machine.isNotEmpty ? wo.machine : "Asset"} • ${wo.description}',
           ),
         );

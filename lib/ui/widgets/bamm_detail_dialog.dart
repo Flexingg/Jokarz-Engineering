@@ -828,12 +828,12 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
               context,
               BarcodeLabelData(
                 kind: BarcodeLabelKind.bammWorkOrder,
-                primaryCode: 'WO-${_wo.workOrderNumber}',
-                title: _wo.description.isNotEmpty ? _wo.description : 'Work Order ${_wo.workOrderNumber}',
+                primaryCode: 'WO-${_wo.worNoSeq}',
+                title: _wo.description.isNotEmpty ? _wo.description : 'Work Order ${_wo.worNoSeq}',
                 subtitle: 'Machine: ${_wo.machine.isNotEmpty ? _wo.machine : "General"} • Area: ${_wo.area}',
                 meta1: 'Status: ${_wo.status} • Resp: ${_wo.responsible}',
                 meta2: _wo.requiredDate != null ? 'Target: ${DateFormat("yyyy-MM-dd").format(_wo.requiredDate!)}' : null,
-                scanPayload: 'WO:${_wo.workOrderNumber}',
+                scanPayload: 'WO:${_wo.worNoSeq}',
               ),
             );
           },

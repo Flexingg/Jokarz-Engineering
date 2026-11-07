@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jokarz-engineering/models/project.dart';
-import 'package:jokarz-engineering/utils/barcode_utils.dart';
-import 'package:jokarz-engineering/utils/barcode_label_pdf.dart';
-import 'package:jokarz-engineering/utils/note_action_extractor.dart';
-import 'package:jokarz-engineering/ui/screens/workbench_screen.dart';
+import 'package:jokarz_engineering/models/project.dart';
+import 'package:jokarz_engineering/utils/barcode_utils.dart';
+import 'package:jokarz_engineering/utils/barcode_label_pdf.dart';
+import 'package:jokarz_engineering/utils/note_action_extractor.dart';
+import 'package:jokarz_engineering/ui/screens/workbench_screen.dart';
 
 void main() {
   group('New Mechanical Engineering Solvers (1–4)', () {
