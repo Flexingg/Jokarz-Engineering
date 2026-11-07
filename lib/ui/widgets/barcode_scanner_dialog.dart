@@ -274,18 +274,23 @@ class BarcodeLabelPreviewModal extends StatefulWidget {
 class _BarcodeLabelPreviewModalState extends State<BarcodeLabelPreviewModal> {
   bool _isExporting = false;
 
-  Future<void> _exportPdf() async {
+  Future<void> _exportPdf({bool isSheet = false}) async {
     setState(() => _isExporting = true);
     try {
-      final pdfBytes = await generateSingleBarcodeLabelPdf(widget.labelData);
+      final pdfBytes = isSheet
+          ? await generateMultiLabelSheetPdf(List.filled(8, widget.labelData))
+          : await generateSingleBarcodeLabelPdf(widget.labelData);
       final dir = await getTemporaryDirectory();
-      final filename = 'label_${widget.labelData.primaryCode.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}.pdf';
+      final suffix = isSheet ? '_8.5x11_sheet' : '';
+      final filename = 'label_${widget.labelData.primaryCode.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}$suffix.pdf';
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(pdfBytes);
 
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'application/pdf')],
-        subject: 'Barcode Label: ${widget.labelData.primaryCode}',
+        subject: isSheet
+            ? 'Barcode Sheet (8.5x11): ${widget.labelData.primaryCode}'
+            : 'Barcode Label: ${widget.labelData.primaryCode}',
       );
     } catch (e) {
       if (mounted) {
@@ -298,21 +303,50 @@ class _BarcodeLabelPreviewModalState extends State<BarcodeLabelPreviewModal> {
     }
   }
 
+  Widget _previewMetaRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 65,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.of(context);
     final label = widget.labelData;
+    final is2d = label.is2dOnly || label.kind == BarcodeLabelKind.project;
+    final step = label.step ?? (label.meta1 != null && label.meta1!.isNotEmpty ? label.meta1! : label.subtitle);
+    final type = label.type ?? label.kind.label;
+    final priority = label.priority ?? label.primaryCode;
 
     return AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.print_rounded, color: colors.primary),
+          Icon(Icons.qr_code_2_rounded, color: colors.primary),
           const SizedBox(width: 8),
-          const Text('Print Barcode & QR Label'),
+          const Text('2D Barcode Label Preview'),
         ],
       ),
       content: SizedBox(
-        width: 380,
+        width: 390,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -327,83 +361,139 @@ class _BarcodeLabelPreviewModalState extends State<BarcodeLabelPreviewModal> {
                   BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0, 2)),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'JOKARZ ENGINEERING • CRIB & FIELD',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black54,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      ExpressiveBadge(
-                        label: label.kind.label.toUpperCase(),
-                        color: Colors.black,
-                        fontSize: 8,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    label.title,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    label.subtitle,
-                    style: const TextStyle(fontSize: 10, color: Colors.black87),
-                    maxLines: 1,
-                  ),
-                  if (label.meta1 != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      label.meta1!,
-                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
+              child: is2d
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Project & Code (NO top brand row)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Barcode128Widget(
-                              data: label.scanPayload,
-                              height: 38,
-                              barColor: Colors.black,
-                              showText: true,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    label.title,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    label.primaryCode,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blueGrey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('✂', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Divider(color: Colors.black26, height: 1),
+                        const SizedBox(height: 8),
+
+                        // Project, Step, Type, Priority, Machine & 2D QR Code
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _previewMetaRow('STEP', step),
+                                  _previewMetaRow('TYPE', type),
+                                  _previewMetaRow('PRIORITY', priority),
+                                  if (label.machine != null && label.machine!.isNotEmpty)
+                                    _previewMetaRow('MACHINE', label.machine!),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              children: [
+                                QrCodeWidget(data: label.scanPayload, size: 70, color: Colors.black),
+                                const SizedBox(height: 3),
+                                const Text(
+                                  'SCAN IN APP',
+                                  style: TextStyle(fontSize: 7, color: Colors.black87, fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        children: [
-                          QrCodeWidget(data: label.scanPayload, size: 50, color: Colors.black),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              label.primaryCode,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
+                            ExpressiveBadge(
+                              label: label.kind.label.toUpperCase(),
+                              color: Colors.black,
+                              fontSize: 8,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          label.title,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          label.subtitle,
+                          style: const TextStyle(fontSize: 10, color: Colors.black87),
+                          maxLines: 1,
+                        ),
+                        if (label.meta1 != null) ...[
                           const SizedBox(height: 2),
-                          const Text(
-                            'SCAN IN APP',
-                            style: TextStyle(fontSize: 6, color: Colors.black54, fontWeight: FontWeight.bold),
+                          Text(
+                            label.meta1!,
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blueGrey),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Barcode128Widget(
+                                data: label.scanPayload,
+                                height: 36,
+                                barColor: Colors.black,
+                                showText: true,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            QrCodeWidget(data: label.scanPayload, size: 48, color: Colors.black),
+                          ],
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Compatible with standard 4"×2.5" thermal crib label printers and US Letter adhesive label sheets.',
-              style: TextStyle(fontSize: 10, color: colors.textSecondary),
+              '8.5" × 11" Cut Sheet prints 8 labels per page with scissor/trim guidelines for non-thermal plant printers.',
+              style: TextStyle(fontSize: 10.5, color: colors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -412,14 +502,19 @@ class _BarcodeLabelPreviewModalState extends State<BarcodeLabelPreviewModal> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('Close'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _isExporting ? null : () => _exportPdf(isSheet: true),
+          icon: const Icon(Icons.grid_view_rounded, size: 16),
+          label: const Text('Print 8.5"×11" Sheet'),
         ),
         FilledButton.icon(
-          onPressed: _isExporting ? null : _exportPdf,
+          onPressed: _isExporting ? null : () => _exportPdf(isSheet: false),
           icon: _isExporting
               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.print_rounded, size: 16),
-          label: const Text('Generate Printable PDF'),
+          label: const Text('Print Single Label'),
         ),
       ],
     );

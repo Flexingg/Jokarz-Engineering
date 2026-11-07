@@ -17,6 +17,7 @@ import '../fluid/fluid_dialog.dart';
 import '../screens/workbench_screen.dart' show workbenchTools;
 import '../../providers/bamm_provider.dart';
 import 'barcode_scanner_dialog.dart';
+import 'bulk_project_barcode_dialog.dart';
 
 /// Opens the Ctrl+K command palette over the whole app: one box that jumps to
 /// any page, creates things, and finds projects, orders, tasks and notes.
@@ -213,6 +214,15 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         (_) {
           final ctx = appRootContext;
           if (ctx != null) showBarcodeScannerDialog(ctx);
+        },
+      ),
+      _Entry(
+        'Action',
+        'Print project barcode sheet (8.5"×11")',
+        Icons.print_rounded,
+        (_) {
+          final ctx = appRootContext;
+          if (ctx != null) showBulkProjectBarcodeDialog(ctx);
         },
       ),
     ];

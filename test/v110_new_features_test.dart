@@ -134,23 +134,82 @@ void main() {
       expect(String.fromCharCodes(pdfBytes.take(4)), '%PDF');
     });
 
-    test('Multi-Label Sheet PDF Generator runs without error', () async {
-      final labels = [
-        const BarcodeLabelData(
+    test('2D Project Barcode Label factory formats Step, Type, Priority without top branding', () {
+      final sample = Project(
+        id: 'proj-101',
+        title: 'Rebuild Infeed Staging Roller',
+        description: 'Overhaul roller assembly',
+        notes: '',
+        category: ProjectCategory.maintenance,
+        phase: 'Installation',
+        priority: 1,
+        cost: 0,
+        machine: 'Case Packer 2',
+        subAssembly: 'Infeed',
+        tags: const [],
+        tasks: const [],
+        orders: const [],
+        logs: const [],
+        photoPaths: const [],
+        bammWorkOrders: const [],
+        createdAt: DateTime.now(),
+      );
+
+      final label = BarcodeLabelData.fromProject(sample);
+      expect(label.kind, BarcodeLabelKind.project);
+      expect(label.title, 'Rebuild Infeed Staging Roller');
+      expect(label.primaryCode, 'PROJ-#1');
+      expect(label.step, 'Installation');
+      expect(label.type, 'Maintenance');
+      expect(label.priority, '#1');
+      expect(label.machine, 'Case Packer 2');
+      expect(label.is2dOnly, true);
+      expect(label.scanPayload, 'PROJ:proj-101');
+    });
+
+    test('Single 2D Barcode Label PDF Generator runs without error', () async {
+      final sample = Project(
+        id: 'proj-102',
+        title: 'Overhaul Sorter Gearbox',
+        description: 'New seals and synthetic lube',
+        notes: '',
+        category: ProjectCategory.capital,
+        phase: 'Pending',
+        priority: 2,
+        cost: 0,
+        machine: 'Sorter 1',
+        subAssembly: 'Main Drive',
+        tags: const [],
+        tasks: const [],
+        orders: const [],
+        logs: const [],
+        photoPaths: const [],
+        bammWorkOrders: const [],
+        createdAt: DateTime.now(),
+      );
+
+      final pdfBytes = await generateSingleBarcodeLabelPdf(BarcodeLabelData.fromProject(sample));
+      expect(pdfBytes.isNotEmpty, true);
+      expect(pdfBytes.length, greaterThan(100));
+      expect(String.fromCharCodes(pdfBytes.take(4)), '%PDF');
+    });
+
+    test('Multi-Label 8.5x11 Cut Sheet PDF Generator formats 8 labels per page', () async {
+      final labels = List.generate(
+        10,
+        (i) => BarcodeLabelData(
           kind: BarcodeLabelKind.project,
-          primaryCode: 'PROJ-#1',
-          title: 'Case Packer Infeed Overhaul',
-          subtitle: 'Machine: Packer 1 • Phase: Installation',
-          scanPayload: 'PROJ:proj-uuid-1',
+          primaryCode: 'PROJ-#${i + 1}',
+          title: 'Project Item #$i',
+          subtitle: 'Machine: Machine-$i',
+          step: 'Step-$i',
+          type: 'Maintenance',
+          priority: '#${i + 1}',
+          machine: 'Machine-$i',
+          is2dOnly: true,
+          scanPayload: 'PROJ:uuid-$i',
         ),
-        const BarcodeLabelData(
-          kind: BarcodeLabelKind.bammWorkOrder,
-          primaryCode: 'WO-185586',
-          title: 'Rebuild Conveyor Drive Sprockets',
-          subtitle: 'Machine: Line 2 Conveyor • Area: Packaging',
-          scanPayload: 'WO:185586',
-        ),
-      ];
+      );
 
       final pdfBytes = await generateMultiLabelSheetPdf(labels);
       expect(pdfBytes.isNotEmpty, true);

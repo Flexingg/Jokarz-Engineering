@@ -274,15 +274,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           onPressed: () {
             showBarcodeLabelPreviewDialog(
               context,
-              BarcodeLabelData(
-                kind: BarcodeLabelKind.project,
-                primaryCode: 'PROJ-#${project.priority}',
-                title: project.title,
-                subtitle: 'Machine: ${project.machine.isNotEmpty ? project.machine : "General"} • Phase: ${project.phase}',
-                meta1: 'Category: ${project.category.label} • Priority #${project.priority}',
-                meta2: 'Tasks: ${project.tasks.length} • Orders: ${project.orders.length}',
-                scanPayload: 'PROJ:${project.id}',
-              ),
+              BarcodeLabelData.fromProject(project),
             );
           },
         ),

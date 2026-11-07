@@ -15,6 +15,9 @@ import '../widgets/park_dialog.dart';
 import '../adaptive/breakpoints.dart';
 import '../adaptive/master_detail.dart';
 import '../keynav/key_nav.dart';
+import '../widgets/barcode_scanner_dialog.dart';
+import '../widgets/bulk_project_barcode_dialog.dart';
+import '../../utils/barcode_label_pdf.dart';
 import 'project_detail_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
@@ -64,8 +67,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
         title: const Text(
           'Engineering Projects',
           style: TextStyle(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.qr_code_2_rounded, color: AppTheme.of(context).primary),
+            tooltip: 'Print Project Barcodes (8.5×11 Sheet)',
+            onPressed: () => showBulkProjectBarcodeDialog(context),
+          ),
           IconButton(
             icon: Icon(Icons.calendar_month_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Maintenance Task Calendar',
@@ -426,6 +435,8 @@ class _ProjectCard extends ConsumerWidget {
       onTap: onTap,
       contextActions: [
         MenuAction('Open', Icons.open_in_new_rounded, onTap),
+        MenuAction('Print Barcode Label...', Icons.qr_code_2_rounded,
+            () => showBarcodeLabelPreviewDialog(context, BarcodeLabelData.fromProject(project))),
         MenuAction('Edit...', Icons.edit_outlined, () => context.push('/projects/${project.id}/edit')),
         if (!isTerminal && project.priority != 1)
           MenuAction('Move to #1', Icons.vertical_align_top_rounded,
