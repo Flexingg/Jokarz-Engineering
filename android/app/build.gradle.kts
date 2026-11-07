@@ -41,7 +41,7 @@ android {
             val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
             if (!ksPath.isNullOrBlank()) {
                 val ks = File(ksPath)
-                if (ks.exists()) {
+                if (ks.exists() && ks.length() > 0) {
                     storeFile = ks
                     storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
                     keyAlias = System.getenv("ANDROID_KEY_ALIAS")
@@ -54,7 +54,7 @@ android {
     buildTypes {
         release {
             val releaseCfg = signingConfigs.getByName("release")
-            signingConfig = if (releaseCfg.storeFile?.exists() == true) {
+            signingConfig = if (releaseCfg.storeFile?.exists() == true && (releaseCfg.storeFile?.length() ?: 0) > 0) {
                 releaseCfg
             } else {
                 signingConfigs.getByName("debug")
