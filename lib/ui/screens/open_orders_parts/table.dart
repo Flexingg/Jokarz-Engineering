@@ -771,6 +771,24 @@ extension _OpenOrdersTable on _OpenOrdersScreenState {
             onPressed: () => _copyText(e.po, 'PO ${e.po}'),
             child: const Text('Copy PO #'),
           ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.qr_code_2_rounded, size: 16),
+          label: const Text('Print Label'),
+          onPressed: () {
+            showBarcodeLabelPreviewDialog(
+              context,
+              BarcodeLabelData(
+                kind: BarcodeLabelKind.purchaseOrder,
+                primaryCode: e.po.isNotEmpty ? 'PO-${e.po}' : (e.pr.isNotEmpty ? 'PR-${e.pr}' : 'ORDER-${e.key.substring(0, 8)}'),
+                title: e.description,
+                subtitle: 'Vendor: ${e.vendorName.isNotEmpty ? e.vendorName : "Direct"} • Machine: ${e.machine.isNotEmpty ? e.machine : "General"}',
+                meta1: 'PO: ${e.po.isNotEmpty ? e.po : "Pending"} | PR: ${e.pr.isNotEmpty ? e.pr : "None"}',
+                meta2: e.eta != null ? 'ETA: ${dateFormat.format(e.eta!)}' : null,
+                scanPayload: e.po.isNotEmpty ? 'PO:${e.po}' : 'PO:${e.key}',
+              ),
+            );
+          },
+        ),
         if (e.isStandalone)
           OutlinedButton(
             onPressed: () => _showAttachToProjectDialog(context, e),

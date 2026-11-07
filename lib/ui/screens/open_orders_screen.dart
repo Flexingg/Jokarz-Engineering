@@ -21,6 +21,8 @@ import '../widgets/bamm_chip.dart';
 import '../motion/motion.dart';
 import '../panels/order_editor_panel.dart';
 import '../panels/resizable_panel.dart';
+import '../widgets/barcode_scanner_dialog.dart';
+import '../../utils/barcode_label_pdf.dart';
 
 part 'open_orders_parts/dialogs.dart';
 part 'open_orders_parts/rows.dart';
@@ -224,6 +226,11 @@ class _OpenOrdersScreenState extends ConsumerState<OpenOrdersScreen> {
                 }),
               ),
             ),
+          IconButton(
+            icon: Icon(Icons.qr_code_scanner_rounded, color: AppTheme.of(context).primary),
+            tooltip: 'Scan Barcode / QR Code',
+            onPressed: () => showBarcodeScannerDialog(context),
+          ),
           IconButton(
             icon: Icon(Icons.storefront_rounded, color: AppTheme.of(context).primary),
             tooltip: 'Vendor Directory',

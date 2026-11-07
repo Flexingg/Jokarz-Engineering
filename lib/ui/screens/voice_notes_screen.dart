@@ -20,6 +20,9 @@ import '../adaptive/breakpoints.dart';
 import '../keynav/key_nav.dart';
 import '../panels/note_editor_panel.dart';
 import '../panels/resizable_panel.dart';
+import '../../models/task_item.dart';
+import '../widgets/order_dialogs.dart';
+import '../../utils/note_action_extractor.dart';
 
 class VoiceNotesScreen extends ConsumerStatefulWidget {
   final String? targetNoteId;
@@ -93,6 +96,96 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
     if (x == null) return;
     if (!context.mounted) return;
     context.push('/photo-note?path=${Uri.encodeComponent(x.path)}');
+  }
+
+  Future<void> _showQuickCreateTaskDialog(
+    BuildContext context,
+    String initialDesc,
+    DateTime? date,
+    String? initialProjectId,
+  ) async {
+    final projects = ref.read(projectProvider).activeProjects;
+    if (projects.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please create a project first.')),
+      );
+      return;
+    }
+
+    final descCtrl = TextEditingController(text: initialDesc);
+    String selectedProjId = initialProjectId ?? projects.first.id;
+    DateTime? schedDate = date;
+
+    await showFluidDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Convert Note to Project Task'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedProjId,
+                  decoration: const InputDecoration(labelText: 'Target Project'),
+                  items: projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.title))).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedProjId = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Task Description'),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.calendar_today_rounded, size: 18),
+                  title: Text(
+                    schedDate != null ? DateFormat('yyyy-MM-dd').format(schedDate!) : 'No scheduled date',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: schedDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) setDialogState(() => schedDate = picked);
+                    },
+                    child: const Text('Set Date'),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () async {
+                  final text = descCtrl.text.trim();
+                  if (text.isNotEmpty) {
+                    await ref.read(projectProvider.notifier).addTask(
+                          selectedProjId,
+                          TaskItem(description: text, scheduledDate: schedDate),
+                        );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Task created on project!')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Add Task'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showEditNoteDialog(BuildContext context, VoiceNote note) {
@@ -627,6 +720,67 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
                                           : AppTheme.of(context).textSecondary,
                                     ),
                                   ),
+                                  if (!isProjectNote) ...[
+                                    Builder(builder: (context) {
+                                      final action = extractActionsFromText(
+                                        entry.content,
+                                        ref.watch(projectProvider).projects,
+                                      );
+                                      if (!action.hasAnySuggestion) return const SizedBox.shrink();
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            if (action.detectedMachine != null)
+                                              ExpressiveBadge(
+                                                label: '🏭 ${action.detectedMachine}',
+                                                color: AppTheme.of(context).primary,
+                                                fontSize: 10,
+                                              ),
+                                            if (action.hasTaskSuggestion)
+                                              ActionChip(
+                                                avatar: Icon(
+                                                  Icons.bolt_rounded,
+                                                  size: 14,
+                                                  color: AppTheme.of(context).amber,
+                                                ),
+                                                label: const Text(
+                                                  'Create Task',
+                                                  style: TextStyle(fontSize: 11),
+                                                ),
+                                                onPressed: () => _showQuickCreateTaskDialog(
+                                                  context,
+                                                  action.taskDescription,
+                                                  action.suggestedDate,
+                                                  action.matchedProjectId ?? entry.projectId,
+                                                ),
+                                              ),
+                                            if (action.hasOrderSuggestion)
+                                              ActionChip(
+                                                avatar: Icon(
+                                                  Icons.add_shopping_cart_rounded,
+                                                  size: 14,
+                                                  color: AppTheme.of(context).emerald,
+                                                ),
+                                                label: Text(
+                                                  'Order: ${action.orderDescription}',
+                                                  style: const TextStyle(fontSize: 11),
+                                                ),
+                                                onPressed: () => showOrderDialog(
+                                                  context,
+                                                  prefillDescription: action.orderDescription,
+                                                  fixedProjectId: action.matchedProjectId ?? entry.projectId,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
                                 ],
                                 if (isProjectNote) ...[
                                   const SizedBox(height: 6),

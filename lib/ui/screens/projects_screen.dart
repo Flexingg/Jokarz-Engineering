@@ -77,6 +77,11 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
             onPressed: () => context.push('/projects/queue'),
           ),
           IconButton(
+            icon: Icon(Icons.timeline_rounded, color: AppTheme.of(context).primary),
+            tooltip: 'Shutdown / Overhaul Gantt Scheduler',
+            onPressed: () => context.push('/shutdown'),
+          ),
+          IconButton(
             icon: Icon(Icons.print_rounded, color: AppTheme.of(context).amber),
             tooltip: 'Daily Walk-Around Report',
             onPressed: () => context.push('/report'),

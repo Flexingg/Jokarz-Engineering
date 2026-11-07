@@ -24,6 +24,7 @@ import '../ui/screens/bamm_screen.dart';
 import '../ui/screens/bamm_batch_update_screen.dart';
 import '../ui/screens/day_schedule_screen.dart';
 import '../ui/screens/fab_list_screen.dart';
+import '../ui/screens/gantt_schedule_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -138,10 +139,12 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/workbench',
-              pageBuilder: (context, state) => const FluidNoTransitionPage(
+              pageBuilder: (context, state) => FluidNoTransitionPage(
                 child: SectionTheme(
                   section: AppSection.tools,
-                  child: WorkbenchScreen(),
+                  child: WorkbenchScreen(
+                    initialToolId: state.uri.queryParameters['tool'],
+                  ),
                 ),
               ),
             ),
@@ -241,6 +244,14 @@ final appRouter = GoRouter(
       path: '/report',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ReportScreen(),
+    ),
+    GoRoute(
+      path: '/shutdown',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SectionTheme(
+        section: AppSection.calendar,
+        child: GanttScheduleScreen(),
+      ),
     ),
     GoRoute(
       path: '/photo-note',

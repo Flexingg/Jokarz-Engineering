@@ -14,6 +14,9 @@ import '../shell/app_actions.dart';
 import 'note_dialogs.dart';
 import 'order_dialogs.dart';
 import '../fluid/fluid_dialog.dart';
+import '../screens/workbench_screen.dart' show workbenchTools;
+import '../../providers/bamm_provider.dart';
+import 'barcode_scanner_dialog.dart';
 
 /// Opens the Ctrl+K command palette over the whole app: one box that jumps to
 /// any page, creates things, and finds projects, orders, tasks and notes.
@@ -197,6 +200,21 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         Icons.archive_outlined,
         (_) => appRouter.go('/settings'),
       ),
+      _Entry(
+        'Action',
+        'Shutdown Gantt scheduler',
+        Icons.timeline_rounded,
+        (_) => appRouter.push('/shutdown'),
+      ),
+      _Entry(
+        'Action',
+        'Scan barcode / QR code',
+        Icons.qr_code_scanner_rounded,
+        (_) {
+          final ctx = appRootContext;
+          if (ctx != null) showBarcodeScannerDialog(ctx);
+        },
+      ),
     ];
   }
 
@@ -308,6 +326,73 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         ),
       );
     }
+    // Match Workbench Calculators & Engineering Tools
+    for (final t in workbenchTools.entries) {
+      final tool = t.value;
+      if (tool.label.toLowerCase().contains(q) ||
+          tool.keywords.any((k) => k.toLowerCase().contains(q))) {
+        out.add(
+          _Entry(
+            'Tool',
+            tool.label,
+            tool.icon,
+            (_) => appRouter.go('/workbench?tool=${t.key}'),
+            sub: 'Workbench Engineering Calculator',
+          ),
+        );
+      }
+    }
+
+    // Match Machine Assets
+    for (final m in ref.read(projectProvider).machineAssets) {
+      if (m.name.toLowerCase().contains(q) ||
+          m.subAssemblies.any((s) => s.toLowerCase().contains(q))) {
+        out.add(
+          _Entry(
+            'Machine',
+            m.name,
+            Icons.precision_manufacturing_outlined,
+            (_) => appRouter.push('/machines/${Uri.encodeComponent(m.name)}'),
+            sub: '${m.activeProjects.length} active projects • ${m.openOrders.length} orders',
+          ),
+        );
+      }
+    }
+
+    // Match BAMM Work Orders
+    final bammState = ref.read(bammProvider);
+    for (final wo in bammState.workOrders.take(100)) {
+      if (wo.workOrderNumber.toLowerCase().contains(q) ||
+          wo.description.toLowerCase().contains(q) ||
+          wo.machine.toLowerCase().contains(q)) {
+        out.add(
+          _Entry(
+            'BAMM WO',
+            'WO #${wo.workOrderNumber}',
+            Icons.build_circle_outlined,
+            (_) => appRouter.go('/bamm?wo=${wo.workOrderNumber}'),
+            sub: '${wo.machine.isNotEmpty ? wo.machine : "Asset"} • ${wo.description}',
+          ),
+        );
+        if (out.where((e) => e.kind == 'BAMM WO').length >= 4) break;
+      }
+    }
+
+    // Match Vendors
+    for (final v in ref.read(projectProvider).vendors) {
+      if (v.name.toLowerCase().contains(q) || v.accountNumber.toLowerCase().contains(q)) {
+        out.add(
+          _Entry(
+            'Vendor',
+            v.name,
+            Icons.storefront_outlined,
+            (_) => appRouter.push('/vendors'),
+            sub: 'Vendor Account: ${v.accountNumber.isNotEmpty ? v.accountNumber : "Active"}',
+          ),
+        );
+      }
+    }
+
     return [...out, ...creates];
   }
 

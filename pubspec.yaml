@@ -1,7 +1,7 @@
 name: jokarz_engineering
 description: "Material Expressive Engineering Suite & Workshop Companion for AOR Engineering"
 publish_to: 'none'
-version: 1.10.1+33
+version: 1.11.0+34
 
 environment:
   sdk: ^3.8.1

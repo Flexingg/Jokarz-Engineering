@@ -21,6 +21,8 @@ import '../../services/bamm_service.dart' show BammAddActivityLineOutcome;
 import '../../theme/app_theme.dart';
 import 'bamm_asset_tree_picker.dart';
 import 'bamm_lookup_picker.dart';
+import 'barcode_scanner_dialog.dart';
+import '../../utils/barcode_label_pdf.dart';
 
 part 'bamm_detail_parts/add_activity_line_sheet.dart';
 part 'bamm_detail_parts/bamm_link_sheet.dart';
@@ -818,6 +820,24 @@ class _BammDetailDialogState extends ConsumerState<BammDetailDialog> {
         child: SingleChildScrollView(child: bodyColumn),
       ),
       actions: [
+        OutlinedButton.icon(
+          icon: const Icon(Icons.qr_code_2_rounded, size: 16),
+          label: const Text('Print WO Label'),
+          onPressed: () {
+            showBarcodeLabelPreviewDialog(
+              context,
+              BarcodeLabelData(
+                kind: BarcodeLabelKind.bammWorkOrder,
+                primaryCode: 'WO-${_wo.workOrderNumber}',
+                title: _wo.description.isNotEmpty ? _wo.description : 'Work Order ${_wo.workOrderNumber}',
+                subtitle: 'Machine: ${_wo.machine.isNotEmpty ? _wo.machine : "General"} • Area: ${_wo.area}',
+                meta1: 'Status: ${_wo.status} • Resp: ${_wo.responsible}',
+                meta2: _wo.requiredDate != null ? 'Target: ${DateFormat("yyyy-MM-dd").format(_wo.requiredDate!)}' : null,
+                scanPayload: 'WO:${_wo.workOrderNumber}',
+              ),
+            );
+          },
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Close'),

@@ -27,6 +27,8 @@ import '../keynav/key_nav.dart';
 import '../panels/project_editor_panel.dart';
 import '../panels/resizable_panel.dart';
 import '../panels/task_editor_panel.dart';
+import '../widgets/barcode_scanner_dialog.dart';
+import '../../utils/barcode_label_pdf.dart';
 
 part 'project_detail_parts/dialogs.dart';
 part 'project_detail_parts/tabs.dart';
@@ -265,6 +267,24 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           icon: Icon(Icons.edit_outlined, color: AppTheme.of(context).primary),
           tooltip: 'Edit Project Details',
           onPressed: () => context.push('/projects/${project.id}/edit'),
+        ),
+        IconButton(
+          icon: Icon(Icons.qr_code_2_rounded, color: AppTheme.of(context).primary),
+          tooltip: 'Print Traveler Barcode Label',
+          onPressed: () {
+            showBarcodeLabelPreviewDialog(
+              context,
+              BarcodeLabelData(
+                kind: BarcodeLabelKind.project,
+                primaryCode: 'PROJ-#${project.priority}',
+                title: project.title,
+                subtitle: 'Machine: ${project.machine.isNotEmpty ? project.machine : "General"} • Phase: ${project.phase}',
+                meta1: 'Category: ${project.category.label} • Priority #${project.priority}',
+                meta2: 'Tasks: ${project.tasks.length} • Orders: ${project.orders.length}',
+                scanPayload: 'PROJ:${project.id}',
+              ),
+            );
+          },
         ),
 
         IconButton(

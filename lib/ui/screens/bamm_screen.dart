@@ -12,6 +12,8 @@ import '../../theme/app_theme.dart';
 import '../panels/resizable_panel.dart';
 import '../widgets/bamm_detail_dialog.dart';
 import '../widgets/bamm_table_columns.dart';
+import '../widgets/barcode_scanner_dialog.dart';
+import '../../utils/barcode_label_pdf.dart';
 
 part 'bamm_screen_parts/dialogs.dart';
 part 'bamm_screen_parts/filters.dart';
@@ -245,6 +247,13 @@ class _BammScreenState extends ConsumerState<BammScreen> {
                 );
               }
             },
+          ),
+
+          // Scan Barcode / QR
+          IconButton(
+            tooltip: 'Scan Barcode / QR Code',
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            onPressed: () => showBarcodeScannerDialog(context),
           ),
 
           // Batch Update - tick several work orders, apply the same
